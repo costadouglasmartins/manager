@@ -1,0 +1,70 @@
+<?php
+$scriptDir = rtrim(str_replace('\\', '/', dirname($_SERVER['SCRIPT_NAME'])), '/');
+define('ROOT_PATH', dirname(__DIR__));
+define('PUBLIC_PATH', __DIR__);
+define('DB_HOST', getenv('DB_HOST') ?: 'mysql');
+define('DB_PORT', getenv('DB_PORT') ?: '3306');
+define('DB_DATABASE_MANAGER', getenv('DB_DATABASE_MANAGER') ?: 'manager_main');
+define('DB_USERNAME', getenv('DB_USERNAME') ?: 'root');
+define('DB_PASSWORD', getenv('DB_PASSWORD') ?: 'rootpassword');
+define('DB_CHARSET', getenv('DB_CHARSET') ?: 'utf8mb4');
+
+/**
+ * Detecta protocolo (http/https), respeitando proxy/reverso se existir.
+ */
+$scheme = 'http';
+
+if ((!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') || (isset($_SERVER['SERVER_PORT']) && $_SERVER['SERVER_PORT'] == 443)) 
+  {
+  $scheme = 'https';
+  } 
+elseif (!empty($_SERVER['HTTP_X_FORWARDED_PROTO'])) 
+  {
+  // útil em proxy reverso / load balancer
+  $scheme = $_SERVER['HTTP_X_FORWARDED_PROTO'];
+  }
+
+/**
+ * Descobre o host (domínio + porta, se houver).
+ */
+$host = $_SERVER['HTTP_HOST'] ?? ($_SERVER['SERVER_NAME'] ?? 'localhost');
+
+/**
+ * Diretório base da aplicação (ex.: /manager_main/public).
+ */
+$scriptDir = rtrim(str_replace('\\', '/', dirname($_SERVER['SCRIPT_NAME'])), '/');
+$basePath  = ($scriptDir === '/' ? '' : $scriptDir);
+
+/**
+ * BASE_URL ABSOLUTA, ex.:
+ * http://localhost/manager_main/public/
+ * https://meusistema.com/
+ */
+define('BASE_URL', $scheme . '://' . $host . $basePath . '/');
+
+if (session_status() === PHP_SESSION_NONE) 
+  {
+  session_start();
+  }
+	
+require_once ROOT_PATH . '/app/Core/App.php';
+require_once ROOT_PATH . '/app/Core/Controller.php';
+require_once ROOT_PATH . '/app/Core/Database.php';
+require_once ROOT_PATH . '/app/Core/Model.php';
+require_once ROOT_PATH . '/app/Helpers/Helper.php';
+require_once ROOT_PATH . '/app/Helpers/PaginationHelper.php';
+
+// Autoload dos namespaces
+spl_autoload_register(function ($class) 
+  {
+  $class = str_replace('\\', '/', $class);
+  $file = __DIR__ . '/../' . $class . '.php';
+  if (file_exists($file)) 
+    {
+    require_once $file;
+    }
+  });
+
+use App\Core\App;
+
+new App();
