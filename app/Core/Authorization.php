@@ -7,7 +7,7 @@ use App\Models\Permission;
 /**
  * Authorization helper (user-only permissions).
  *
- * Permissions are cached in session at: $_SESSION['manager_main']['permissions'].
+ * Permissions are cached in session at: $_SESSION['manager']['permissions'].
  *
  * Notes:
  * - Permissions are evaluated only from user_permissions (no groups/roles).
@@ -21,7 +21,7 @@ class Authorization
 	 */
 	public static function user(): ?array
 		{
-		return $_SESSION['manager_main']['user'] ?? null;
+		return $_SESSION['manager']['user'] ?? null;
 		}
 
 	/**
@@ -29,7 +29,7 @@ class Authorization
 	 */
 	public static function clearCache(): void
 		{
-		unset($_SESSION['manager_main']['permissions']);
+		unset($_SESSION['manager']['permissions']);
 		}
 
 	/**
@@ -43,7 +43,7 @@ class Authorization
 			return [];
 			}
 
-		$cached = $_SESSION['manager_main']['permissions'] ?? null;
+		$cached = $_SESSION['manager']['permissions'] ?? null;
 		if (is_array($cached))
 			{
 			return $cached;
@@ -62,7 +62,7 @@ class Authorization
 				}
 			}
 
-		$_SESSION['manager_main']['permissions'] = $out;
+		$_SESSION['manager']['permissions'] = $out;
 		return $out;
 		}
 

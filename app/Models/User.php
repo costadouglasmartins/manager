@@ -206,7 +206,7 @@ class User extends Model
             INNER JOIN people AS Person ON Person.id = User.person_id
             INNER JOIN emails  AS Email ON Email.person_id = Person.id
             WHERE User.active = 1
-              AND User.type = 'root'
+              AND User.type IN ('admin', 'user')
               AND Email.email = :email
               AND Email.is_login = '1'
             LIMIT 1";

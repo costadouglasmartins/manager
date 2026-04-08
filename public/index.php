@@ -37,7 +37,7 @@ $basePath  = ($scriptDir === '/' ? '' : $scriptDir);
 
 /**
  * BASE_URL ABSOLUTA, ex.:
- * http://localhost/manager_main/public/
+ * http://localhost/manager/public/
  * https://meusistema.com/
  */
 define('BASE_URL', $scheme . '://' . $host . $basePath . '/');

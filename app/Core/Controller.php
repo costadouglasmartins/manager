@@ -95,7 +95,7 @@ class Controller
 	 */
 	protected function isAuthenticated()
 		{
-		return !empty($_SESSION['manager_main']['user']);
+		return !empty($_SESSION['manager']['user']);
 		}
 
 	/**

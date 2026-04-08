@@ -6,13 +6,13 @@ class TenantContext
 {
 	public static function tenant(): ?array
 	{
-		$tenant = $_SESSION['manager_main']['tenant'] ?? null;
+		$tenant = $_SESSION['manager']['tenant'] ?? null;
 		return is_array($tenant) ? $tenant : null;
 	}
 
 	public static function setTenant(array $tenant): void
 	{
-		$_SESSION['manager_main']['tenant'] = [
+		$_SESSION['manager']['tenant'] = [
 			'id' => (int) ($tenant['id'] ?? 0),
 			'code' => (string) ($tenant['code'] ?? ''),
 			'name' => (string) ($tenant['name'] ?? ''),
@@ -23,7 +23,7 @@ class TenantContext
 
 	public static function clear(): void
 	{
-		unset($_SESSION['manager_main']['tenant']);
+		unset($_SESSION['manager']['tenant']);
 	}
 
 	public static function databaseName(): ?string

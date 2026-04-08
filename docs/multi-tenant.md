@@ -7,7 +7,7 @@ O projeto foi preparado para operar com dois contextos de banco:
 - `manager_main`: autenticacao, usuarios, tenants e permissoes centrais.
 - `main_0001`, `main_0002`, ...: dados de negocio de cada tenant.
 
-O login continua centralizado em `manager_main`. Depois do login, a aplicacao resolve a lista de tenants disponiveis para o usuario pela tabela `tenant_users` e grava o tenant selecionado em `$_SESSION['manager_main']['tenant']`.
+O login continua centralizado em `manager_main`. Depois do login, a aplicacao resolve a lista de tenants disponiveis para o usuario pela tabela `tenant_users` e grava o tenant selecionado em `$_SESSION['manager']['tenant']`.
 
 ## Estrutura recomendada
 

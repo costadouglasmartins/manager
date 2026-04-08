@@ -12,7 +12,7 @@ class TenantController extends Controller
 	{
 		$this->requireAuth();
 
-		$user = $_SESSION['manager_main']['user'] ?? null;
+		$user = $_SESSION['manager']['user'] ?? null;
 		$tenantModel = new Tenant();
 		$tenants = $tenantModel->getAccessibleByUserId((int) ($user['id'] ?? 0));
 
@@ -26,7 +26,7 @@ class TenantController extends Controller
 	{
 		$this->requireAuth();
 
-		$user = $_SESSION['manager_main']['user'] ?? null;
+		$user = $_SESSION['manager']['user'] ?? null;
 		$tenantModel = new Tenant();
 		$tenant = $tenantModel->findByIdForUser((int) $tenantId, (int) ($user['id'] ?? 0));
 

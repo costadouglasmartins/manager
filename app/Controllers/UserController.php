@@ -87,7 +87,7 @@ class UserController extends Controller
 	public function login()
 		{
 		// Se já logado, redireciona para home
-		if (!empty($_SESSION['manager_main']['user']))
+		if (!empty($_SESSION['manager']['user']))
 			{
 			$this->redirect('/');
 			exit;
@@ -105,7 +105,7 @@ class UserController extends Controller
 			if ($user)
 				{
 				\App\Core\Authorization::clearCache();
-				$_SESSION['manager_main']['user'] = [
+				$_SESSION['manager']['user'] = [
 					'id'				=> $user['id'],
 					'username'	=> $user['username'],
 					'email'			=> $user['email'],
