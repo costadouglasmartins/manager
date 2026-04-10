@@ -11,9 +11,10 @@ class Tenant extends Model
 	{
 		$stmt = $this->db->prepare("
 			SELECT t.id,
-			       t.code,
 			       t.name,
-			       t.database_name,
+			       t.fantasy,
+			       t.document,
+			       t.database_number,
 			       t.status,
 			       tu.role,
 			       tu.active AS user_active
@@ -33,9 +34,10 @@ class Tenant extends Model
 	{
 		$stmt = $this->db->prepare("
 			SELECT t.id,
-			       t.code,
 			       t.name,
-			       t.database_name,
+			       t.fantasy,
+			       t.document,
+			       t.database_number,
 			       t.status,
 			       tu.role,
 			       tu.active AS user_active
@@ -55,15 +57,15 @@ class Tenant extends Model
 		return $row ?: null;
 	}
 
-	public function findByCode(string $code): ?array
+	public function findByDatabaseNumber(string $databaseNumber): ?array
 	{
 		$stmt = $this->db->prepare("
-			SELECT id, code, name, database_name, status, created, modified
+			SELECT id, name, fantasy, document, database_number, status, created, modified
 			FROM tenants
-			WHERE code = :code
+			WHERE database_number = :database_number
 			LIMIT 1
 		");
-		$stmt->execute(['code' => trim($code)]);
+		$stmt->execute(['database_number' => trim($databaseNumber)]);
 
 		$row = $stmt->fetch(PDO::FETCH_ASSOC);
 		return $row ?: null;
@@ -74,14 +76,15 @@ class Tenant extends Model
 		$now = date('Y-m-d H:i:s');
 
 		$stmt = $this->db->prepare("
-			INSERT INTO tenants (code, name, database_name, status, created, modified)
-			VALUES (:code, :name, :database_name, :status, :created, :modified)
+			INSERT INTO tenants (name, fantasy, document, database_number, status, created, modified)
+			VALUES (:name, :fantasy, :document, :database_number, :status, :created, :modified)
 		");
 		$stmt->execute([
-			'code' => trim((string) ($data['code'] ?? '')),
 			'name' => trim((string) ($data['name'] ?? '')),
-			'database_name' => trim((string) ($data['database_name'] ?? '')),
-			'status' => trim((string) ($data['status'] ?? 'active')),
+			'fantasy' => trim((string) ($data['fantasy'] ?? '')),
+			'document' => trim((string) ($data['document'] ?? '')),
+			'database_number' => trim((string) ($data['database_number'] ?? '')),
+			'status' => trim((string) ($data['status'] ?? 'pending')),
 			'created' => $now,
 			'modified' => $now,
 		]);

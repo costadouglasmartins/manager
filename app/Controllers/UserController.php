@@ -3,6 +3,8 @@
 namespace App\Controllers;
 
 use App\Core\Controller;
+use App\Core\TenantContext;
+use App\Models\Tenant;
 use App\Models\User;
 
 class UserController extends Controller
@@ -112,6 +114,44 @@ class UserController extends Controller
 					'type'			=> $user['type'],
 					'name'			=> $user['name']
 				];
+
+				// Auto-selecionar tenant se o usuário tem acesso a apenas um
+				try
+					{
+					$tenantModel = new Tenant();
+					$tenants = $tenantModel->getAccessibleByUserId((int) $user['id']);
+
+					error_log('DEBUG LOGIN: User ID ' . $user['id'] . ' has ' . count($tenants) . ' tenants');
+					if (!empty($tenants))
+						{
+						error_log('DEBUG LOGIN: Tenants found: ' . json_encode($tenants));
+						}
+
+					if (count($tenants) === 1)
+						{
+						TenantContext::setTenant($tenants[0]);
+						error_log('DEBUG LOGIN: Auto-selected tenant ID ' . $tenants[0]['id']);
+						$this->redirect('/');
+						exit;
+						}
+					elseif (count($tenants) > 1)
+						{
+						error_log('DEBUG LOGIN: Multiple tenants, redirecting to selection page');
+						$this->redirect('tenant/select');
+						exit;
+						}
+					else
+						{
+						error_log('DEBUG LOGIN: No tenants found for user ' . $user['id']);
+						}
+					}
+				catch (\Exception $e)
+					{
+					error_log('ERROR LOGIN: Exception during tenant selection: ' . $e->getMessage());
+					error_log('ERROR LOGIN: Trace: ' . $e->getTraceAsString());
+					}
+
+				// Se chegou aqui, não encontrou tenant ou houve erro - redireciona para home mesmo assim
 				$this->redirect('/');
 				exit;
 				}

@@ -28,14 +28,14 @@ class Database
 
 	public static function getCurrentTenantConnection(): PDO
 	{
-		$tenant = TenantContext::tenant();
+		$databaseName = TenantContext::databaseName();
 
-		if (!$tenant || empty($tenant['database_name']))
+		if (!$databaseName)
 		{
 			throw new PDOException('No tenant selected in session.');
 		}
 
-		return self::getTenantConnection((string) $tenant['database_name']);
+		return self::getTenantConnection($databaseName);
 	}
 
 	public static function getInstance(?string $databaseName = null): PDO
