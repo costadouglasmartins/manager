@@ -30,7 +30,7 @@ class TenantContext
 	}
 
 	/**
-	 * Retorna o nome completo do banco (main_XXXX)
+	 * Retorna o nome completo do banco (manager_XXXX)
 	 */
 	public static function databaseName(): ?string
 	{
