@@ -2,10 +2,10 @@
 
 namespace App\Models;
 
-use App\Core\Model;
+use App\Core\TenantModel;
 use PDO;
 
-class Address extends Model
+class Address extends TenantModel
 	{
 
 	/**

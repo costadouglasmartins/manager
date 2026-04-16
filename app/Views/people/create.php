@@ -8,321 +8,833 @@
 </nav>
 <!-- /Breadcrumbs -->
 
-<!-- Progress -->
-<div class="card shadow-sm mb-3">
-	<div class="card-body">
-		<div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
-			<div>
-				<div class="fw-semibold" id="stepTitle">Etapa 1 de 5</div>
-				<div class="text-body-secondary small" id="stepSubtitle">Pessoa</div>
-			</div>
-			<span class="badge text-bg-secondary" id="stepBadge">1/5</span>
-		</div>
-
-		<div class="progress mt-3" role="progressbar" aria-label="Progresso do cadastro" aria-valuemin="0" aria-valuemax="100">
-			<div class="progress-bar" id="progressBar" style="width: 20%"></div>
-		</div>
-
-		<div class="row g-2 mt-3">
-			<div class="col-6 col-md">
-				<button type="button" class="btn w-100 btn-primary" data-step-jump="1">1. Pessoa</button>
-			</div>
-			<div class="col-6 col-md">
-				<button type="button" class="btn w-100 btn-outline-secondary" data-step-jump="2">2. Usuário</button>
-			</div>
-			<div class="col-6 col-md">
-				<button type="button" class="btn w-100 btn-outline-secondary" data-step-jump="3">3. Endereços</button>
-			</div>
-			<div class="col-6 col-md">
-				<button type="button" class="btn w-100 btn-outline-secondary" data-step-jump="4">4. Contatos</button>
-			</div>
-			<div class="col-12 col-md">
-				<button type="button" class="btn w-100 btn-outline-secondary" data-step-jump="5">5. Revisão</button>
-			</div>
-		</div>
-	</div>
+<div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+  <div>
+    <h5 class="mb-0">Cadastrar pessoa</h5>
+    <div class="text-body-secondary small">Cadastre os dados da pessoa e, se quiser, adicione múltiplos endereços, telefones e e-mails.</div>
+  </div>
+  <a href="<?= url('person'); ?>" class="btn btn-outline-secondary">Voltar</a>
 </div>
 
-<form action="<?= url('person/store'); ?>" method="POST" id="signupForm" class="needs-validation" novalidate>
-	<div class="card shadow-sm">
-		<div class="card-body">
+<form action="<?= url('person/store'); ?>" method="POST" id="personCreateForm" class="needs-validation" novalidate>
+  <div class="card shadow-sm mb-3">
+    <div class="card-body">
+      <div class="alert alert-danger d-none mb-4" id="formAlert" role="alert"></div>
 
-			<!-- Step 1: Pessoa -->
-			<section data-step="1">
-				<h2 class="h6 mb-3">Pessoa</h2>
+      <section class="mb-4">
+        <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+          <div>
+            <h2 class="h6 mb-0">Dados da pessoa</h2>
+            <div class="text-body-secondary small">Os campos marcados com * são obrigatórios.</div>
+          </div>
+        </div>
 
-				<div class="row g-3">
-					<div class="col-12 col-md-6">
-						<label class="form-label" for="personName">Nome completo</label>
-						<input autocomplete="off" class="form-control" id="personName" name="person[name]" placeholder="Nome completo" type="text" required />
-						<div class="invalid-feedback">Informe o nome.</div>
-					</div>
+        <div class="row g-3">
+          <div class="col-12 col-md-6">
+            <label class="form-label" for="personName">Nome *</label>
+            <input autocomplete="off" class="form-control" id="personName" name="person[name]" placeholder="Nome completo ou razão social" type="text" required />
+            <div class="invalid-feedback">Informe o nome.</div>
+          </div>
 
-					<div class="col-12 col-md-6">
-						<label class="form-label" for="personFantasy">Nome fantasia</label>
-						<input autocomplete="off" class="form-control" id="personFantasy" name="person[fantasy]" placeholder="Nome fantasia" type="text" />
-					</div>
+          <div class="col-12 col-md-6">
+            <label class="form-label" for="personFantasy">Nome fantasia</label>
+            <input autocomplete="off" class="form-control" id="personFantasy" name="person[fantasy]" placeholder="Nome fantasia" type="text" />
+          </div>
 
-					<div class="col-12 col-md-4">
-						<label class="form-label" for="personType">Tipo de pessoa</label>
-						<select autocomplete="off" class="form-select" id="personType" name="person[type]" required>
-							<option value="" selected disabled>Selecione o tipo...</option>
-							<option value="individual">Pessoa física</option>
-							<option value="company">Pessoa jurídica</option>
-						</select>
-						<div class="invalid-feedback">Selecione o tipo.</div>
-					</div>
+          <div class="col-12 col-md-4">
+            <label class="form-label" for="personType">Tipo *</label>
+            <select autocomplete="off" class="form-select" id="personType" name="person[type]" required>
+              <option value="" selected disabled>Selecione...</option>
+              <option value="individual">Pessoa física</option>
+              <option value="company">Pessoa jurídica</option>
+            </select>
+            <div class="invalid-feedback">Selecione o tipo.</div>
+          </div>
 
-					<div class="col-12 col-md-4">
-						<label class="form-label" for="personDocument">Documento (CPF/CNPJ)</label>
-						<input autocomplete="off" class="form-control mask-cpf-cnpj" id="personDocument" name="person[document]" placeholder="CPF ou CNPJ" type="text" required />
-						<div class="invalid-feedback">Informe o documento.</div>
-					</div>
+          <div class="col-12 col-md-4">
+            <label class="form-label" for="personDocument">Documento *</label>
+            <input autocomplete="off" class="form-control mask-cpf-cnpj" id="personDocument" name="person[document]" maxlength="18" placeholder="CPF ou CNPJ" type="text" required />
+            <div class="invalid-feedback">Informe o documento.</div>
+          </div>
 
-					<div class="col-12 col-md-4">
-						<label class="form-label" for="personBirthdate">Data de nascimento</label>
-						<input autocomplete="off" class="form-control mask-date" id="personBirthdate" name="person[birthdate]" placeholder="DD/MM/AAAA" type="text" />
-					</div>
+          <div class="col-12 col-md-2">
+            <label class="form-label" for="personActive">Ativo *</label>
+            <select autocomplete="off" class="form-select" id="personActive" name="person[active]" required>
+              <option value="" selected disabled>Selecione...</option>
+              <option value="1">Sim</option>
+              <option value="0">Não</option>
+            </select>
+            <div class="invalid-feedback">Selecione a situação.</div>
+          </div>
 
-					<input type="hidden" value="1" name="person[active]">
-				</div>
-			</section>
-			<!-- /Step 1 -->
+          <div class="col-12 col-md-2">
+            <label class="form-label" for="personBirthdate">Data de nascimento</label>
+            <input autocomplete="off" class="form-control mask-date" id="personBirthdate" name="person[birthdate]" placeholder="DD/MM/AAAA" type="text" />
+            <div class="invalid-feedback">Informe uma data válida.</div>
+          </div>
+        </div>
+      </section>
 
-			<!-- Step 2: Usuário -->
-			<section data-step="2" class="d-none">
-				<h2 class="h6 mb-3">Usuário</h2>
+      <section class="mb-4">
+        <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+          <div>
+            <h2 class="h6 mb-0">Endereços</h2>
+            <div class="text-body-secondary small">Você pode adicionar quantos endereços quiser. Se um bloco ficar vazio, ele será ignorado.</div>
+          </div>
+          <button type="button" class="btn btn-outline-primary btn-sm" id="btnAddAddress">Adicionar endereço</button>
+        </div>
 
-				<div class="row g-3">
-					<div class="col-12 col-md-6">
-						<label class="form-label" for="userUsername">Nome de usuário</label>
-						<input autocomplete="off" class="form-control" id="userUsername" name="user[username]" placeholder="Nome de usuário" type="text" required />
-						<div class="invalid-feedback">Informe o nome de usuário.</div>
-					</div>
+        <div id="addressesContainer" class="d-grid gap-3"></div>
 
-					<div class="col-12 col-md-6">
-						<label class="form-label" for="userType">Tipo de acesso</label>
-						<select autocomplete="off" class="form-select" id="userType" name="user[type]" required>
-							<option value="" selected disabled>Selecione o tipo de acesso...</option>
-							<option value="root">Root</option>
-							<option value="admin">Administrador</option>
-							<option value="user">Usuário</option>
-						</select>
-						<div class="invalid-feedback">Selecione o tipo de acesso.</div>
-					</div>
+        <template id="addressTemplate">
+          <div class="border rounded p-3 js-address-item">
+            <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+              <div class="fw-semibold js-block-title">Endereço</div>
+              <button type="button" class="btn btn-outline-danger btn-sm" data-remove-group="address">Remover</button>
+            </div>
 
-					<div class="col-12 col-md-6">
-						<label class="form-label" for="userPassword">Senha</label>
-						<input autocomplete="off" class="form-control" id="userPassword" name="user[password]" placeholder="Senha" type="password" minlength="8" required />
-						<div class="invalid-feedback">A senha deve ter pelo menos 8 caracteres.</div>
-					</div>
+            <div class="row g-3">
+              <div class="col-12 col-md-3">
+                <label class="form-label">CEP</label>
+                <input class="form-control mask-cep js-address-zip" name="addresses[__INDEX__][zip_code]" type="text" maxlength="9" placeholder="00000-000" />
+              </div>
 
-					<div class="col-12 col-md-6">
-						<label class="form-label" for="userPassword2">Confirmar senha</label>
-						<input autocomplete="off" class="form-control" id="userPassword2" name="user[password_confirm]" placeholder="Confirmar senha" type="password" minlength="8" required />
-						<div class="invalid-feedback">Confirme a senha.</div>
-					</div>
+              <div class="col-12 col-md-5">
+                <label class="form-label">Logradouro</label>
+                <input class="form-control js-address-street" name="addresses[__INDEX__][street]" type="text" maxlength="255" placeholder="Rua, Avenida, etc." />
+                <div class="invalid-feedback">Informe o logradouro.</div>
+              </div>
 
-					<input type="hidden" value="1" name="user[active]">
-				</div>
-			</section>
-			<!-- /Step 2 -->
+              <div class="col-12 col-md-2">
+                <label class="form-label">Número</label>
+                <input class="form-control js-address-number" name="addresses[__INDEX__][number]" type="text" maxlength="10" placeholder="Nº" />
+              </div>
 
-			<!-- Step 3: Endereços -->
-			<section data-step="3" class="d-none">
-				<h2 class="h6 mb-3">Endereços</h2>
+              <div class="col-12 col-md-2">
+                <label class="form-label">Observações</label>
+                <input class="form-control js-address-observations" name="addresses[__INDEX__][observations]" type="text" maxlength="255" placeholder="Complemento, referência..." />
+              </div>
 
-				<div class="row g-3">
-					<div class="col-12">
-						<div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
-							<div>
-								<div class="fw-semibold">Endereços</div>
-								<div class="text-body-secondary small">Obrigatório ao menos um endereço. Você pode cadastrar mais de um.</div>
-							</div>
-							<button type="button" class="btn btn-outline-primary btn-sm" id="btnAddAddress">Adicionar endereço</button>
-						</div>
+              <div class="col-12 position-relative">
+                <label class="form-label">Bairro</label>
+                <input type="hidden" class="addr-neighborhood-id" name="addresses[__INDEX__][neighborhood_id]" value="" />
+                <input type="text" class="form-control addr-neighborhood-input" autocomplete="off" placeholder="Digite o nome do bairro..." />
+                <div class="invalid-feedback">Selecione ou cadastre um bairro.</div>
+                <ul class="list-group addr-neighborhood-results mt-1" style="display:none; position:absolute; width:100%; z-index:1050; max-height:220px; overflow-y:auto;"></ul>
+              </div>
 
-						<div class="mt-2" id="addressesContainer"></div>
+              <div class="col-12 addr-create-panel d-none">
+                <div class="border border-warning rounded p-3 bg-warning-subtle">
+                  <p class="fw-semibold small mb-2">Cadastrar novo bairro</p>
+                  <div class="row g-2 align-items-end">
+                    <div class="col-12 col-md-5">
+                      <label class="form-label small">Nome do bairro</label>
+                      <input type="text" class="form-control form-control-sm addr-new-neighborhood-name" placeholder="Ex.: Centro" />
+                    </div>
 
-						<template id="addressTemplate">
-							<div class="border rounded p-3 mt-2">
-								<div class="row g-2 align-items-end">
-									<div class="col-12 col-md-3">
-										<label class="form-label">CEP</label>
-										<input class="form-control mask-cep" name="addresses[][zip_code]" type="text" maxlength="9" placeholder="00000-000" />
-									</div>
-									<div class="col-12 col-md-5">
-										<label class="form-label">Logradouro</label>
-										<input class="form-control" name="addresses[][street]" type="text" maxlength="255" placeholder="Rua, Avenida, etc." />
-									</div>
-									<div class="col-12 col-md-2">
-										<label class="form-label">Número</label>
-										<input class="form-control" name="addresses[][number]" type="text" maxlength="10" placeholder="Nº" />
-									</div>
-									<div class="col-12 col-md-2 d-grid">
-										<label class="form-label">&nbsp;</label>
-										<button type="button" class="btn btn-outline-danger" data-remove="address">Remover</button>
-									</div>
-									<div class="col-12 col-md-6">
-										<label class="form-label">Observações</label>
-										<input class="form-control" name="addresses[][observations]" type="text" maxlength="255" placeholder="Complemento, referência, etc." />
-									</div>
-									<div class="col-12 col-md-6 position-relative">
-										<label class="form-label">Bairro</label>
-										<input type="hidden" class="addr-neighborhood-id" name="addresses[][neighborhood_id]" value="" />
-										<input type="text" class="form-control addr-neighborhood-input" autocomplete="off" placeholder="Digite o nome do bairro..." />
-										<ul class="list-group addr-neighborhood-results" style="display:none; position:absolute; width:100%; z-index:1050; max-height:220px; overflow-y:auto;"></ul>
-									</div>
+                    <div class="col-12 col-md-5 position-relative">
+                      <label class="form-label small">Cidade</label>
+                      <input type="hidden" class="addr-new-city-id" value="" />
+                      <input type="text" class="form-control form-control-sm addr-new-city-input" autocomplete="off" placeholder="Digite o nome da cidade..." />
+                      <ul class="list-group addr-new-city-results mt-1" style="display:none; position:absolute; width:100%; z-index:1060; max-height:180px; overflow-y:auto;"></ul>
+                    </div>
 
-									<!-- Painel inline: cadastrar novo bairro -->
-									<div class="col-12 addr-create-panel d-none">
-										<div class="border border-warning rounded p-3 bg-warning-subtle">
-											<p class="fw-semibold small mb-2">Cadastrar novo bairro</p>
-											<div class="row g-2 align-items-end">
-												<div class="col-12 col-md-5">
-													<label class="form-label small">Nome do bairro</label>
-													<input type="text" class="form-control form-control-sm addr-new-neighborhood-name" placeholder="Ex.: Centro" />
-												</div>
-												<div class="col-12 col-md-5 position-relative">
-													<label class="form-label small">Cidade</label>
-													<input type="hidden" class="addr-new-city-id" value="" />
-													<input type="text" class="form-control form-control-sm addr-new-city-input" autocomplete="off" placeholder="Digite o nome da cidade..." />
-													<ul class="list-group addr-new-city-results" style="display:none; position:absolute; width:100%; z-index:1060; max-height:180px; overflow-y:auto;"></ul>
-												</div>
-												<div class="col-12 col-md-2 d-flex gap-2 align-items-end flex-wrap">
-													<button type="button" class="btn btn-warning btn-sm addr-btn-save-neighborhood">Salvar</button>
-													<button type="button" class="btn btn-link btn-sm p-0 text-secondary addr-btn-cancel-neighborhood">Cancelar</button>
-												</div>
-											</div>
-										</div>
-									</div>
-								</div>
-							</div>
-						</template>
-					</div>
-				</div>
-			</section>
-			<!-- /Step 3 -->
+                    <div class="col-12 col-md-2 d-flex gap-2 align-items-end flex-wrap">
+                      <button type="button" class="btn btn-warning btn-sm addr-btn-save-neighborhood">Salvar</button>
+                      <button type="button" class="btn btn-link btn-sm p-0 text-secondary addr-btn-cancel-neighborhood">Cancelar</button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </template>
+      </section>
 
-			<!-- Step 4: Contatos -->
-			<section data-step="4" class="d-none">
-				<h2 class="h6 mb-3">Contatos</h2>
+      <section class="mb-4">
+        <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+          <div>
+            <h2 class="h6 mb-0">Telefones</h2>
+            <div class="text-body-secondary small">Você pode adicionar quantos telefones quiser. Se um bloco ficar vazio, ele será ignorado.</div>
+          </div>
+          <button type="button" class="btn btn-outline-primary btn-sm" id="btnAddPhone">Adicionar telefone</button>
+        </div>
 
-				<div class="row g-3">
-					<!-- Telefones -->
-					<div class="col-12">
-						<div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
-							<div>
-								<div class="fw-semibold">Telefones</div>
-								<div class="text-body-secondary small">Obrigatório ao menos um telefone. Você pode cadastrar mais de um.</div>
-							</div>
-							<button type="button" class="btn btn-outline-primary btn-sm" id="btnAddPhone">Adicionar telefone</button>
-						</div>
+        <div id="phonesContainer" class="d-grid gap-3"></div>
 
-						<div class="mt-2" id="phonesContainer"></div>
+        <template id="phoneTemplate">
+          <div class="border rounded p-3 js-phone-item">
+            <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+              <div class="fw-semibold js-block-title">Telefone</div>
+              <button type="button" class="btn btn-outline-danger btn-sm" data-remove-group="phone">Remover</button>
+            </div>
 
-						<template id="phoneTemplate">
-							<div class="border rounded p-3 mt-2">
-								<div class="row g-2 align-items-end">
-									<div class="col-12 col-md-4">
-										<label class="form-label">Número</label>
-										<input class="form-control" name="phones[][number]" type="text" inputmode="numeric" placeholder="(XX) XXXXX-XXXX" />
-									</div>
-									<div class="col-12 col-md-7">
-										<label class="form-label">Observações</label>
-										<input class="form-control" name="phones[][notes]" type="text" placeholder="Ex.: celular, comercial, WhatsApp" />
-									</div>
-									<div class="col-12 col-md-1 d-grid">
-										<button type="button" class="btn btn-outline-danger" data-remove="phone">X</button>
-									</div>
-								</div>
-							</div>
-						</template>
-					</div>
+            <div class="row g-3">
+              <div class="col-12 col-md-4">
+                <label class="form-label">Número</label>
+                <input class="form-control js-phone-number" name="phones[__INDEX__][number]" type="text" inputmode="numeric" placeholder="(XX) XXXXX-XXXX" />
+                <div class="invalid-feedback">Informe o número do telefone.</div>
+              </div>
 
-					<!-- E-mails -->
-					<div class="col-12 mt-2">
-						<div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
-							<div>
-								<div class="fw-semibold">E-mails</div>
-								<div class="text-body-secondary small">Obrigatório ao menos um e-mail. Você pode cadastrar mais de um.</div>
-							</div>
-							<button type="button" class="btn btn-outline-primary btn-sm" id="btnAddEmail">Adicionar e-mail</button>
-						</div>
+              <div class="col-12 col-md-8">
+                <label class="form-label">Observações</label>
+                <input class="form-control js-phone-notes" name="phones[__INDEX__][notes]" type="text" placeholder="Ex.: celular, comercial, WhatsApp" />
+              </div>
+            </div>
+          </div>
+        </template>
+      </section>
 
-						<div class="mt-2" id="emailsContainer"></div>
+      <section>
+        <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+          <div>
+            <h2 class="h6 mb-0">E-mails</h2>
+            <div class="text-body-secondary small">Você pode adicionar quantos e-mails quiser. Se um bloco ficar vazio, ele será ignorado.</div>
+          </div>
+          <button type="button" class="btn btn-outline-primary btn-sm" id="btnAddEmail">Adicionar e-mail</button>
+        </div>
 
-						<template id="emailTemplate">
-							<div class="border rounded p-3 mt-2">
-								<div class="row g-2 align-items-end">
-									<div class="col-12 col-md-4">
-										<label class="form-label">Endereço de e-mail</label>
-										<input class="form-control" name="emails[][address]" type="email" placeholder="exemplo@email.com" />
-										<div class="invalid-feedback">Informe um e-mail válido.</div>
-									</div>
-									<div class="col-12 col-md-4">
-										<label class="form-label">Descrição</label>
-										<input class="form-control" name="emails[][description]" type="text" placeholder="Ex.: financeiro, pessoal, comercial" />
-									</div>
-									<div class="col-12 col-md-3">
-										<label class="form-label">E-mail de login?</label>
-										<select class="form-select" name="emails[][is_login]">
-											<option value="0" selected>Não</option>
-											<option value="1">Sim</option>
-										</select>
-									</div>
-									<div class="col-12 col-md-1 d-grid">
-										<button type="button" class="btn btn-outline-danger" data-remove="email">X</button>
-									</div>
-								</div>
-							</div>
-						</template>
-					</div>
-				</div>
-			</section>
-			<!-- /Step 4 -->
+        <div id="emailsContainer" class="d-grid gap-3"></div>
 
-			<!-- Step 5: Revisão -->
-			<section data-step="5" class="d-none">
-				<div class="alert alert-info mb-3" role="alert">
-					Revise seus dados antes de concluir.
-				</div>
+        <template id="emailTemplate">
+          <div class="border rounded p-3 js-email-item">
+            <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+              <div class="fw-semibold js-block-title">E-mail</div>
+              <button type="button" class="btn btn-outline-danger btn-sm" data-remove-group="email">Remover</button>
+            </div>
 
-				<div class="table-responsive">
-					<table class="table table-sm align-middle">
-						<thead>
-							<tr>
-								<th style="width: 30%;">Campo</th>
-								<th>Valor</th>
-							</tr>
-						</thead>
-						<tbody id="reviewBody"></tbody>
-					</table>
-				</div>
+            <div class="row g-3">
+              <div class="col-12 col-md-5">
+                <label class="form-label">Endereço de e-mail</label>
+                <input class="form-control js-email-address" name="emails[__INDEX__][address]" type="email" placeholder="exemplo@email.com" />
+                <div class="invalid-feedback">Informe um e-mail válido.</div>
+              </div>
 
-				<div class="form-check mt-2">
-					<input class="form-check-input" type="checkbox" id="confirmReview" required />
-					<label class="form-check-label" for="confirmReview">Confirmo que revisei meus dados</label>
-					<div class="invalid-feedback">Você precisa confirmar a revisão.</div>
-				</div>
-			</section>
-			<!-- /Step 5 -->
+              <div class="col-12 col-md-4">
+                <label class="form-label">Descrição</label>
+                <input class="form-control js-email-description" name="emails[__INDEX__][description]" type="text" placeholder="Ex.: financeiro, pessoal, comercial" />
+              </div>
 
-		</div>
+              <div class="col-12 col-md-3">
+                <label class="form-label">E-mail de login?</label>
+                <select class="form-select js-email-login" name="emails[__INDEX__][is_login]">
+                  <option value="0" selected>Não</option>
+                  <option value="1">Sim</option>
+                </select>
+              </div>
+            </div>
+          </div>
+        </template>
+      </section>
+    </div>
 
-		<div class="card-footer bg-body d-flex flex-wrap gap-2 justify-content-between align-items-center">
-			<button type="button" class="btn btn-secondary" id="btnBack" disabled>Voltar</button>
-
-			<div class="d-flex flex-wrap gap-2">
-				<button type="button" class="btn btn-primary" id="btnNext">Continuar</button>
-				<button type="submit" class="btn btn-success d-none" id="btnSubmit">Concluir</button>
-			</div>
-		</div>
-	</div>
+    <div class="card-footer bg-body d-flex justify-content-end gap-2">
+      <a href="<?= url('person'); ?>" class="btn btn-secondary">Cancelar</a>
+      <button type="submit" class="btn btn-primary">Salvar</button>
+    </div>
+  </div>
 </form>
+
 <script>
-	const PERSON_NEIGHBORHOOD_SEARCH_URL = "<?= url('person/neighborhoodSearch'); ?>";
-	const PERSON_NEIGHBORHOOD_CREATE_URL = "<?= url('person/neighborhoodCreate'); ?>";
-	const PERSON_CITY_SEARCH_URL         = "<?= url('person/citySearch'); ?>";
+  const PERSON_NEIGHBORHOOD_SEARCH_URL = "<?= url('person/neighborhoodSearch'); ?>";
+  const PERSON_NEIGHBORHOOD_CREATE_URL = "<?= url('person/neighborhoodCreate'); ?>";
+  const PERSON_CITY_SEARCH_URL = "<?= url('person/citySearch'); ?>";
+
+  (function ()
+    {
+      const form = document.getElementById("personCreateForm");
+
+      if (!form)
+        {
+          return;
+        }
+
+      const formAlert = document.getElementById("formAlert");
+      const addressesContainer = document.getElementById("addressesContainer");
+      const phonesContainer = document.getElementById("phonesContainer");
+      const emailsContainer = document.getElementById("emailsContainer");
+
+      const addressTemplate = document.getElementById("addressTemplate");
+      const phoneTemplate = document.getElementById("phoneTemplate");
+      const emailTemplate = document.getElementById("emailTemplate");
+
+      const btnAddAddress = document.getElementById("btnAddAddress");
+      const btnAddPhone = document.getElementById("btnAddPhone");
+      const btnAddEmail = document.getElementById("btnAddEmail");
+      let addressIndex = 0;
+      let phoneIndex = 0;
+      let emailIndex = 0;
+
+      function cloneTemplate(template)
+        {
+          return template.content.firstElementChild.cloneNode(true);
+        }
+
+      function applyIndexedNames(block, token, index)
+        {
+          block.querySelectorAll("[name]").forEach(function (field)
+            {
+              const currentName = field.getAttribute("name");
+              if (!currentName || currentName.indexOf(token) === -1)
+                {
+                  return;
+                }
+
+              field.setAttribute("name", currentName.split(token).join(String(index)));
+            });
+        }
+
+      function showFormAlert(message)
+        {
+          formAlert.textContent = message;
+          formAlert.classList.remove("d-none");
+        }
+
+      function hideFormAlert()
+        {
+          formAlert.textContent = "";
+          formAlert.classList.add("d-none");
+        }
+
+      function applyCepMask(value)
+        {
+          const digits = value.replace(/\D/g, "").slice(0, 8);
+          return digits.replace(/(\d{5})(\d{1,3})$/, "$1-$2");
+        }
+
+      document.addEventListener("input", function (event)
+        {
+          if (event.target && event.target.classList.contains("mask-cep"))
+            {
+              const input = event.target;
+              const previousValue = input.value;
+              const previousPosition = input.selectionStart || previousValue.length;
+              input.value = applyCepMask(input.value);
+              const diff = input.value.length - previousValue.length;
+              const nextPosition = Math.max(0, previousPosition + diff);
+              input.setSelectionRange(nextPosition, nextPosition);
+            }
+        });
+
+      function updateBlockTitles(container, selector, prefix)
+        {
+          Array.from(container.querySelectorAll(selector)).forEach(function (block, index)
+            {
+              const title = block.querySelector(".js-block-title");
+              if (title)
+                {
+                  title.textContent = prefix + " " + (index + 1);
+                }
+            });
+        }
+
+      function resetBlock(block)
+        {
+          block.querySelectorAll("input").forEach(function (input)
+            {
+              input.value = "";
+              input.classList.remove("is-invalid");
+            });
+
+          block.querySelectorAll("select").forEach(function (select)
+            {
+              select.selectedIndex = 0;
+              select.classList.remove("is-invalid");
+            });
+
+          block.querySelectorAll("ul").forEach(function (list)
+            {
+              list.innerHTML = "";
+              list.style.display = "none";
+            });
+
+          block.querySelectorAll(".addr-create-panel").forEach(function (panel)
+            {
+              panel.classList.add("d-none");
+            });
+        }
+
+      function removeBlock(button, container, selector, prefix)
+        {
+          const block = button.closest(selector);
+          if (!block)
+            {
+              return;
+            }
+
+          const total = container.querySelectorAll(selector).length;
+          if (total <= 1)
+            {
+              resetBlock(block);
+            }
+          else
+            {
+              block.remove();
+            }
+
+          updateBlockTitles(container, selector, prefix);
+        }
+
+      function initMiniAutocomplete(endpoint, inputEl, listEl, onSelect, extraOption)
+        {
+          let abortController = null;
+
+          function clearList()
+            {
+              listEl.innerHTML = "";
+              listEl.style.display = "none";
+            }
+
+          function renderList(items, term)
+            {
+              listEl.innerHTML = "";
+
+              items.forEach(function (item)
+                {
+                  const listItem = document.createElement("li");
+                  listItem.className = "list-group-item list-group-item-action py-1 px-2";
+                  listItem.textContent = item.label;
+                  listItem.addEventListener("mousedown", function (event)
+                    {
+                      event.preventDefault();
+                      onSelect(item);
+                      clearList();
+                    });
+                  listEl.appendChild(listItem);
+                });
+
+              if (extraOption)
+                {
+                  const extraItem = document.createElement("li");
+                  extraItem.className = "list-group-item list-group-item-action py-1 px-2 text-primary fw-semibold";
+                  extraItem.textContent = extraOption.label(term);
+                  extraItem.addEventListener("mousedown", function (event)
+                    {
+                      event.preventDefault();
+                      clearList();
+                      extraOption.onClick(term);
+                    });
+                  listEl.appendChild(extraItem);
+                }
+
+              listEl.style.display = listEl.children.length ? "block" : "none";
+            }
+
+          inputEl.addEventListener("input", async function ()
+            {
+              const term = inputEl.value.trim();
+
+              if (term.length < 1)
+                {
+                  clearList();
+                  return;
+                }
+
+              if (abortController)
+                {
+                  abortController.abort();
+                }
+
+              abortController = new AbortController();
+
+              try
+                {
+                  const requestUrl = new URL(endpoint, window.location.origin);
+                  requestUrl.searchParams.set("term", term);
+
+                  const response = await fetch(requestUrl.toString(), {
+                    method: "GET",
+                    credentials: "same-origin",
+                    headers: {
+                      "Accept": "application/json",
+                      "X-Requested-With": "XMLHttpRequest"
+                    },
+                    signal: abortController.signal
+                  });
+
+                  const data = await response.json();
+                  renderList(data.items || [], term);
+                }
+              catch (error)
+                {
+                  if (error && error.name !== "AbortError")
+                    {
+                      console.error("Erro no autocomplete:", error);
+                    }
+                }
+            });
+
+          document.addEventListener("click", function (event)
+            {
+              if (event.target !== inputEl && !listEl.contains(event.target))
+                {
+                  clearList();
+                }
+            });
+        }
+
+      function initAddressBlock(block)
+        {
+          const hiddenId = block.querySelector(".addr-neighborhood-id");
+          const textInput = block.querySelector(".addr-neighborhood-input");
+          const resultsList = block.querySelector(".addr-neighborhood-results");
+          const createPanel = block.querySelector(".addr-create-panel");
+          const newNameInput = block.querySelector(".addr-new-neighborhood-name");
+          const newCityId = block.querySelector(".addr-new-city-id");
+          const newCityInput = block.querySelector(".addr-new-city-input");
+          const newCityList = block.querySelector(".addr-new-city-results");
+          const btnSave = block.querySelector(".addr-btn-save-neighborhood");
+          const btnCancel = block.querySelector(".addr-btn-cancel-neighborhood");
+
+          function showCreatePanel(term)
+            {
+              createPanel.classList.remove("d-none");
+              newNameInput.value = term;
+              newCityId.value = "";
+              newCityInput.value = "";
+              hiddenId.value = "";
+              textInput.value = "";
+              textInput.classList.remove("is-invalid");
+            }
+
+          function hideCreatePanel()
+            {
+              createPanel.classList.add("d-none");
+              newNameInput.value = "";
+              newCityId.value = "";
+              newCityInput.value = "";
+            }
+
+          textInput.addEventListener("input", function ()
+            {
+              hiddenId.value = "";
+              textInput.classList.remove("is-invalid");
+            });
+
+          newCityInput.addEventListener("input", function ()
+            {
+              newCityId.value = "";
+              newCityInput.classList.remove("is-invalid");
+            });
+
+          initMiniAutocomplete(
+            PERSON_NEIGHBORHOOD_SEARCH_URL,
+            textInput,
+            resultsList,
+            function onSelect(item)
+              {
+                hiddenId.value = item.id;
+                textInput.value = item.label;
+                textInput.classList.remove("is-invalid");
+                hideCreatePanel();
+              },
+            {
+              label: function (term)
+                {
+                  return "+ Criar bairro: \"" + term + "\"";
+                },
+              onClick: function (term)
+                {
+                  showCreatePanel(term);
+                }
+            }
+          );
+
+          initMiniAutocomplete(
+            PERSON_CITY_SEARCH_URL,
+            newCityInput,
+            newCityList,
+            function onSelect(item)
+              {
+                newCityId.value = item.id;
+                newCityInput.value = item.label;
+                newCityInput.classList.remove("is-invalid");
+              }
+          );
+
+          btnSave.addEventListener("click", async function ()
+            {
+              const neighborhoodName = newNameInput.value.trim();
+              const cityId = newCityId.value.trim();
+
+              newNameInput.classList.remove("is-invalid");
+              newCityInput.classList.remove("is-invalid");
+
+              if (!neighborhoodName)
+                {
+                  newNameInput.classList.add("is-invalid");
+                  newNameInput.focus();
+                  return;
+                }
+
+              if (!cityId)
+                {
+                  newCityInput.classList.add("is-invalid");
+                  newCityInput.focus();
+                  return;
+                }
+
+              btnSave.disabled = true;
+              btnSave.textContent = "Salvando...";
+
+              try
+                {
+                  const body = new URLSearchParams({
+                    name: neighborhoodName,
+                    city_id: cityId
+                  });
+
+                  const response = await fetch(PERSON_NEIGHBORHOOD_CREATE_URL, {
+                    method: "POST",
+                    credentials: "same-origin",
+                    headers: {
+                      "Accept": "application/json",
+                      "X-Requested-With": "XMLHttpRequest",
+                      "Content-Type": "application/x-www-form-urlencoded"
+                    },
+                    body: body.toString()
+                  });
+
+                  const data = await response.json().catch(function ()
+                    {
+                      return {};
+                    });
+
+                  if (!response.ok || data.error)
+                    {
+                      throw new Error(data.error || "Não foi possível cadastrar o bairro.");
+                    }
+
+                  hiddenId.value = data.id;
+                  textInput.value = data.name;
+                  textInput.classList.remove("is-invalid");
+                  hideCreatePanel();
+                }
+              catch (error)
+                {
+                  alert(error.message || "Erro de comunicação ao salvar bairro.");
+                }
+              finally
+                {
+                  btnSave.disabled = false;
+                  btnSave.textContent = "Salvar";
+                }
+            });
+
+          btnCancel.addEventListener("click", function ()
+            {
+              hideCreatePanel();
+            });
+        }
+
+      function addAddressBlock()
+        {
+          const block = cloneTemplate(addressTemplate);
+          applyIndexedNames(block, "__INDEX__", addressIndex);
+          addressIndex += 1;
+          addressesContainer.appendChild(block);
+          initAddressBlock(block);
+          updateBlockTitles(addressesContainer, ".js-address-item", "Endereço");
+        }
+
+      function addPhoneBlock()
+        {
+          const block = cloneTemplate(phoneTemplate);
+          applyIndexedNames(block, "__INDEX__", phoneIndex);
+          phoneIndex += 1;
+          phonesContainer.appendChild(block);
+          updateBlockTitles(phonesContainer, ".js-phone-item", "Telefone");
+        }
+
+      function addEmailBlock()
+        {
+          const block = cloneTemplate(emailTemplate);
+          applyIndexedNames(block, "__INDEX__", emailIndex);
+          emailIndex += 1;
+          emailsContainer.appendChild(block);
+          updateBlockTitles(emailsContainer, ".js-email-item", "E-mail");
+        }
+
+      function clearAssociationValidation()
+        {
+          form.querySelectorAll(
+            ".js-address-street, .addr-neighborhood-input, .js-phone-number, .js-email-address"
+          ).forEach(function (field)
+            {
+              field.classList.remove("is-invalid");
+            });
+        }
+
+      function isAddressTouched(block)
+        {
+          const zip = block.querySelector(".js-address-zip");
+          const street = block.querySelector(".js-address-street");
+          const number = block.querySelector(".js-address-number");
+          const observations = block.querySelector(".js-address-observations");
+          const neighborhood = block.querySelector(".addr-neighborhood-input");
+
+          return [
+            zip ? zip.value : "",
+            street ? street.value : "",
+            number ? number.value : "",
+            observations ? observations.value : "",
+            neighborhood ? neighborhood.value : ""
+          ].some(function (value)
+            {
+              return value.trim() !== "";
+            });
+        }
+
+      function isPhoneTouched(block)
+        {
+          const phoneNumber = block.querySelector(".js-phone-number");
+          const notes = block.querySelector(".js-phone-notes");
+
+          return [
+            phoneNumber ? phoneNumber.value : "",
+            notes ? notes.value : ""
+          ].some(function (value)
+            {
+              return value.trim() !== "";
+            });
+        }
+
+      function isEmailTouched(block)
+        {
+          const addressField = block.querySelector(".js-email-address");
+          const descriptionField = block.querySelector(".js-email-description");
+          const loginField = block.querySelector(".js-email-login");
+
+          const address = addressField ? addressField.value : "";
+          const description = descriptionField ? descriptionField.value : "";
+          const isLogin = loginField ? loginField.value : "0";
+
+          return address.trim() !== "" || description.trim() !== "" || isLogin === "1";
+        }
+
+      function validateAssociationBlocks()
+        {
+          let valid = true;
+
+          addressesContainer.querySelectorAll(".js-address-item").forEach(function (block)
+            {
+              if (!isAddressTouched(block))
+                {
+                  return;
+                }
+
+              const street = block.querySelector(".js-address-street");
+              const neighborhoodId = block.querySelector(".addr-neighborhood-id");
+              const neighborhoodInput = block.querySelector(".addr-neighborhood-input");
+
+              if (!street.value.trim())
+                {
+                  street.classList.add("is-invalid");
+                  valid = false;
+                }
+
+              if (!neighborhoodId.value.trim())
+                {
+                  neighborhoodInput.classList.add("is-invalid");
+                  valid = false;
+                }
+            });
+
+          phonesContainer.querySelectorAll(".js-phone-item").forEach(function (block)
+            {
+              if (!isPhoneTouched(block))
+                {
+                  return;
+                }
+
+              const phoneNumber = block.querySelector(".js-phone-number");
+
+              if (!phoneNumber.value.trim())
+                {
+                  phoneNumber.classList.add("is-invalid");
+                  valid = false;
+                }
+            });
+
+          emailsContainer.querySelectorAll(".js-email-item").forEach(function (block)
+            {
+              if (!isEmailTouched(block))
+                {
+                  return;
+                }
+
+              const emailAddress = block.querySelector(".js-email-address");
+
+              if (!emailAddress.value.trim() || !emailAddress.checkValidity())
+                {
+                  emailAddress.classList.add("is-invalid");
+                  valid = false;
+                }
+            });
+
+          return valid;
+        }
+
+      btnAddAddress.addEventListener("click", addAddressBlock);
+      btnAddPhone.addEventListener("click", addPhoneBlock);
+      btnAddEmail.addEventListener("click", addEmailBlock);
+
+      addressesContainer.addEventListener("click", function (event)
+        {
+          const button = event.target.closest("[data-remove-group='address']");
+          if (button)
+            {
+              removeBlock(button, addressesContainer, ".js-address-item", "Endereço");
+            }
+        });
+
+      phonesContainer.addEventListener("click", function (event)
+        {
+          const button = event.target.closest("[data-remove-group='phone']");
+          if (button)
+            {
+              removeBlock(button, phonesContainer, ".js-phone-item", "Telefone");
+            }
+        });
+
+      emailsContainer.addEventListener("click", function (event)
+        {
+          const button = event.target.closest("[data-remove-group='email']");
+          if (button)
+            {
+              removeBlock(button, emailsContainer, ".js-email-item", "E-mail");
+            }
+        });
+
+      form.addEventListener("submit", function (event)
+        {
+          hideFormAlert();
+          clearAssociationValidation();
+
+          const nativeValid = form.checkValidity();
+          const associationsValid = validateAssociationBlocks();
+
+          if (!nativeValid || !associationsValid)
+            {
+              event.preventDefault();
+              event.stopPropagation();
+              form.classList.add("was-validated");
+              showFormAlert("Revise os campos destacados antes de salvar.");
+
+              const firstInvalidField = form.querySelector(".is-invalid, :invalid");
+              if (firstInvalidField && typeof firstInvalidField.scrollIntoView === "function")
+                {
+                  firstInvalidField.scrollIntoView({behavior: "smooth", block: "center"});
+                }
+
+              return;
+            }
+
+          form.classList.add("was-validated");
+        });
+
+      addAddressBlock();
+      addPhoneBlock();
+      addEmailBlock();
+    })();
 </script>
-<script src="<?= url('assets/js/person/create.js?v=4'); ?>"></script>

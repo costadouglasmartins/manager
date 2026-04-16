@@ -2,10 +2,10 @@
 
 namespace App\Controllers;
 
-use App\Core\Controller;
+use App\Core\TenantAwareController;
 use App\Models\PhoneNumber;
 
-class PhoneNumberController extends Controller
+class PhoneNumberController extends TenantAwareController
 	{
 
 	/**

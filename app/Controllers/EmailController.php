@@ -2,10 +2,10 @@
 
 namespace App\Controllers;
 
-use App\Core\Controller;
+use App\Core\TenantAwareController;
 use App\Models\Email;
 
-class EmailController extends Controller
+class EmailController extends TenantAwareController
 	{
 
 	/**

@@ -2,12 +2,12 @@
 
 namespace App\Controllers;
 
-use App\Core\Controller;
+use App\Core\TenantAwareController;
 use App\Models\Person;
 use App\Models\Neighborhood;
 use App\Models\City;
 
-class PersonController extends Controller
+class PersonController extends TenantAwareController
 	{
 
 	/**
@@ -98,10 +98,19 @@ class PersonController extends Controller
 
 		$items = array_map(function ($r)
 			{
+			$label = trim((string) ($r['name'] ?? ''));
+			$cityName = trim((string) ($r['city_name'] ?? ''));
+
+			if ($cityName !== '')
+				{
+				$label .= ' - ' . $cityName;
+				}
+
 			return [
 				'id'    => (int) $r['id'],
-				'label' => $r['name'],
+				'label' => $label,
 				'name'  => $r['name'],
+				'city_name' => $r['city_name'] ?? null,
 			];
 			}, $rows);
 

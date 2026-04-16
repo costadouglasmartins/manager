@@ -132,6 +132,28 @@ class Controller
 		}
 
 	/**
+	 * Require an active tenant context.
+	 */
+	protected function requireTenant(): void
+		{
+		if (TenantContext::hasTenant())
+			{
+			return;
+			}
+
+		if ($this->wantsJson())
+			{
+			$this->json([
+				'error' => 'tenant_required',
+				'message' => 'Selecione um tenant antes de acessar este recurso',
+			], 409);
+			}
+
+		$this->redirect('tenant/select');
+		exit;
+		}
+
+	/**
 	 * Require a specific permission (ability).
 	 */
 	protected function requirePermission(string $ability): void

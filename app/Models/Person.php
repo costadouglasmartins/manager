@@ -2,10 +2,10 @@
 
 namespace App\Models;
 
-use App\Core\Model;
+use App\Core\TenantModel;
 use PDO;
 
-class Person extends Model
+class Person extends TenantModel
 	{
 
 	/**
@@ -19,7 +19,7 @@ class Person extends Model
 		}
 
 	/**
-	 * Create method - saves person, user, phones and emails in a single transaction
+	 * Create method - saves person, optional user, phones, addresses and emails in a single transaction
 	 * @param Array $data Data to save
 	 * @return array
 	 * @throws \Exception
@@ -52,22 +52,40 @@ class Person extends Model
 			]);
 			$personId = $this->db->lastInsertId();
 
-			// Save user
-			$sqlUser = "INSERT INTO users
+			$userId = null;
+			$hasUserData = !empty($data['user']) && is_array($data['user']) && (
+				trim((string) ($data['user']['username'] ?? '')) !== ''
+				|| trim((string) ($data['user']['password'] ?? '')) !== ''
+				|| trim((string) ($data['user']['type'] ?? '')) !== ''
+			);
+
+			if ($hasUserData)
+				{
+				$username = trim((string) ($data['user']['username'] ?? ''));
+				$password = (string) ($data['user']['password'] ?? '');
+				$type     = trim((string) ($data['user']['type'] ?? ''));
+
+				if ($username === '' || $password === '' || $type === '')
+					{
+					throw new \InvalidArgumentException('Dados do usuário incompletos.');
+					}
+
+				$sqlUser = "INSERT INTO users
                       (`person_id`, `username`, `password`, `type`, `active`, `created`, `modified`)
                     VALUES
                       (:person_id, :username, :password, :type, :active, :created, :modified)";
-			$stmtUser = $this->db->prepare($sqlUser);
-			$stmtUser->execute([
-				'person_id' => $personId,
-				'username'  => $data['user']['username'],
-				'password'  => password_hash($data['user']['password'], PASSWORD_DEFAULT),
-				'type'      => $data['user']['type'],
-				'active'    => intval($data['user']['active'] ?? 1),
-				'created'   => date('Y-m-d H:i:s'),
-				'modified'  => date('Y-m-d H:i:s'),
-			]);
-			$userId = $this->db->lastInsertId();
+				$stmtUser = $this->db->prepare($sqlUser);
+				$stmtUser->execute([
+					'person_id' => $personId,
+					'username'  => $username,
+					'password'  => password_hash($password, PASSWORD_DEFAULT),
+					'type'      => $type,
+					'active'    => intval($data['user']['active'] ?? 1),
+					'created'   => date('Y-m-d H:i:s'),
+					'modified'  => date('Y-m-d H:i:s'),
+				]);
+				$userId = $this->db->lastInsertId();
+				}
 
 			// Save phones
 			if (!empty($data['phones']) && is_array($data['phones']))
