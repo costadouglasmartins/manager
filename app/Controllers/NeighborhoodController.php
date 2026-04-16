@@ -134,19 +134,26 @@ class NeighborhoodController extends Controller
 		$items = array_map(function ($r)
 			{
 			$label = trim($r['name'] ?? '');
+			$cityName = trim((string) ($r['city_name'] ?? ''));
+
+			if ($cityName !== '')
+				{
+				$label .= ' - ' . $cityName;
+				}
+
 			if ($label === '')
 				{
 				$label = (string) ($r['id'] ?? '');
 				}
 			return [
-				'id'    => isset($r['id']) ? (int) $r['id'] : null,
-				'label' => $label,
-				'name'  => $r['name'] ?? null,
+				'id'        => isset($r['id']) ? (int) $r['id'] : null,
+				'label'     => $label,
+				'name'      => $r['name'] ?? null,
+				'city_name' => $r['city_name'] ?? null,
 			];
 			}, $rows);
 
 		$this->json(['items' => $items]);
 		}
 	}
-
 ?>

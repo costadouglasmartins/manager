@@ -48,14 +48,14 @@
       <ul id="personResults" class="list-group mt-1 w-100" style="overflow:auto; max-height:240px; position:absolute; z-index:1050;"></ul>
     </div>
 
-    <div class="mb-2 col-md-6 col-lg-6 position-relative">
-      <label class="form-label" for="neighborhoodName">Bairro</label>
-      <input type="hidden" id="neighborhood_id" name="neighborhood_id" value="<?= (int) $address['neighborhood_id']; ?>">
-      <input id="neighborhoodName" type="text" class="form-control js-autocomplete" autocomplete="off"
-        value="<?= htmlspecialchars($address['neighborhood_name'] ?? '', ENT_QUOTES, 'UTF-8'); ?>"
-        placeholder="Digite o nome do bairro..."
-        data-endpoint="<?= url('neighborhood/autocomplete'); ?>"
-        data-results="#neighborhoodResults"
+	    <div class="mb-2 col-md-6 col-lg-6 position-relative">
+	      <label class="form-label" for="neighborhoodName">Bairro</label>
+	      <input type="hidden" id="neighborhood_id" name="neighborhood_id" value="<?= (int) $address['neighborhood_id']; ?>">
+	      <input id="neighborhoodName" type="text" class="form-control js-autocomplete" autocomplete="off"
+	        value="<?= htmlspecialchars(trim(($address['neighborhood_name'] ?? '') . (($address['neighborhood_city_name'] ?? '') !== '' ? ' - ' . $address['neighborhood_city_name'] : '')), ENT_QUOTES, 'UTF-8'); ?>"
+	        placeholder="Digite o nome do bairro..."
+	        data-endpoint="<?= url('neighborhood/autocomplete'); ?>"
+	        data-results="#neighborhoodResults"
         data-hidden="#neighborhood_id"
         data-minlen="1"
         data-param="term">

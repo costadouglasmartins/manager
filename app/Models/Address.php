@@ -2,19 +2,101 @@
 
 namespace App\Models;
 
+use App\Core\Database;
 use App\Core\TenantModel;
 use PDO;
 
 class Address extends TenantModel
 	{
+	private PDO $managerDb;
+
+	public function __construct()
+		{
+		parent::__construct();
+		$this->managerDb = Database::getManagerConnection();
+		}
+
+	private function baseSelectSql(): string
+		{
+		return "SELECT a.*, p.name AS person_name FROM addresses a LEFT JOIN people p ON p.id = a.person_id";
+		}
+
+	private function appendNeighborhoodNames(array $rows): array
+		{
+		if ($rows === [])
+			{
+			return $rows;
+			}
+
+		$neighborhoodIds = [];
+
+		foreach ($rows as $row)
+			{
+			if (!empty($row['neighborhood_id']))
+				{
+				$neighborhoodIds[(int) $row['neighborhood_id']] = (int) $row['neighborhood_id'];
+				}
+			}
+
+		if ($neighborhoodIds === [])
+			{
+			foreach ($rows as &$row)
+				{
+				$row['neighborhood_name'] = null;
+				$row['neighborhood_city_name'] = null;
+				}
+			unset($row);
+
+			return $rows;
+			}
+
+		$placeholders = implode(', ', array_fill(0, count($neighborhoodIds), '?'));
+		$stmt = $this->managerDb->prepare("
+			SELECT n.id, n.name, c.name AS city_name
+			FROM neighborhoods n
+			LEFT JOIN cities c ON c.id = n.city_id
+			WHERE n.id IN ({$placeholders})
+		");
+		$stmt->execute(array_values($neighborhoodIds));
+
+		$namesById = [];
+		$cityNamesById = [];
+		foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $neighborhood)
+			{
+			$namesById[(int) $neighborhood['id']] = $neighborhood['name'];
+			$cityNamesById[(int) $neighborhood['id']] = $neighborhood['city_name'] ?? null;
+			}
+
+		foreach ($rows as &$row)
+			{
+			$neighborhoodId = isset($row['neighborhood_id']) ? (int) $row['neighborhood_id'] : 0;
+			$row['neighborhood_name'] = $namesById[$neighborhoodId] ?? null;
+			$row['neighborhood_city_name'] = $cityNamesById[$neighborhoodId] ?? null;
+			}
+		unset($row);
+
+		return $rows;
+		}
+
+	private function appendNeighborhoodName($row)
+		{
+		if (!is_array($row))
+			{
+			return $row;
+			}
+
+		$rows = $this->appendNeighborhoodNames([$row]);
+
+		return $rows[0] ?? $row;
+		}
 
 	/**
 	 * Get all method
 	 */
 	public function getAll()
 		{
-		$stmt = $this->db->query("SELECT a.*, p.name AS person_name, n.name AS neighborhood_name FROM addresses a LEFT JOIN people p ON p.id = a.person_id LEFT JOIN neighborhoods n ON n.id = a.neighborhood_id ORDER BY a.id DESC");
-		return $stmt->fetchAll(PDO::FETCH_ASSOC);
+		$stmt = $this->db->query($this->baseSelectSql() . " ORDER BY a.id DESC");
+		return $this->appendNeighborhoodNames($stmt->fetchAll(PDO::FETCH_ASSOC));
 		}
 
 	/**
@@ -56,9 +138,9 @@ class Address extends TenantModel
 	 */
 	public function find($id)
 		{
-		$stmt = $this->db->prepare("SELECT a.*, p.name AS person_name, n.name AS neighborhood_name FROM addresses a LEFT JOIN people p ON p.id = a.person_id LEFT JOIN neighborhoods n ON n.id = a.neighborhood_id WHERE a.id = :id");
+		$stmt = $this->db->prepare($this->baseSelectSql() . " WHERE a.id = :id");
 		$stmt->execute(['id' => $id]);
-		return $stmt->fetch(PDO::FETCH_ASSOC);
+		return $this->appendNeighborhoodName($stmt->fetch(PDO::FETCH_ASSOC));
 		}
 
 	/**
@@ -96,7 +178,7 @@ class Address extends TenantModel
 	 */
 	public function search(array $filters = [], int $limit = 10, int $offset = 0): array
 		{
-		$sql = "SELECT a.*, p.name AS person_name, n.name AS neighborhood_name FROM addresses a LEFT JOIN people p ON p.id = a.person_id LEFT JOIN neighborhoods n ON n.id = a.neighborhood_id WHERE 1=1";
+		$sql = $this->baseSelectSql() . " WHERE 1=1";
 		$params = [];
 
 		if (isset($filters['id']) && $filters['id'] !== '')
@@ -138,7 +220,7 @@ class Address extends TenantModel
 
 		$stmt->execute();
 
-		return $stmt->fetchAll(PDO::FETCH_ASSOC);
+		return $this->appendNeighborhoodNames($stmt->fetchAll(PDO::FETCH_ASSOC));
 		}
 
 	/**
@@ -191,10 +273,10 @@ class Address extends TenantModel
 	 */
 	public function findAllByAddressId($id)
 		{
-		$stmt = $this->db->prepare("SELECT a.*, p.name AS person_name, n.name AS neighborhood_name FROM addresses a LEFT JOIN people p ON p.id = a.person_id LEFT JOIN neighborhoods n ON n.id = a.neighborhood_id WHERE a.id = :id");
+		$stmt = $this->db->prepare($this->baseSelectSql() . " WHERE a.id = :id");
 		$stmt->execute(['id' => $id]);
 		$data = $stmt->fetch(PDO::FETCH_ASSOC);
-		return ['address' => $data];
+		return ['address' => $this->appendNeighborhoodName($data)];
 		}
 	}
 
