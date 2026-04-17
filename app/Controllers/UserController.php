@@ -11,12 +11,42 @@ class UserController extends Controller
 	{
 
 	/**
+	 * Returns the current tenant id after validating auth, tenant and ability.
+	 */
+	private function currentTenantId(string $ability): int
+		{
+		$this->requireAuth();
+		$this->requireTenant();
+		$this->requirePermission($ability);
+
+		$tenant = TenantContext::tenant();
+		return (int) ($tenant['id'] ?? 0);
+		}
+
+	/**
+	 * Aborts the request when the user does not belong to the current tenant.
+	 */
+	private function abortUserNotFound(): void
+		{
+		if ($this->wantsJson())
+			{
+			$this->json([
+				'error' => 'user_not_found',
+				'message' => 'Usuario nao encontrado ou sem acesso para o tenant selecionado.',
+			], 404);
+			}
+
+		http_response_code(404);
+		echo 'Usuario nao encontrado ou sem acesso para o tenant selecionado.';
+		exit;
+		}
+
+	/**
 	 * Index method
 	 */
 	public function index()
 		{
-		$this->requirePermission('user.index');
-
+		$tenantId = $this->currentTenantId('user.index');
 		$user = new User();
 
 		// Filtros vindos da query string
@@ -39,10 +69,10 @@ class UserController extends Controller
 		$offset = ($page - 1) * $perPage;
 
 		// Busca paginada com filtros
-		$users = $user->search($filters, $perPage, $offset);
+		$users = $user->search($filters, $perPage, $offset, $tenantId);
 
 		// Total para paginação (com os mesmos filtros)
-		$total = $user->count($filters);
+		$total = $user->count($filters, $tenantId);
 		$totalPages = (int) ceil($total / $perPage);
 		if ($totalPages < 1)
 			{
@@ -65,9 +95,13 @@ class UserController extends Controller
 	 */
 	public function edit($id)
 		{
-		$this->requirePermission('user.edit');
+		$tenantId = $this->currentTenantId('user.edit');
 		$user = new User();
-		$data = $user->find($id);
+		$data = $user->find($id, $tenantId);
+		if (!$data)
+			{
+			$this->abortUserNotFound();
+			}
 		$this->view('users/edit', ['user' => $data]);
 		}
 
@@ -77,9 +111,15 @@ class UserController extends Controller
 	 */
 	public function update($id)
 		{
-		$this->requirePermission('user.update');
+		$tenantId = $this->currentTenantId('user.update');
 		$user = new User();
-		$user->update($id, $_POST);
+
+		if (!$user->find($id, $tenantId))
+			{
+			$this->abortUserNotFound();
+			}
+
+		$user->update($id, $_POST, $tenantId);
 		$this->redirect('user');
 		}
 
@@ -194,10 +234,18 @@ class UserController extends Controller
    */
   public function informations($id)
 		{
-		$this->requirePermission('user.informations');
+		$tenantId = $this->currentTenantId('user.informations');
 		$user = new User();
-		$data = $user->find($id);
-		$this->view('users/informations', ['title' => 'Informações sobre o(a) usuário(a)', 'user' => $data]);
+		$data = $user->find($id, $tenantId);
+		if (!$data)
+			{
+			$this->abortUserNotFound();
+			}
+		$this->view('users/informations', [
+			'title' => 'Informações sobre o(a) usuário(a)',
+			'user' => $data,
+			'data' => ['user' => $data],
+		]);
 		}
 	}
 

@@ -11,22 +11,33 @@ class User extends Model
   /**
 	 * Search method
 	 */
-	public function search(array $filters = [], int $limit = 10, int $offset = 0): array
+	public function search(array $filters = [], int $limit = 10, int $offset = 0, ?int $tenantId = null): array
 		{
-		$sql = "SELECT * FROM users WHERE 1=1";
+		$sql = "SELECT DISTINCT User.* FROM users AS User";
 		$params = [];
+
+		if ($tenantId !== null)
+			{
+			$sql .= " INNER JOIN tenant_users AS TenantUser
+				ON TenantUser.user_id = User.id
+				AND TenantUser.tenant_id = :tenant_id
+				AND TenantUser.active = 1";
+			$params['tenant_id'] = $tenantId;
+			}
+
+		$sql .= " WHERE 1=1";
 
 		// Id 
 		if (isset($filters['id']) && $filters['id'] !== '')
 			{
-			$sql .= " AND id = :id";
+			$sql .= " AND User.id = :id";
 			$params['id'] = (int) $filters['id'];
 			}
 
 		// Username
 		if (isset($filters['username']) && $filters['username'] !== '')
 			{
-			$sql .= " AND username LIKE :username";
+			$sql .= " AND User.username LIKE :username";
 			$params['username'] = '%' . $filters['username'] . '%';
 			}
 
@@ -40,7 +51,7 @@ class User extends Model
 		// Type
 		if (isset($filters['type']) && $filters['type'] !== '')
 			{
-			$sql .= " AND `type` = :type";
+			$sql .= " AND User.`type` = :type";
 			$params['type'] = $filters['type'];
 			}
 
@@ -51,12 +62,12 @@ class User extends Model
 
 			if (in_array($active, [0, 1], true))
 				{
-				$sql .= " AND active = :active";
+				$sql .= " AND User.active = :active";
 				$params['active'] = $active;
 				}
 			}
 
-		$sql .= " ORDER BY id DESC LIMIT :limit OFFSET :offset";
+		$sql .= " ORDER BY User.id DESC LIMIT :limit OFFSET :offset";
 
 		$stmt = $this->db->prepare($sql);
 
@@ -79,22 +90,33 @@ class User extends Model
 	/**
 	 * Count method
 	 */
-	public function count(array $filters = []): int
+	public function count(array $filters = [], ?int $tenantId = null): int
 		{
-		$sql = "SELECT COUNT(*) AS total FROM users WHERE 1=1";
+		$sql = "SELECT COUNT(DISTINCT User.id) AS total FROM users AS User";
 		$params = [];
+
+		if ($tenantId !== null)
+			{
+			$sql .= " INNER JOIN tenant_users AS TenantUser
+				ON TenantUser.user_id = User.id
+				AND TenantUser.tenant_id = :tenant_id
+				AND TenantUser.active = 1";
+			$params['tenant_id'] = $tenantId;
+			}
+
+		$sql .= " WHERE 1=1";
 
 		// Filtro por ID (igual)
 		if (!empty($filters['id']))
 			{
-			$sql .= " AND id = :id";
+			$sql .= " AND User.id = :id";
 			$params['id'] = (int) $filters['id'];
 			}
 
 		// Filtro por Username (LIKE)
 		if (!empty($filters['username']))
 			{
-			$sql .= " AND username LIKE :username";
+			$sql .= " AND User.username LIKE :username";
 			$params['username'] = '%' . $filters['username'] . '%';
 			}
 
@@ -108,7 +130,7 @@ class User extends Model
     // Filtro por Fantasia (LIKE)
 		if (!empty($filters['type']))
 			{
-			$sql .= " AND `type` = :type";
+			$sql .= " AND User.`type` = :type";
 			$params['type'] = $filters['type'];
 			}
     
@@ -118,7 +140,7 @@ class User extends Model
 
 			if (in_array($active, [0, 1], true))
 				{
-				$sql .= " AND active = :active";
+				$sql .= " AND User.active = :active";
 				$params['active'] = $active;
 				}
 			}
@@ -150,20 +172,33 @@ class User extends Model
 	 * @param Integer $id User id
 	 * @return array
 	 */
-	public function find($id)
+	public function find($id, ?int $tenantId = null)
 		{
-		$stmt = $this->db->prepare("SELECT 	User.id,
-                                        User.username,
-                                        User.type,
-                                        User.active,
-                                        Email.email
-                                  FROM users AS User
-                                  INNER JOIN people AS Person ON Person.id = User.person_id
-                                  INNER JOIN emails AS Email ON Email.person_id = Person.id
-                                  WHERE User.active = 1 
-                                  AND User.id = :id
-                                  LIMIT 1");
-		$stmt->execute(['id' => $id]);
+		$sql = "SELECT User.id,
+                       User.username,
+                       User.type,
+                       User.active,
+                       Email.email
+                FROM users AS User
+                INNER JOIN people AS Person ON Person.id = User.person_id
+                INNER JOIN emails AS Email ON Email.person_id = Person.id";
+		$params = ['id' => $id];
+
+		if ($tenantId !== null)
+			{
+			$sql .= " INNER JOIN tenant_users AS TenantUser
+				ON TenantUser.user_id = User.id
+				AND TenantUser.tenant_id = :tenant_id
+				AND TenantUser.active = 1";
+			$params['tenant_id'] = $tenantId;
+			}
+
+		$sql .= " WHERE User.active = 1
+			AND User.id = :id
+			LIMIT 1";
+
+		$stmt = $this->db->prepare($sql);
+		$stmt->execute($params);
 		return $stmt->fetch(PDO::FETCH_ASSOC);
 		}
 
@@ -172,18 +207,34 @@ class User extends Model
 	 * @param Integer $id User id
 	 * @param array $data
 	 */
-	public function update($id, $data)
+	public function update($id, $data, ?int $tenantId = null)
 		{
-		$stmt = $this->db->prepare("UPDATE users SET `username` = :username, 
-                                                 `password` = :password,
-                                                 `type`     = :type,
-                                                 `active`   = :active
-                                                 WHERE id = :id");
-		$stmt->execute(['username' => $data['username'], 
-                    'password' => password_hash($data['password'], PASSWORD_DEFAULT),
-                    'type'     => $data['type'],
-                    'active'   => $data['active'], 
-                    'id'       => $id]);
+		$sql = "UPDATE users AS User";
+		$params = [
+			'username' => $data['username'],
+			'password' => password_hash($data['password'], PASSWORD_DEFAULT),
+			'type'     => $data['type'],
+			'active'   => $data['active'],
+			'id'       => $id,
+		];
+
+		if ($tenantId !== null)
+			{
+			$sql .= " INNER JOIN tenant_users AS TenantUser
+				ON TenantUser.user_id = User.id
+				AND TenantUser.tenant_id = :tenant_id
+				AND TenantUser.active = 1";
+			$params['tenant_id'] = $tenantId;
+			}
+
+		$sql .= " SET User.`username` = :username,
+				User.`password` = :password,
+				User.`type`     = :type,
+				User.`active`   = :active
+			WHERE User.id = :id";
+
+		$stmt = $this->db->prepare($sql);
+		$stmt->execute($params);
 		}
 
 	/**
@@ -254,5 +305,4 @@ class User extends Model
 		return false;
 		}
 	}
-
 ?>
