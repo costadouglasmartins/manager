@@ -13,7 +13,9 @@ class City extends Model
 	 */
 	public function getAll()
 		{
-		$stmt = $this->db->query("SELECT c.*, s.name AS state_name FROM cities c LEFT JOIN states s ON s.id = c.state_id ORDER BY c.id DESC");
+		$citiesTable = $this->managerTable('cities');
+		$statesTable = $this->managerTable('states');
+		$stmt = $this->db->query("SELECT c.*, s.name AS state_name FROM {$citiesTable} c LEFT JOIN {$statesTable} s ON s.id = c.state_id ORDER BY c.id DESC");
 		return $stmt->fetchAll(PDO::FETCH_ASSOC);
 		}
 
@@ -25,8 +27,9 @@ class City extends Model
 		try
 			{
 			$this->db->beginTransaction();
+			$citiesTable = $this->managerTable('cities');
 
-			$sql = "INSERT INTO cities (`name`, `description`, `state_id`, `created`, `modified`) VALUES (:name, :description, :state_id, :created, :modified)";
+			$sql = "INSERT INTO {$citiesTable} (`name`, `description`, `state_id`, `created`, `modified`) VALUES (:name, :description, :state_id, :created, :modified)";
 			$stmt = $this->db->prepare($sql);
 			$stmt->execute([
 				'name'        => $data['name'],
@@ -53,7 +56,9 @@ class City extends Model
 	 */
 	public function find($id)
 		{
-		$stmt = $this->db->prepare("SELECT c.*, s.name AS state_name FROM cities c LEFT JOIN states s ON s.id = c.state_id WHERE c.id = :id");
+		$citiesTable = $this->managerTable('cities');
+		$statesTable = $this->managerTable('states');
+		$stmt = $this->db->prepare("SELECT c.*, s.name AS state_name FROM {$citiesTable} c LEFT JOIN {$statesTable} s ON s.id = c.state_id WHERE c.id = :id");
 		$stmt->execute(['id' => $id]);
 		return $stmt->fetch(PDO::FETCH_ASSOC);
 		}
@@ -63,8 +68,9 @@ class City extends Model
 	 */
 	public function update($id, $data)
 		{
+		$citiesTable = $this->managerTable('cities');
 		$stmt = $this->db->prepare("
-			UPDATE cities
+			UPDATE {$citiesTable}
 			SET
 				`name`        = :name,
 				`description` = :description,
@@ -87,7 +93,9 @@ class City extends Model
 	 */
 	public function search(array $filters = [], int $limit = 10, int $offset = 0): array
 		{
-		$sql = "SELECT c.*, s.name AS state_name FROM cities c LEFT JOIN states s ON s.id = c.state_id WHERE 1=1";
+		$citiesTable = $this->managerTable('cities');
+		$statesTable = $this->managerTable('states');
+		$sql = "SELECT c.*, s.name AS state_name FROM {$citiesTable} c LEFT JOIN {$statesTable} s ON s.id = c.state_id WHERE 1=1";
 		$params = [];
 
 		if (isset($filters['id']) && $filters['id'] !== '')
@@ -131,7 +139,8 @@ class City extends Model
 	 */
 	public function count(array $filters = []): int
 		{
-		$sql = "SELECT COUNT(*) AS total FROM cities WHERE 1=1";
+		$citiesTable = $this->managerTable('cities');
+		$sql = "SELECT COUNT(*) AS total FROM {$citiesTable} WHERE 1=1";
 		$params = [];
 
 		if (!empty($filters['id']))
@@ -170,7 +179,9 @@ class City extends Model
 	 */
 	public function findAllByCityId($id)
 		{
-		$stmt = $this->db->prepare("SELECT c.*, s.name AS state_name FROM cities c LEFT JOIN states s ON s.id = c.state_id WHERE c.id = :id");
+		$citiesTable = $this->managerTable('cities');
+		$statesTable = $this->managerTable('states');
+		$stmt = $this->db->prepare("SELECT c.*, s.name AS state_name FROM {$citiesTable} c LEFT JOIN {$statesTable} s ON s.id = c.state_id WHERE c.id = :id");
 		$stmt->execute(['id' => $id]);
 		$data = $stmt->fetch(PDO::FETCH_ASSOC);
 		return ['city' => $data];
@@ -188,8 +199,9 @@ class City extends Model
 			}
 
 		$limit = max(1, min(50, (int) $limit));
+		$citiesTable = $this->managerTable('cities');
 
-		$sql = "SELECT id, `name` FROM cities WHERE `name` LIKE :t ORDER BY `name` ASC LIMIT {$limit}";
+		$sql = "SELECT id, `name` FROM {$citiesTable} WHERE `name` LIKE :t ORDER BY `name` ASC LIMIT {$limit}";
 
 		$stmt = $this->db->prepare($sql);
 		$stmt->execute([':t' => '%' . $term . '%']);

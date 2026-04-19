@@ -228,6 +228,7 @@ class PersonController extends TenantAwareController
 			'user'   => $data['user'],
 			'phones' => $data['phones'],
 			'emails' => $data['emails'],
+			'addresses' => $data['addresses'],
 		]);
 		}
 

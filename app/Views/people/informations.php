@@ -124,6 +124,52 @@
 </div>
 <!-- /Telefones -->
 
+<!-- Endereços -->
+<div class="card shadow-sm mb-3">
+  <div class="card-header fw-semibold">Endereços</div>
+  <?php if (!empty($addresses)): ?>
+    <div class="table-responsive">
+      <table class="table table-hover align-middle mb-0">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>CEP</th>
+            <th>Logradouro</th>
+            <th>Número</th>
+            <th>Bairro</th>
+            <th>Cidade</th>
+            <th>Observações</th>
+          </tr>
+        </thead>
+        <tbody>
+          <?php foreach ($addresses as $address): ?>
+            <?php
+              $zipDigits = onlyDigits((string) ($address['zip_code'] ?? ''));
+              $zipCode = $zipDigits;
+              if (strlen($zipDigits) === 8)
+                {
+                $zipCode = substr($zipDigits, 0, 5) . '-' . substr($zipDigits, 5);
+                }
+            ?>
+            <tr>
+              <td class="text-muted" style="width: 1%;"><?= $address['id']; ?></td>
+              <td><?= htmlspecialchars($zipCode !== '' ? $zipCode : '—'); ?></td>
+              <td><?= htmlspecialchars($address['street'] ?? '—'); ?></td>
+              <td><?= htmlspecialchars(($address['number'] ?? '') !== '' ? $address['number'] : '—'); ?></td>
+              <td><?= htmlspecialchars(($address['neighborhood_name'] ?? '') !== '' ? $address['neighborhood_name'] : '—'); ?></td>
+              <td><?= htmlspecialchars(($address['neighborhood_city_name'] ?? '') !== '' ? $address['neighborhood_city_name'] : '—'); ?></td>
+              <td><?= htmlspecialchars(($address['observations'] ?? '') !== '' ? $address['observations'] : '—'); ?></td>
+            </tr>
+          <?php endforeach; ?>
+        </tbody>
+      </table>
+    </div>
+  <?php else: ?>
+    <div class="card-body text-muted">Nenhum endereço cadastrado.</div>
+  <?php endif; ?>
+</div>
+<!-- /Endereços -->
+
 <!-- E-mails -->
 <div class="card shadow-sm mb-3">
   <div class="card-header fw-semibold">E-mails</div>

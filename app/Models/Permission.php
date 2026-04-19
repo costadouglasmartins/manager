@@ -16,7 +16,16 @@ class Permission extends Model
 	{
 	public function getAll(): array
 		{
-		$stmt = $this->db->query("SELECT id, ability, description FROM permissions ORDER BY ability ASC");
+		$permissionsTable = $this->managerTable('permissions');
+
+		$stmt = $this->db->query("
+			SELECT MIN(id) AS id,
+			       ability,
+			       MAX(description) AS description
+			FROM {$permissionsTable}
+			GROUP BY ability
+			ORDER BY ability ASC
+		");
 		return $stmt->fetchAll(PDO::FETCH_ASSOC);
 		}
 
@@ -34,58 +43,91 @@ class Permission extends Model
 			return false;
 			}
 
-		$stmt = $this->db->prepare("INSERT IGNORE INTO permissions (ability, description, created, modified) VALUES (:ability, :description, :created, :modified)");
+		if ($this->findCanonicalPermissionIdByAbility($ability) !== null)
+			{
+			return false;
+			}
+
+		$permissionsTable = $this->managerTable('permissions');
+		$stmt = $this->db->prepare("
+			INSERT INTO {$permissionsTable} (ability, description, created, modified)
+			VALUES (:ability, :description, :created, :modified)
+		");
 		$stmt->execute([
 			'ability' => $ability,
 			'description' => ($description === '' ? null : $description),
 			'created' => date('Y-m-d H:i:s'),
-			'modified' => date('Y-m-d H:i:s')
-			]);
+			'modified' => date('Y-m-d H:i:s'),
+		]);
 
 		return ($stmt->rowCount() > 0);
 		}
 
 	/**
 	 * Sync permission catalog by discovering controller actions.
-	 * It will INSERT missing abilities into permissions table (INSERT IGNORE).
-	 *
 	 * Returns the count of new permissions inserted.
 	 */
 	public function syncFromControllers(string $controllersDir): int
 		{
 		$discovered = $this->discoverAbilitiesFromControllers($controllersDir);
+		$existingAbilities = $this->getExistingAbilitiesLookup();
 
 		$added = 0;
-		$stmt = $this->db->prepare("INSERT IGNORE INTO permissions (ability, description, created, modified) VALUES (:ability, :description, :created, :modified)");
+		$permissionsTable = $this->managerTable('permissions');
+		$stmt = $this->db->prepare("
+			INSERT INTO {$permissionsTable} (ability, description, created, modified)
+			VALUES (:ability, :description, :created, :modified)
+		");
 
 		foreach ($discovered as $ability => $description)
 			{
+			if (isset($existingAbilities[$ability]))
+				{
+				continue;
+				}
+
 			$stmt->execute([
 				'ability' => $ability,
 				'description' => $description,
 				'created' => date('Y-m-d H:i:s'),
-				'modified' => date('Y-m-d H:i:s')
-				]);
+				'modified' => date('Y-m-d H:i:s'),
+			]);
 
 			if ($stmt->rowCount() > 0)
 				{
 				$added++;
+				$existingAbilities[$ability] = true;
 				}
 			}
 
 		return $added;
 		}
 
+	private function getExistingAbilitiesLookup(): array
+		{
+		$permissionsTable = $this->managerTable('permissions');
+		$stmt = $this->db->query("SELECT DISTINCT ability FROM {$permissionsTable}");
+
+		$lookup = [];
+		while ($row = $stmt->fetch(PDO::FETCH_ASSOC))
+			{
+			$ability = trim((string) ($row['ability'] ?? ''));
+			if ($ability !== '')
+				{
+				$lookup[$ability] = true;
+				}
+			}
+
+		return $lookup;
+		}
+
 	/**
 	 * Discovers abilities by parsing controllers and their public methods.
 	 * Ability format: <module>.<action>
-	 * - module: controller name lowercased without "Controller"
-	 * - action: public method name
 	 */
 	private function discoverAbilitiesFromControllers(string $controllersDir): array
 		{
 		$controllersDir = rtrim($controllersDir, '/');
-
 		$abilities = [];
 
 		$files = glob($controllersDir . '/*Controller.php');
@@ -97,8 +139,6 @@ class Permission extends Model
 		foreach ($files as $file)
 			{
 			$base = basename($file);
-
-			// Ignore internal controllers (keep catalog focused on business modules)
 			if ($base === 'PermissionController.php')
 				{
 				continue;
@@ -113,29 +153,22 @@ class Permission extends Model
 				continue;
 				}
 
-			if (preg_match_all('/public\s+function\s+([a-zA-Z0-9_]+)\s*\(/', $code, $m))
+			if (!preg_match_all('/public\s+function\s+([a-zA-Z0-9_]+)\s*\(/', $code, $matches))
 				{
-				foreach ($m[1] as $method)
+				continue;
+				}
+
+			foreach ($matches[1] as $method)
+				{
+				$method = (string) $method;
+
+				if ($method === '__construct' || strpos($method, '_') === 0)
 					{
-					$method = (string) $method;
-
-					if ($method === '__construct')
-						{
-						continue;
-						}
-
-					if (strpos($method, '_') === 0)
-						{
-						continue;
-						}
-
-					$ability = $module . '.' . $method;
-
-					// Simple default description
-					$description = 'Acesso: ' . $module . ' -> ' . $method;
-
-					$abilities[$ability] = $description;
+					continue;
 					}
+
+				$ability = $module . '.' . $method;
+				$abilities[$ability] = 'Acesso: ' . $module . ' -> ' . $method;
 				}
 			}
 
@@ -143,35 +176,98 @@ class Permission extends Model
 		return $abilities;
 		}
 
-
-	public function getUsers(): array
+	public function getUsers(?int $tenantId = null): array
 		{
-		$stmt = $this->db->query("SELECT 	User.id,
-                                      User.username,
-                                      Email.email
-                              FROM users AS User
-                              INNER JOIN people AS Person ON Person.id = User.person_id
-                              INNER JOIN emails AS Email ON Email.person_id = Person.id
-                              WHERE User.active = '1' 
-                              AND Email.is_login = '1'");
+		$usersTable = $this->managerTable('users');
+		$peopleTable = $this->managerTable('people');
+		$emailsTable = $this->managerTable('emails');
+		$tenantUsersTable = $this->managerTable('tenant_users');
+		$params = [];
+
+		$sql = "
+			SELECT User.id,
+			       User.username,
+			       User.type,
+			       MIN(Email.email) AS email
+			FROM {$usersTable} AS User
+			INNER JOIN {$peopleTable} AS Person ON Person.id = User.person_id
+			LEFT JOIN {$emailsTable} AS Email
+				ON Email.person_id = Person.id
+				AND Email.is_login = '1'
+		";
+
+		if ($tenantId !== null)
+			{
+			$sql .= "
+			INNER JOIN {$tenantUsersTable} AS TenantUser
+				ON TenantUser.user_id = User.id
+				AND TenantUser.tenant_id = :tenant_id
+				AND TenantUser.active = 1
+			";
+			$params['tenant_id'] = $tenantId;
+			}
+
+		$sql .= "
+			WHERE User.active = 1
+			GROUP BY User.id, User.username, User.type
+			ORDER BY User.username ASC
+		";
+
+		$stmt = $this->db->prepare($sql);
+		$stmt->execute($params);
 		return $stmt->fetchAll(PDO::FETCH_ASSOC);
+		}
+
+	public function userBelongsToTenant(int $userId, int $tenantId): bool
+		{
+		if ($userId <= 0 || $tenantId <= 0)
+			{
+			return false;
+			}
+
+		$tenantUsersTable = $this->managerTable('tenant_users');
+		$stmt = $this->db->prepare("
+			SELECT 1
+			FROM {$tenantUsersTable}
+			WHERE user_id = :user_id
+			  AND tenant_id = :tenant_id
+			  AND active = 1
+			LIMIT 1
+		");
+		$stmt->execute([
+			'user_id' => $userId,
+			'tenant_id' => $tenantId,
+		]);
+
+		return $stmt->fetchColumn() !== false;
 		}
 
 	public function getPermissionIdsByUser(int $userId): array
 		{
+		$userPermissionsTable = $this->managerTable('user_permissions');
+		$permissionsTable = $this->managerTable('permissions');
+
 		$stmt = $this->db->prepare("
-			SELECT permission_id
-			FROM user_permissions
-			WHERE user_id = :user_id
+			SELECT DISTINCT canonical.id
+			FROM {$userPermissionsTable} up
+			INNER JOIN {$permissionsTable} p ON p.id = up.permission_id
+			INNER JOIN (
+				SELECT MIN(id) AS id, ability
+				FROM {$permissionsTable}
+				GROUP BY ability
+			) canonical ON canonical.ability = p.ability
+			WHERE up.user_id = :user_id
 		");
 		$stmt->execute(['user_id' => $userId]);
 
 		$ids = [];
 		while ($row = $stmt->fetch(PDO::FETCH_ASSOC))
 			{
-			$ids[] = (int) $row['permission_id'];
+			$ids[] = (int) $row['id'];
 			}
-		return $ids;
+
+		sort($ids);
+		return array_values(array_unique($ids));
 		}
 
 	/**
@@ -188,28 +284,26 @@ class Permission extends Model
 
 		try
 			{
-			$del = $this->db->prepare("DELETE FROM user_permissions WHERE user_id = :user_id");
+			$userPermissionsTable = $this->managerTable('user_permissions');
+			$del = $this->db->prepare("DELETE FROM {$userPermissionsTable} WHERE user_id = :user_id");
 			$del->execute(['user_id' => $userId]);
 
-			if (!empty($permissionIds))
+			$canonicalPermissionIds = $this->canonicalizePermissionIds($permissionIds);
+			if ($canonicalPermissionIds !== [])
 				{
 				$ins = $this->db->prepare("
-					INSERT INTO user_permissions (user_id, permission_id, created, modified)
+					INSERT INTO {$userPermissionsTable} (user_id, permission_id, created, modified)
 					VALUES (:user_id, :permission_id, :created, :modified)
 				");
 
-				foreach ($permissionIds as $pid)
+				foreach ($canonicalPermissionIds as $permissionId)
 					{
-					$pid = (int) $pid;
-					if ($pid > 0)
-						{
-						$ins->execute([
-							'user_id' => $userId,
-							'permission_id' => $pid,
-              'created' => date('Y-m-d H:i:s'),
-              'modified' => date('Y-m-d H:i:s')
-							]);
-						}
+					$ins->execute([
+						'user_id' => $userId,
+						'permission_id' => $permissionId,
+						'created' => date('Y-m-d H:i:s'),
+						'modified' => date('Y-m-d H:i:s'),
+					]);
 					}
 				}
 
@@ -220,6 +314,64 @@ class Permission extends Model
 			$this->db->rollBack();
 			throw $e;
 			}
+		}
+
+	private function canonicalizePermissionIds(array $permissionIds): array
+		{
+		if ($permissionIds === [])
+			{
+			return [];
+			}
+
+		$permissionIds = array_values(array_unique(array_map('intval', $permissionIds)));
+		$permissionIds = array_values(array_filter($permissionIds, static function ($id)
+			{
+			return $id > 0;
+			}));
+
+		if ($permissionIds === [])
+			{
+			return [];
+			}
+
+		$permissionsTable = $this->managerTable('permissions');
+		$placeholders = implode(', ', array_fill(0, count($permissionIds), '?'));
+		$stmt = $this->db->prepare("
+			SELECT MIN(canonical.id) AS id
+			FROM {$permissionsTable} selected
+			INNER JOIN {$permissionsTable} canonical ON canonical.ability = selected.ability
+			WHERE selected.id IN ({$placeholders})
+			GROUP BY selected.ability
+		");
+		$stmt->execute($permissionIds);
+
+		$canonicalIds = [];
+		while ($row = $stmt->fetch(PDO::FETCH_ASSOC))
+			{
+			$id = (int) ($row['id'] ?? 0);
+			if ($id > 0)
+				{
+				$canonicalIds[] = $id;
+				}
+			}
+
+		sort($canonicalIds);
+		return array_values(array_unique($canonicalIds));
+		}
+
+	private function findCanonicalPermissionIdByAbility(string $ability): ?int
+		{
+		$permissionsTable = $this->managerTable('permissions');
+		$stmt = $this->db->prepare("
+			SELECT MIN(id) AS id
+			FROM {$permissionsTable}
+			WHERE ability = :ability
+			LIMIT 1
+		");
+		$stmt->execute(['ability' => $ability]);
+
+		$id = $stmt->fetchColumn();
+		return $id !== false ? (int) $id : null;
 		}
 
 	/**
@@ -235,10 +387,13 @@ class Permission extends Model
 	 */
 	public function getAbilitiesForUser(int $userId): array
 		{
+		$userPermissionsTable = $this->managerTable('user_permissions');
+		$permissionsTable = $this->managerTable('permissions');
+
 		$stmt = $this->db->prepare("
 			SELECT DISTINCT p.ability
-			FROM user_permissions up
-			INNER JOIN permissions p ON p.id = up.permission_id
+			FROM {$userPermissionsTable} up
+			INNER JOIN {$permissionsTable} p ON p.id = up.permission_id
 			WHERE up.user_id = :user_id
 			ORDER BY p.ability ASC
 		");
@@ -249,6 +404,7 @@ class Permission extends Model
 			{
 			$abilities[] = (string) $row['ability'];
 			}
+
 		return $abilities;
 		}
 

@@ -13,7 +13,9 @@ class Neighborhood extends Model
 	 */
 	public function getAll()
 		{
-		$stmt = $this->db->query("SELECT n.*, c.name AS city_name FROM neighborhoods n LEFT JOIN cities c ON c.id = n.city_id ORDER BY n.id DESC");
+		$neighborhoodsTable = $this->managerTable('neighborhoods');
+		$citiesTable = $this->managerTable('cities');
+		$stmt = $this->db->query("SELECT n.*, c.name AS city_name FROM {$neighborhoodsTable} n LEFT JOIN {$citiesTable} c ON c.id = n.city_id ORDER BY n.id DESC");
 		return $stmt->fetchAll(PDO::FETCH_ASSOC);
 		}
 
@@ -25,8 +27,9 @@ class Neighborhood extends Model
 		try
 			{
 			$this->db->beginTransaction();
+			$neighborhoodsTable = $this->managerTable('neighborhoods');
 
-			$sql = "INSERT INTO neighborhoods (`name`, `city_id`, `created`, `modified`) VALUES (:name, :city_id, :created, :modified)";
+			$sql = "INSERT INTO {$neighborhoodsTable} (`name`, `city_id`, `created`, `modified`) VALUES (:name, :city_id, :created, :modified)";
 			$stmt = $this->db->prepare($sql);
 			$stmt->execute([
 				'name'     => $data['name'],
@@ -52,7 +55,9 @@ class Neighborhood extends Model
 	 */
 	public function find($id)
 		{
-		$stmt = $this->db->prepare("SELECT n.*, c.name AS city_name FROM neighborhoods n LEFT JOIN cities c ON c.id = n.city_id WHERE n.id = :id");
+		$neighborhoodsTable = $this->managerTable('neighborhoods');
+		$citiesTable = $this->managerTable('cities');
+		$stmt = $this->db->prepare("SELECT n.*, c.name AS city_name FROM {$neighborhoodsTable} n LEFT JOIN {$citiesTable} c ON c.id = n.city_id WHERE n.id = :id");
 		$stmt->execute(['id' => $id]);
 		return $stmt->fetch(PDO::FETCH_ASSOC);
 		}
@@ -62,8 +67,9 @@ class Neighborhood extends Model
 	 */
 	public function update($id, $data)
 		{
+		$neighborhoodsTable = $this->managerTable('neighborhoods');
 		$stmt = $this->db->prepare("
-			UPDATE neighborhoods
+			UPDATE {$neighborhoodsTable}
 			SET
 				`name`     = :name,
 				`city_id`  = :city_id,
@@ -84,7 +90,9 @@ class Neighborhood extends Model
 	 */
 	public function search(array $filters = [], int $limit = 10, int $offset = 0): array
 		{
-		$sql = "SELECT n.*, c.name AS city_name FROM neighborhoods n LEFT JOIN cities c ON c.id = n.city_id WHERE 1=1";
+		$neighborhoodsTable = $this->managerTable('neighborhoods');
+		$citiesTable = $this->managerTable('cities');
+		$sql = "SELECT n.*, c.name AS city_name FROM {$neighborhoodsTable} n LEFT JOIN {$citiesTable} c ON c.id = n.city_id WHERE 1=1";
 		$params = [];
 
 		if (isset($filters['id']) && $filters['id'] !== '')
@@ -128,7 +136,8 @@ class Neighborhood extends Model
 	 */
 	public function count(array $filters = []): int
 		{
-		$sql = "SELECT COUNT(*) AS total FROM neighborhoods WHERE 1=1";
+		$neighborhoodsTable = $this->managerTable('neighborhoods');
+		$sql = "SELECT COUNT(*) AS total FROM {$neighborhoodsTable} WHERE 1=1";
 		$params = [];
 
 		if (!empty($filters['id']))
@@ -167,7 +176,9 @@ class Neighborhood extends Model
 	 */
 	public function findAllByNeighborhoodId($id)
 		{
-		$stmt = $this->db->prepare("SELECT n.*, c.name AS city_name FROM neighborhoods n LEFT JOIN cities c ON c.id = n.city_id WHERE n.id = :id");
+		$neighborhoodsTable = $this->managerTable('neighborhoods');
+		$citiesTable = $this->managerTable('cities');
+		$stmt = $this->db->prepare("SELECT n.*, c.name AS city_name FROM {$neighborhoodsTable} n LEFT JOIN {$citiesTable} c ON c.id = n.city_id WHERE n.id = :id");
 		$stmt->execute(['id' => $id]);
 		$data = $stmt->fetch(PDO::FETCH_ASSOC);
 		return ['neighborhood' => $data];
@@ -185,12 +196,14 @@ class Neighborhood extends Model
 			}
 
 		$limit = max(1, min(50, (int) $limit));
+		$neighborhoodsTable = $this->managerTable('neighborhoods');
+		$citiesTable = $this->managerTable('cities');
 
 		$sql = "SELECT n.id,
 				       n.`name`,
 				       c.name AS city_name
-				FROM neighborhoods n
-				LEFT JOIN cities c ON c.id = n.city_id
+				FROM {$neighborhoodsTable} n
+				LEFT JOIN {$citiesTable} c ON c.id = n.city_id
 				WHERE n.`name` LIKE :t
 				ORDER BY n.`name` ASC, c.name ASC
 				LIMIT {$limit}";

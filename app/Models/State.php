@@ -14,7 +14,9 @@ class State extends Model
 	 */
 	public function getAll()
 		{
-		$stmt = $this->db->query("SELECT s.*, c.name AS country_name FROM states s LEFT JOIN countries c ON c.id = s.country_id ORDER BY s.id DESC");
+		$statesTable = $this->managerTable('states');
+		$countriesTable = $this->managerTable('countries');
+		$stmt = $this->db->query("SELECT s.*, c.name AS country_name FROM {$statesTable} s LEFT JOIN {$countriesTable} c ON c.id = s.country_id ORDER BY s.id DESC");
 		return $stmt->fetchAll(PDO::FETCH_ASSOC);
 		}
 
@@ -29,8 +31,9 @@ class State extends Model
 		try
 			{
 			$this->db->beginTransaction();
+			$statesTable = $this->managerTable('states');
 
-			$sql = "INSERT INTO states (`name`, `acronym`, `country_id`, `created`, `modified`) VALUES (:name, :acronym, :country_id, :created, :modified)";
+			$sql = "INSERT INTO {$statesTable} (`name`, `acronym`, `country_id`, `created`, `modified`) VALUES (:name, :acronym, :country_id, :created, :modified)";
 			$stmt = $this->db->prepare($sql);
 			$stmt->execute([
 				'name'       => $data['name'],
@@ -59,7 +62,9 @@ class State extends Model
 	 */
 	public function find($id)
 		{
-		$stmt = $this->db->prepare("SELECT s.*, c.name AS country_name FROM states s LEFT JOIN countries c ON c.id = s.country_id WHERE s.id = :id");
+		$statesTable = $this->managerTable('states');
+		$countriesTable = $this->managerTable('countries');
+		$stmt = $this->db->prepare("SELECT s.*, c.name AS country_name FROM {$statesTable} s LEFT JOIN {$countriesTable} c ON c.id = s.country_id WHERE s.id = :id");
 		$stmt->execute(['id' => $id]);
 		return $stmt->fetch(PDO::FETCH_ASSOC);
 		}
@@ -71,8 +76,9 @@ class State extends Model
 	 */
 	public function update($id, $data)
 		{
+		$statesTable = $this->managerTable('states');
 		$stmt = $this->db->prepare("
-			UPDATE states
+			UPDATE {$statesTable}
 			SET
 				`name`       = :name,
 				`acronym`    = :acronym,
@@ -95,7 +101,9 @@ class State extends Model
 	 */
 	public function search(array $filters = [], int $limit = 10, int $offset = 0): array
 		{
-		$sql = "SELECT s.*, c.name AS country_name FROM states s LEFT JOIN countries c ON c.id = s.country_id WHERE 1=1";
+		$statesTable = $this->managerTable('states');
+		$countriesTable = $this->managerTable('countries');
+		$sql = "SELECT s.*, c.name AS country_name FROM {$statesTable} s LEFT JOIN {$countriesTable} c ON c.id = s.country_id WHERE 1=1";
 		$params = [];
 
 		if (isset($filters['id']) && $filters['id'] !== '')
@@ -139,7 +147,8 @@ class State extends Model
 	 */
 	public function count(array $filters = []): int
 		{
-		$sql = "SELECT COUNT(*) AS total FROM states WHERE 1=1";
+		$statesTable = $this->managerTable('states');
+		$sql = "SELECT COUNT(*) AS total FROM {$statesTable} WHERE 1=1";
 		$params = [];
 
 		if (!empty($filters['id']))
@@ -178,7 +187,9 @@ class State extends Model
 	 */
 	public function findAllByStateId($id)
 		{
-		$stmt = $this->db->prepare("SELECT s.*, c.name AS country_name FROM states s LEFT JOIN countries c ON c.id = s.country_id WHERE s.id = :id");
+		$statesTable = $this->managerTable('states');
+		$countriesTable = $this->managerTable('countries');
+		$stmt = $this->db->prepare("SELECT s.*, c.name AS country_name FROM {$statesTable} s LEFT JOIN {$countriesTable} c ON c.id = s.country_id WHERE s.id = :id");
 		$stmt->execute(['id' => $id]);
 		$data = $stmt->fetch(PDO::FETCH_ASSOC);
 		return ['state' => $data];
@@ -196,8 +207,9 @@ class State extends Model
 			}
 
 		$limit = max(1, min(50, (int) $limit));
+		$statesTable = $this->managerTable('states');
 
-		$sql = "SELECT id, `name`, acronym FROM states WHERE `name` LIKE :t ORDER BY `name` ASC LIMIT {$limit}";
+		$sql = "SELECT id, `name`, acronym FROM {$statesTable} WHERE `name` LIKE :t ORDER BY `name` ASC LIMIT {$limit}";
 
 		$stmt = $this->db->prepare($sql);
 		$stmt->execute([':t' => '%' . $term . '%']);

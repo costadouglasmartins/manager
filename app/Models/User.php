@@ -13,12 +13,14 @@ class User extends Model
 	 */
 	public function search(array $filters = [], int $limit = 10, int $offset = 0, ?int $tenantId = null): array
 		{
-		$sql = "SELECT DISTINCT User.* FROM users AS User";
+		$usersTable = $this->managerTable('users');
+		$tenantUsersTable = $this->managerTable('tenant_users');
+		$sql = "SELECT DISTINCT User.* FROM {$usersTable} AS User";
 		$params = [];
 
 		if ($tenantId !== null)
 			{
-			$sql .= " INNER JOIN tenant_users AS TenantUser
+			$sql .= " INNER JOIN {$tenantUsersTable} AS TenantUser
 				ON TenantUser.user_id = User.id
 				AND TenantUser.tenant_id = :tenant_id
 				AND TenantUser.active = 1";
@@ -92,12 +94,14 @@ class User extends Model
 	 */
 	public function count(array $filters = [], ?int $tenantId = null): int
 		{
-		$sql = "SELECT COUNT(DISTINCT User.id) AS total FROM users AS User";
+		$usersTable = $this->managerTable('users');
+		$tenantUsersTable = $this->managerTable('tenant_users');
+		$sql = "SELECT COUNT(DISTINCT User.id) AS total FROM {$usersTable} AS User";
 		$params = [];
 
 		if ($tenantId !== null)
 			{
-			$sql .= " INNER JOIN tenant_users AS TenantUser
+			$sql .= " INNER JOIN {$tenantUsersTable} AS TenantUser
 				ON TenantUser.user_id = User.id
 				AND TenantUser.tenant_id = :tenant_id
 				AND TenantUser.active = 1";
@@ -163,7 +167,8 @@ class User extends Model
 	 */
 	public function getAll()
 		{
-		$stmt = $this->db->query("SELECT * FROM users ORDER BY id DESC");
+		$usersTable = $this->managerTable('users');
+		$stmt = $this->db->query("SELECT * FROM {$usersTable} ORDER BY id DESC");
 		return $stmt->fetchAll(PDO::FETCH_ASSOC);
 		}
 
@@ -174,19 +179,24 @@ class User extends Model
 	 */
 	public function find($id, ?int $tenantId = null)
 		{
+		$usersTable = $this->managerTable('users');
+		$peopleTable = $this->managerTable('people');
+		$emailsTable = $this->managerTable('emails');
+		$tenantUsersTable = $this->managerTable('tenant_users');
+
 		$sql = "SELECT User.id,
                        User.username,
                        User.type,
                        User.active,
                        Email.email
-                FROM users AS User
-                INNER JOIN people AS Person ON Person.id = User.person_id
-                INNER JOIN emails AS Email ON Email.person_id = Person.id";
+                FROM {$usersTable} AS User
+                INNER JOIN {$peopleTable} AS Person ON Person.id = User.person_id
+                INNER JOIN {$emailsTable} AS Email ON Email.person_id = Person.id";
 		$params = ['id' => $id];
 
 		if ($tenantId !== null)
 			{
-			$sql .= " INNER JOIN tenant_users AS TenantUser
+			$sql .= " INNER JOIN {$tenantUsersTable} AS TenantUser
 				ON TenantUser.user_id = User.id
 				AND TenantUser.tenant_id = :tenant_id
 				AND TenantUser.active = 1";
@@ -209,7 +219,9 @@ class User extends Model
 	 */
 	public function update($id, $data, ?int $tenantId = null)
 		{
-		$sql = "UPDATE users AS User";
+		$usersTable = $this->managerTable('users');
+		$tenantUsersTable = $this->managerTable('tenant_users');
+		$sql = "UPDATE {$usersTable} AS User";
 		$params = [
 			'username' => $data['username'],
 			'password' => password_hash($data['password'], PASSWORD_DEFAULT),
@@ -220,7 +232,7 @@ class User extends Model
 
 		if ($tenantId !== null)
 			{
-			$sql .= " INNER JOIN tenant_users AS TenantUser
+			$sql .= " INNER JOIN {$tenantUsersTable} AS TenantUser
 				ON TenantUser.user_id = User.id
 				AND TenantUser.tenant_id = :tenant_id
 				AND TenantUser.active = 1";
@@ -244,6 +256,10 @@ class User extends Model
 	 */
 	public function findByEmail(string $email): ?array
     {
+    $usersTable = $this->managerTable('users');
+    $peopleTable = $this->managerTable('people');
+    $emailsTable = $this->managerTable('emails');
+
     $sql = "SELECT  User.id,
                     User.username,
                     User.password,
@@ -253,9 +269,9 @@ class User extends Model
                     Person.name,
                     Person.type AS person_type,
                     Person.document
-            FROM users AS User
-            INNER JOIN people AS Person ON Person.id = User.person_id
-            INNER JOIN emails  AS Email ON Email.person_id = Person.id
+            FROM {$usersTable} AS User
+            INNER JOIN {$peopleTable} AS Person ON Person.id = User.person_id
+            INNER JOIN {$emailsTable} AS Email ON Email.person_id = Person.id
             WHERE User.active = 1
               AND User.type IN ('admin', 'user')
               AND Email.email = :email
@@ -293,8 +309,9 @@ class User extends Model
 			// Opcional: rehash if needed
 			if (password_needs_rehash($user['password'], PASSWORD_DEFAULT))
 				{
+				$usersTable = $this->managerTable('users');
 				$newHash = password_hash($password, PASSWORD_DEFAULT);
-				$stmt = $this->db->prepare("UPDATE users SET password = :password WHERE id = :id");
+				$stmt = $this->db->prepare("UPDATE {$usersTable} SET password = :password WHERE id = :id");
 				$stmt->execute(['password' => $newHash, 'id' => $user['id']]);
 				}
 			// Remover senha antes de retornar

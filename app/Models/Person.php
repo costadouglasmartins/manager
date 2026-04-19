@@ -2,12 +2,12 @@
 
 namespace App\Models;
 
+use App\Core\Database;
 use App\Core\TenantModel;
 use PDO;
 
 class Person extends TenantModel
 	{
-
 	/**
 	 * Get all method
 	 * @return associative array
@@ -347,34 +347,146 @@ class Person extends TenantModel
 		}
 
 	/**
-	 * Find all by person id - returns person, user, phones and emails
+	 * Find all by person id - returns person, user, phones, emails and addresses
 	 * @param Integer $id Person id
 	 * @return array
 	 */
 	public function findAllByPersonId($id)
 		{
-		$personStmt = $this->db->prepare("SELECT * FROM people WHERE id = :id");
-		$personStmt->execute(['id' => $id]);
-		$person = $personStmt->fetch(PDO::FETCH_ASSOC);
+		$managerNeighborhoodsTable = sprintf('`%s`.`%s`', Database::getManagerDatabaseName(), 'neighborhoods');
+		$managerCitiesTable = sprintf('`%s`.`%s`', Database::getManagerDatabaseName(), 'cities');
 
-		$userStmt = $this->db->prepare("SELECT id, person_id, username, type, active, created, modified FROM users WHERE person_id = :id");
-		$userStmt->execute(['id' => $id]);
-		$user = $userStmt->fetch(PDO::FETCH_ASSOC);
+		$stmt = $this->db->prepare("
+			SELECT p.*,
+			       COALESCE(
+			       	(
+			       		SELECT JSON_ARRAYAGG(
+			       			JSON_OBJECT(
+			       				'id', phone_rows.id,
+			       				'phone_number', phone_rows.phone_number,
+			       				'observations', phone_rows.observations,
+			       				'person_id', phone_rows.person_id,
+			       				'created', phone_rows.created,
+			       				'modified', phone_rows.modified
+			       			)
+			       		)
+			       		FROM (
+			       			SELECT id, phone_number, observations, person_id, created, modified
+			       			FROM phone_numbers
+			       			WHERE person_id = :phones_person_id
+			       			ORDER BY id ASC
+			       		) AS phone_rows
+			       	),
+			       	JSON_ARRAY()
+			       ) AS phones_json,
+			       COALESCE(
+			       	(
+			       		SELECT JSON_ARRAYAGG(
+			       			JSON_OBJECT(
+			       				'id', email_rows.id,
+			       				'email', email_rows.email,
+			       				'observations', email_rows.observations,
+			       				'is_login', email_rows.is_login,
+			       				'person_id', email_rows.person_id,
+			       				'created', email_rows.created,
+			       				'modified', email_rows.modified
+			       			)
+			       		)
+			       		FROM (
+			       			SELECT id, email, observations, is_login, person_id, created, modified
+			       			FROM emails
+			       			WHERE person_id = :emails_person_id
+			       			ORDER BY id ASC
+			       		) AS email_rows
+			       	),
+			       	JSON_ARRAY()
+			       ) AS emails_json
+			       ,
+			       COALESCE(
+			       	(
+			       		SELECT JSON_ARRAYAGG(
+			       			JSON_OBJECT(
+			       				'id', address_rows.id,
+			       				'zip_code', address_rows.zip_code,
+			       				'street', address_rows.street,
+			       				'number', address_rows.number,
+			       				'observations', address_rows.observations,
+			       				'person_id', address_rows.person_id,
+			       				'neighborhood_id', address_rows.neighborhood_id,
+			       				'created', address_rows.created,
+			       				'modified', address_rows.modified,
+			       				'neighborhood_name', address_rows.neighborhood_name,
+			       				'neighborhood_city_name', address_rows.neighborhood_city_name
+			       			)
+			       		)
+			       		FROM (
+			       			SELECT a.id,
+			       			       a.zip_code,
+			       			       a.street,
+			       			       a.number,
+			       			       a.observations,
+			       			       a.person_id,
+			       			       a.neighborhood_id,
+			       			       a.created,
+			       			       a.modified,
+			       			       n.name AS neighborhood_name,
+			       			       c.name AS neighborhood_city_name
+			       			FROM addresses a
+			       			LEFT JOIN {$managerNeighborhoodsTable} n ON n.id = a.neighborhood_id
+			       			LEFT JOIN {$managerCitiesTable} c ON c.id = n.city_id
+			       			WHERE a.person_id = :addresses_person_id
+			       			ORDER BY a.id ASC
+			       		) AS address_rows
+			       	),
+			       	JSON_ARRAY()
+			       ) AS addresses_json
+			FROM people p
+			WHERE p.id = :person_id
+			LIMIT 1
+		");
+		$stmt->execute([
+			'person_id' => $id,
+			'phones_person_id' => $id,
+			'emails_person_id' => $id,
+			'addresses_person_id' => $id,
+		]);
+		$row = $stmt->fetch(PDO::FETCH_ASSOC);
 
-		$phonesStmt = $this->db->prepare("SELECT * FROM phone_numbers WHERE person_id = :id ORDER BY id ASC");
-		$phonesStmt->execute(['id' => $id]);
-		$phones = $phonesStmt->fetchAll(PDO::FETCH_ASSOC);
+		$person = is_array($row) ? $row : null;
+		$phones = [];
+		$emails = [];
+		$addresses = [];
 
-		$emailsStmt = $this->db->prepare("SELECT * FROM emails WHERE person_id = :id ORDER BY id ASC");
-		$emailsStmt->execute(['id' => $id]);
-		$emails = $emailsStmt->fetchAll(PDO::FETCH_ASSOC);
+		if (is_array($person))
+			{
+			$phones = $this->decodeJsonArray($person['phones_json'] ?? null);
+			$emails = $this->decodeJsonArray($person['emails_json'] ?? null);
+			$addresses = $this->decodeJsonArray($person['addresses_json'] ?? null);
+			unset($person['phones_json'], $person['emails_json'], $person['addresses_json']);
+			}
+
+		// Tenant databases do not have a users table; keep the person details view
+		// focused on tenant-owned data and expose no user block when unavailable.
+		$user = null;
 
 		return [
 			'person' => $person,
 			'user'   => $user,
 			'phones' => $phones,
 			'emails' => $emails,
+			'addresses' => $addresses,
 		];
+		}
+
+	private function decodeJsonArray($json): array
+		{
+		if (!is_string($json) || trim($json) === '')
+			{
+			return [];
+			}
+
+		$data = json_decode($json, true);
+		return is_array($data) ? $data : [];
 		}
 
 	/**

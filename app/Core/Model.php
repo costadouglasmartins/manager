@@ -18,5 +18,13 @@ class Model
     {
     $this->db = Database::getManagerConnection();
     }
+
+	/**
+	 * Returns a table qualified with the manager database name.
+	 */
+	protected function managerTable(string $table): string
+		{
+		return sprintf('`%s`.`%s`', Database::getManagerDatabaseName(), trim($table));
+		}
   }
 ?>

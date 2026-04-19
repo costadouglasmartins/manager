@@ -14,7 +14,8 @@ class Country extends Model
 	 */
 	public function getAll()
 		{
-		$stmt = $this->db->query("SELECT * FROM countries ORDER BY id DESC");
+		$countriesTable = $this->managerTable('countries');
+		$stmt = $this->db->query("SELECT * FROM {$countriesTable} ORDER BY id DESC");
 		return $stmt->fetchAll(PDO::FETCH_ASSOC);
 		}
 
@@ -31,9 +32,9 @@ class Country extends Model
 			{
 			// Início da transação
 			$this->db->beginTransaction();
+			$countriesTable = $this->managerTable('countries');
 
-			// Save one person
-			$sql = "INSERT INTO countries 
+			$sql = "INSERT INTO {$countriesTable}
                         (`name`, `acronym`, `created`, `modified`) 
                       VALUES 
                         ( :name, :acronym, :created, :modified)";
@@ -70,7 +71,8 @@ class Country extends Model
 	 */
 	public function find($id)
 		{
-		$stmt = $this->db->prepare("SELECT * FROM countries WHERE id = :id");
+		$countriesTable = $this->managerTable('countries');
+		$stmt = $this->db->prepare("SELECT * FROM {$countriesTable} WHERE id = :id");
 		$stmt->execute(['id' => $id]);
 		return $stmt->fetch(PDO::FETCH_ASSOC);
 		}
@@ -82,8 +84,9 @@ class Country extends Model
 	 */
 	public function update($id, $data)
     {
+    $countriesTable = $this->managerTable('countries');
     $stmt = $this->db->prepare("
-        UPDATE countries
+        UPDATE {$countriesTable}
         SET
             `name`      = :name,
             `acronym`   = :acronym,
@@ -104,7 +107,8 @@ class Country extends Model
 	 */
 	public function search(array $filters = [], int $limit = 10, int $offset = 0): array
 		{
-		$sql = "SELECT * FROM countries WHERE 1=1";
+		$countriesTable = $this->managerTable('countries');
+		$sql = "SELECT * FROM {$countriesTable} WHERE 1=1";
 		$params = [];
 
 		// Id 
@@ -155,7 +159,8 @@ class Country extends Model
 	 */
 	public function count(array $filters = []): int
 		{
-		$sql = "SELECT COUNT(*) AS total FROM countries WHERE 1=1";
+		$countriesTable = $this->managerTable('countries');
+		$sql = "SELECT COUNT(*) AS total FROM {$countriesTable} WHERE 1=1";
 		$params = [];
 
 		// Filtro por ID (igual)
@@ -197,7 +202,8 @@ class Country extends Model
 	 */
 	public function findAllByCountryId($id)
 		{
-		$personStmt = $this->db->prepare("SELECT * FROM countries WHERE id = :id");
+		$countriesTable = $this->managerTable('countries');
+		$personStmt = $this->db->prepare("SELECT * FROM {$countriesTable} WHERE id = :id");
 		$personStmt->execute(['id' => $id]);
 		$personData = $personStmt->fetch(PDO::FETCH_ASSOC);
 		return ['countries' => $personData];
@@ -218,9 +224,10 @@ class Country extends Model
 			}
 
 		$limit = max(1, min(50, (int) $limit));
+		$countriesTable = $this->managerTable('countries');
 
 		$sql = "SELECT id, `name`, acronym
-						FROM countries
+						FROM {$countriesTable}
 						WHERE `name` LIKE :t
 						ORDER BY COALESCE(`name`) ASC
 						LIMIT {$limit}";

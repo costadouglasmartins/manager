@@ -4,34 +4,34 @@ namespace App\Controllers;
 
 use App\Core\Controller;
 use App\Core\Authorization;
+use App\Core\TenantContext;
 use App\Models\Permission;
 
 class PermissionController extends Controller
 	{
+	private function currentTenantId(): int
+		{
+		$this->requireAuth();
+		$this->requireTenant();
+		$this->requirePermission('permission.manage');
+
+		$tenant = TenantContext::tenant();
+		return (int) ($tenant['id'] ?? 0);
+		}
+
 	public function index(): void
 		{
-		// User-only permissions: allow only users that can manage permissions (or root failsafe).
-		if (method_exists($this, 'requirePermission'))
-			{
-			$this->requirePermission('permission.manage');
-			}
-		else
-			{
-			$this->requireAuth();
-			if (!Authorization::can('permission.manage'))
-				{
-				header('HTTP/1.1 403 Forbidden');
-				echo '403';
-				exit;
-				}
-			}
-
+		$tenantId = $this->currentTenantId();
 		$permissionModel = new Permission();
 
 		$permissions = $permissionModel->getAll();
-		$users = $permissionModel->getUsers();
+		$users = $permissionModel->getUsers($tenantId);
 
 		$selectedUserId = (int) ($_GET['user_id'] ?? 0);
+		if ($selectedUserId > 0 && !$permissionModel->userBelongsToTenant($selectedUserId, $tenantId))
+			{
+			$selectedUserId = 0;
+			}
 
 		$userPermissionIds = [];
 		$effectiveAbilities = [];
@@ -47,56 +47,31 @@ class PermissionController extends Controller
 			'selectedUserId' => $selectedUserId,
 			'userPermissionIds' => $userPermissionIds,
 			'effectiveAbilities' => $effectiveAbilities,
-			'title' => 'Permissões'
-			]);
+			'title' => 'Permissões',
+		]);
 		}
 
 	public function saveUser(): void
 		{
-		if (method_exists($this, 'requirePermission'))
-			{
-			$this->requirePermission('permission.manage');
-			}
-		else
-			{
-			$this->requireAuth();
-			if (!Authorization::can('permission.manage'))
-				{
-				header('HTTP/1.1 403 Forbidden');
-				echo '403';
-				exit;
-				}
-			}
-
+		$tenantId = $this->currentTenantId();
 		$userId = (int) ($_POST['user_id'] ?? 0);
 		$permissionIds = $this->normalizePermissionIds($_POST['permission_ids'] ?? []);
 
 		$permissionModel = new Permission();
-		$permissionModel->setPermissionsForUser($userId, $permissionIds);
+		if (!$permissionModel->userBelongsToTenant($userId, $tenantId))
+			{
+			$this->redirect('permission');
+			}
 
+		$permissionModel->setPermissionsForUser($userId, $permissionIds);
 		Authorization::clearCache();
 
-		$this->redirect('permission?user_id=' . (int) $userId);
+		$this->redirect('permission?user_id=' . $userId);
 		}
 
-	
 	public function sync(): void
 		{
-		if (method_exists($this, 'requirePermission'))
-			{
-			$this->requirePermission('permission.manage');
-			}
-		else
-			{
-			$this->requireAuth();
-			if (!Authorization::can('permission.manage'))
-				{
-				header('HTTP/1.1 403 Forbidden');
-				echo '403';
-				exit;
-				}
-			}
-
+		$this->currentTenantId();
 		$backUserId = (int) ($_POST['selected_user_id'] ?? 0);
 
 		$permissionModel = new Permission();
@@ -104,10 +79,10 @@ class PermissionController extends Controller
 
 		Authorization::clearCache();
 
-		$qs = 'permission?synced=' . (int) $added;
+		$qs = 'permission?synced=' . $added;
 		if ($backUserId > 0)
 			{
-			$qs .= '&user_id=' . (int) $backUserId;
+			$qs .= '&user_id=' . $backUserId;
 			}
 
 		$this->redirect($qs);
@@ -115,21 +90,7 @@ class PermissionController extends Controller
 
 	public function create(): void
 		{
-		if (method_exists($this, 'requirePermission'))
-			{
-			$this->requirePermission('permission.manage');
-			}
-		else
-			{
-			$this->requireAuth();
-			if (!Authorization::can('permission.manage'))
-				{
-				header('HTTP/1.1 403 Forbidden');
-				echo '403';
-				exit;
-				}
-			}
-
+		$this->currentTenantId();
 		$backUserId = (int) ($_POST['selected_user_id'] ?? 0);
 
 		$ability = (string) ($_POST['ability'] ?? '');
@@ -143,14 +104,13 @@ class PermissionController extends Controller
 		$qs = 'permission?created=' . ($ok ? '1' : '0');
 		if ($backUserId > 0)
 			{
-			$qs .= '&user_id=' . (int) $backUserId;
+			$qs .= '&user_id=' . $backUserId;
 			}
 
 		$this->redirect($qs);
 		}
 
-
-private function normalizePermissionIds($raw): array
+	private function normalizePermissionIds($raw): array
 		{
 		if (!is_array($raw))
 			{
@@ -158,14 +118,15 @@ private function normalizePermissionIds($raw): array
 			}
 
 		$out = [];
-		foreach ($raw as $v)
+		foreach ($raw as $value)
 			{
-			$iv = (int) $v;
-			if ($iv > 0)
+			$id = (int) $value;
+			if ($id > 0)
 				{
-				$out[] = $iv;
+				$out[] = $id;
 				}
 			}
+
 		return array_values(array_unique($out));
 		}
 	}

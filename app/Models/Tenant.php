@@ -9,6 +9,9 @@ class Tenant extends Model
 {
 	public function getAccessibleByUserId(int $userId): array
 	{
+		$tenantsTable = $this->managerTable('tenants');
+		$tenantUsersTable = $this->managerTable('tenant_users');
+
 		$stmt = $this->db->prepare("
 			SELECT t.id,
 			       t.name,
@@ -18,8 +21,8 @@ class Tenant extends Model
 			       t.status,
 			       tu.role,
 			       tu.active AS user_active
-			FROM tenants t
-			INNER JOIN tenant_users tu ON tu.tenant_id = t.id
+			FROM {$tenantsTable} t
+			INNER JOIN {$tenantUsersTable} tu ON tu.tenant_id = t.id
 			WHERE tu.user_id = :user_id
 			  AND tu.active = 1
 			  AND t.status = 'active'
@@ -32,6 +35,9 @@ class Tenant extends Model
 
 	public function findByIdForUser(int $tenantId, int $userId): ?array
 	{
+		$tenantsTable = $this->managerTable('tenants');
+		$tenantUsersTable = $this->managerTable('tenant_users');
+
 		$stmt = $this->db->prepare("
 			SELECT t.id,
 			       t.name,
@@ -41,8 +47,8 @@ class Tenant extends Model
 			       t.status,
 			       tu.role,
 			       tu.active AS user_active
-			FROM tenants t
-			INNER JOIN tenant_users tu ON tu.tenant_id = t.id
+			FROM {$tenantsTable} t
+			INNER JOIN {$tenantUsersTable} tu ON tu.tenant_id = t.id
 			WHERE t.id = :tenant_id
 			  AND tu.user_id = :user_id
 			  AND tu.active = 1
@@ -59,9 +65,11 @@ class Tenant extends Model
 
 	public function findByDatabaseNumber(string $databaseNumber): ?array
 	{
+		$tenantsTable = $this->managerTable('tenants');
+
 		$stmt = $this->db->prepare("
 			SELECT id, name, fantasy, document, database_number, status, created, modified
-			FROM tenants
+			FROM {$tenantsTable}
 			WHERE database_number = :database_number
 			LIMIT 1
 		");
@@ -74,9 +82,10 @@ class Tenant extends Model
 	public function create(array $data): int
 	{
 		$now = date('Y-m-d H:i:s');
+		$tenantsTable = $this->managerTable('tenants');
 
 		$stmt = $this->db->prepare("
-			INSERT INTO tenants (name, fantasy, document, database_number, status, created, modified)
+			INSERT INTO {$tenantsTable} (name, fantasy, document, database_number, status, created, modified)
 			VALUES (:name, :fantasy, :document, :database_number, :status, :created, :modified)
 		");
 		$stmt->execute([
@@ -95,9 +104,10 @@ class Tenant extends Model
 	public function linkUser(int $tenantId, int $userId, string $role = 'user', bool $active = true): void
 	{
 		$now = date('Y-m-d H:i:s');
+		$tenantUsersTable = $this->managerTable('tenant_users');
 
 		$stmt = $this->db->prepare("
-			INSERT INTO tenant_users (tenant_id, user_id, role, active, created, modified)
+			INSERT INTO {$tenantUsersTable} (tenant_id, user_id, role, active, created, modified)
 			VALUES (:tenant_id, :user_id, :role, :active, :created, :modified)
 			ON DUPLICATE KEY UPDATE
 				role = VALUES(role),
