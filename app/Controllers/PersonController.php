@@ -2,6 +2,7 @@
 
 namespace App\Controllers;
 
+use App\Core\Authorization;
 use App\Core\TenantAwareController;
 use App\Models\Person;
 use App\Models\Neighborhood;
@@ -83,12 +84,12 @@ class PersonController extends TenantAwareController
 		}
 
 	/**
-	 * Neighborhood search — used by the address autocomplete on the person create form.
-	 * Requires only person.create permission (no separate neighborhood permission needed).
+	 * Neighborhood search — used by the address autocomplete on the person form.
+	 * Allows create or edit permission, no separate neighborhood permission needed.
 	 */
 	public function neighborhoodSearch()
 		{
-		$this->requirePermission('person.create');
+		$this->requirePersonFormAccess();
 
 		$term  = trim($_GET['term'] ?? '');
 		$limit = isset($_GET['limit']) ? (int) $_GET['limit'] : 20;
@@ -118,12 +119,12 @@ class PersonController extends TenantAwareController
 		}
 
 	/**
-	 * Neighborhood create — creates a neighborhood inline during person registration.
-	 * Requires only person.create permission.
+	 * Neighborhood create — creates a neighborhood inline during person registration/edit.
+	 * Allows create or edit permission.
 	 */
 	public function neighborhoodCreate()
 		{
-		$this->requirePermission('person.create');
+		$this->requirePersonFormAccess();
 
 		$name   = trim($_POST['name'] ?? '');
 		$cityId = (int) ($_POST['city_id'] ?? 0);
@@ -154,11 +155,11 @@ class PersonController extends TenantAwareController
 
 	/**
 	 * City search — used by the neighborhood inline create form.
-	 * Requires only person.create permission.
+	 * Allows create or edit permission.
 	 */
 	public function citySearch()
 		{
-		$this->requirePermission('person.create');
+		$this->requirePersonFormAccess();
 
 		$term  = trim($_GET['term'] ?? '');
 		$limit = isset($_GET['limit']) ? (int) $_GET['limit'] : 20;
@@ -197,8 +198,20 @@ class PersonController extends TenantAwareController
 		{
 		$this->requirePermission('person.edit');
 		$person = new Person();
-		$data = $person->find($id);
-		$this->view('people/edit', ['title' => 'Editar pessoa', 'person' => $data]);
+		$data = $person->findAllByPersonId($id);
+
+		if (empty($data['person']))
+			{
+			$this->redirect('person');
+			}
+
+		$this->view('people/edit', [
+			'title' => 'Editar pessoa',
+			'person' => $data['person'],
+			'phones' => $data['phones'],
+			'emails' => $data['emails'],
+			'addresses' => $data['addresses'],
+		]);
 		}
 
 	/**
@@ -260,6 +273,16 @@ class PersonController extends TenantAwareController
 			}, $rows);
 
 		$this->json(['items' => $items]);
+		}
+
+	private function requirePersonFormAccess(): void
+		{
+		if (Authorization::can('person.create') || Authorization::can('person.edit'))
+			{
+			return;
+			}
+
+		$this->requirePermission('person.create');
 		}
 	}
 

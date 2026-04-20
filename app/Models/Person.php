@@ -192,29 +192,62 @@ class Person extends TenantModel
 	 */
 	public function update($id, $data)
 		{
-		$stmt = $this->db->prepare("
-			UPDATE people
-			SET
-				`name`      = :name,
-				`fantasy`   = :fantasy,
-				`type`      = :type,
-				`document`  = :document,
-				`active`    = :active,
-				`birthdate` = :birthdate,
-				`modified`  = :modified
-			WHERE id = :id
-		");
+		$personData = (isset($data['person']) && is_array($data['person'])) ? $data['person'] : $data;
 
-		$stmt->execute([
-			'name'      => $data['name'],
-			'fantasy'   => $data['fantasy'] ?? '',
-			'type'      => $data['type'],
-			'document'  => onlyDigits($data['document']),
-			'active'    => $data['active'],
-			'birthdate' => (!empty($data['birthdate']) ? dateBrToUs($data['birthdate']) : null),
-			'modified'  => date('Y-m-d H:i:s'),
-			'id'        => $id,
-		]);
+		try
+			{
+			$this->db->beginTransaction();
+
+			$stmt = $this->db->prepare("
+				UPDATE people
+				SET
+					`name`      = :name,
+					`fantasy`   = :fantasy,
+					`type`      = :type,
+					`document`  = :document,
+					`active`    = :active,
+					`birthdate` = :birthdate,
+					`modified`  = :modified
+				WHERE id = :id
+			");
+
+			$stmt->execute([
+				'name'      => $personData['name'],
+				'fantasy'   => $personData['fantasy'] ?? '',
+				'type'      => $personData['type'],
+				'document'  => onlyDigits($personData['document']),
+				'active'    => intval($personData['active'] ?? 1),
+				'birthdate' => (!empty($personData['birthdate']) ? dateBrToUs($personData['birthdate']) : null),
+				'modified'  => date('Y-m-d H:i:s'),
+				'id'        => $id,
+			]);
+
+			if (array_key_exists('phones', $data) && is_array($data['phones']))
+				{
+				$this->syncPhoneNumbers((int) $id, $data['phones']);
+				}
+
+			if (array_key_exists('addresses', $data) && is_array($data['addresses']))
+				{
+				$this->syncAddresses((int) $id, $data['addresses']);
+				}
+
+			if (array_key_exists('emails', $data) && is_array($data['emails']))
+				{
+				$this->syncEmails((int) $id, $data['emails']);
+				}
+
+			$this->db->commit();
+			}
+		catch (\Exception $e)
+			{
+			if ($this->db->inTransaction())
+				{
+				$this->db->rollBack();
+				}
+
+			throw $e;
+			}
 		}
 
 	/**
@@ -487,6 +520,220 @@ class Person extends TenantModel
 
 		$data = json_decode($json, true);
 		return is_array($data) ? $data : [];
+		}
+
+	private function syncPhoneNumbers(int $personId, array $phones): void
+		{
+		$existingIds = $this->fetchAssociationIds('phone_numbers', $personId);
+		$keptIds = [];
+
+		$insertStmt = $this->db->prepare("
+			INSERT INTO phone_numbers (`phone_number`, `observations`, `person_id`, `created`, `modified`)
+			VALUES (:phone_number, :observations, :person_id, :created, :modified)
+		");
+		$updateStmt = $this->db->prepare("
+			UPDATE phone_numbers
+			SET
+				`phone_number` = :phone_number,
+				`observations` = :observations,
+				`modified` = :modified
+			WHERE id = :id
+			  AND person_id = :person_id
+		");
+
+		foreach ($phones as $phone)
+			{
+			$number = trim((string) ($phone['number'] ?? ''));
+			$notes = trim((string) ($phone['notes'] ?? ''));
+			$hasContent = ($number !== '' || $notes !== '');
+
+			if (!$hasContent || $number === '')
+				{
+				continue;
+				}
+
+			$rowId = (int) ($phone['id'] ?? 0);
+			$params = [
+				'phone_number' => onlyDigits($number),
+				'observations' => ($notes !== '' ? $notes : null),
+				'person_id'    => $personId,
+				'modified'     => date('Y-m-d H:i:s'),
+			];
+
+			if ($rowId > 0 && isset($existingIds[$rowId]))
+				{
+				$params['id'] = $rowId;
+				$updateStmt->execute($params);
+				$keptIds[$rowId] = true;
+				continue;
+				}
+
+			$params['created'] = date('Y-m-d H:i:s');
+			$insertStmt->execute($params);
+			}
+
+		$this->deleteMissingAssociationRows('phone_numbers', $personId, $existingIds, $keptIds);
+		}
+
+	private function syncAddresses(int $personId, array $addresses): void
+		{
+		$existingIds = $this->fetchAssociationIds('addresses', $personId);
+		$keptIds = [];
+
+		$insertStmt = $this->db->prepare("
+			INSERT INTO addresses
+				(`zip_code`, `street`, `number`, `observations`, `person_id`, `neighborhood_id`, `created`, `modified`)
+			VALUES
+				(:zip_code, :street, :number, :observations, :person_id, :neighborhood_id, :created, :modified)
+		");
+		$updateStmt = $this->db->prepare("
+			UPDATE addresses
+			SET
+				`zip_code` = :zip_code,
+				`street` = :street,
+				`number` = :number,
+				`observations` = :observations,
+				`neighborhood_id` = :neighborhood_id,
+				`modified` = :modified
+			WHERE id = :id
+			  AND person_id = :person_id
+		");
+
+		foreach ($addresses as $address)
+			{
+			$zipCode = trim((string) ($address['zip_code'] ?? ''));
+			$street = trim((string) ($address['street'] ?? ''));
+			$number = trim((string) ($address['number'] ?? ''));
+			$observations = trim((string) ($address['observations'] ?? ''));
+			$neighborhoodId = (int) ($address['neighborhood_id'] ?? 0);
+			$hasContent = (
+				$zipCode !== ''
+				|| $street !== ''
+				|| $number !== ''
+				|| $observations !== ''
+				|| $neighborhoodId > 0
+			);
+
+			if (!$hasContent || $street === '' || $neighborhoodId === 0)
+				{
+				continue;
+				}
+
+			$rowId = (int) ($address['id'] ?? 0);
+			$params = [
+				'zip_code'        => $zipCode,
+				'street'          => $street,
+				'number'          => $number,
+				'observations'    => ($observations !== '' ? $observations : null),
+				'person_id'       => $personId,
+				'neighborhood_id' => $neighborhoodId,
+				'modified'        => date('Y-m-d H:i:s'),
+			];
+
+			if ($rowId > 0 && isset($existingIds[$rowId]))
+				{
+				$params['id'] = $rowId;
+				$updateStmt->execute($params);
+				$keptIds[$rowId] = true;
+				continue;
+				}
+
+			$params['created'] = date('Y-m-d H:i:s');
+			$insertStmt->execute($params);
+			}
+
+		$this->deleteMissingAssociationRows('addresses', $personId, $existingIds, $keptIds);
+		}
+
+	private function syncEmails(int $personId, array $emails): void
+		{
+		$existingIds = $this->fetchAssociationIds('emails', $personId);
+		$keptIds = [];
+
+		$insertStmt = $this->db->prepare("
+			INSERT INTO emails (`email`, `observations`, `is_login`, `person_id`, `created`, `modified`)
+			VALUES (:email, :observations, :is_login, :person_id, :created, :modified)
+		");
+		$updateStmt = $this->db->prepare("
+			UPDATE emails
+			SET
+				`email` = :email,
+				`observations` = :observations,
+				`is_login` = :is_login,
+				`modified` = :modified
+			WHERE id = :id
+			  AND person_id = :person_id
+		");
+
+		foreach ($emails as $email)
+			{
+			$address = trim((string) ($email['address'] ?? ''));
+			$description = trim((string) ($email['description'] ?? ''));
+			$isLogin = intval($email['is_login'] ?? 0);
+			$hasContent = ($address !== '' || $description !== '' || $isLogin === 1);
+
+			if (!$hasContent || $address === '')
+				{
+				continue;
+				}
+
+			$rowId = (int) ($email['id'] ?? 0);
+			$params = [
+				'email'        => $address,
+				'observations' => ($description !== '' ? $description : null),
+				'is_login'     => $isLogin,
+				'person_id'    => $personId,
+				'modified'     => date('Y-m-d H:i:s'),
+			];
+
+			if ($rowId > 0 && isset($existingIds[$rowId]))
+				{
+				$params['id'] = $rowId;
+				$updateStmt->execute($params);
+				$keptIds[$rowId] = true;
+				continue;
+				}
+
+			$params['created'] = date('Y-m-d H:i:s');
+			$insertStmt->execute($params);
+			}
+
+		$this->deleteMissingAssociationRows('emails', $personId, $existingIds, $keptIds);
+		}
+
+	private function fetchAssociationIds(string $table, int $personId): array
+		{
+		$stmt = $this->db->prepare("SELECT id FROM {$table} WHERE person_id = :person_id");
+		$stmt->execute(['person_id' => $personId]);
+
+		$ids = [];
+
+		foreach ($stmt->fetchAll(PDO::FETCH_COLUMN) as $id)
+			{
+			$ids[(int) $id] = true;
+			}
+
+		return $ids;
+		}
+
+	private function deleteMissingAssociationRows(string $table, int $personId, array $existingIds, array $keptIds): void
+		{
+		$deleteIds = array_diff(array_keys($existingIds), array_keys($keptIds));
+
+		if ($deleteIds === [])
+			{
+			return;
+			}
+
+		$stmt = $this->db->prepare("DELETE FROM {$table} WHERE id = :id AND person_id = :person_id");
+
+		foreach ($deleteIds as $deleteId)
+			{
+			$stmt->execute([
+				'id' => (int) $deleteId,
+				'person_id' => $personId,
+			]);
+			}
 		}
 
 	/**
