@@ -511,6 +511,12 @@ class Person extends TenantModel
 		];
 		}
 
+  /**
+   * Helper method to decode JSON arrays stored in the database, ensuring a consistent return type of array
+   * even if the stored value is null, empty, or invalid JSON.
+   * @param mixed $json The JSON string to decode
+   * @return array The decoded array, or an empty array if the input is not a valid JSON string representing an array
+   */
 	private function decodeJsonArray($json): array
 		{
 		if (!is_string($json) || trim($json) === '')
@@ -522,6 +528,11 @@ class Person extends TenantModel
 		return is_array($data) ? $data : [];
 		}
 
+  /**
+   * Synchronizes phone numbers for a given person.
+   * @param int $personId The ID of the person for whom to synchronize phone numbers.
+   * @param array $phones The array of phone numbers to synchronize.
+   */
 	private function syncPhoneNumbers(int $personId, array $phones): void
 		{
 		$existingIds = $this->fetchAssociationIds('phone_numbers', $personId);
@@ -575,6 +586,11 @@ class Person extends TenantModel
 		$this->deleteMissingAssociationRows('phone_numbers', $personId, $existingIds, $keptIds);
 		}
 
+  /**
+   * Synchronizes addresses for a given person.
+   * @param int $personId The ID of the person for whom to synchronize addresses.
+   * @param array $addresses The array of addresses to synchronize.
+   */
 	private function syncAddresses(int $personId, array $addresses): void
 		{
 		$existingIds = $this->fetchAssociationIds('addresses', $personId);
@@ -645,6 +661,11 @@ class Person extends TenantModel
 		$this->deleteMissingAssociationRows('addresses', $personId, $existingIds, $keptIds);
 		}
 
+  /**
+   * Synchronizes emails for a given person.
+   * @param int $personId The ID of the person for whom to synchronize emails.
+   * @param array $emails The array of emails to synchronize.
+   */
 	private function syncEmails(int $personId, array $emails): void
 		{
 		$existingIds = $this->fetchAssociationIds('emails', $personId);
@@ -701,6 +722,12 @@ class Person extends TenantModel
 		$this->deleteMissingAssociationRows('emails', $personId, $existingIds, $keptIds);
 		}
 
+  /**
+   * Helper method to fetch existing association IDs for a given person and table.
+   * @param string $table The name of the association table (e.g., 'phone_numbers', 'addresses', 'emails').
+   * @param int $personId The ID of the person for whom to fetch association IDs.
+   * @return array An associative array where keys are existing association IDs and values are true, used for quick existence checks during synchronization.
+   */
 	private function fetchAssociationIds(string $table, int $personId): array
 		{
 		$stmt = $this->db->prepare("SELECT id FROM {$table} WHERE person_id = :person_id");
@@ -715,7 +742,15 @@ class Person extends TenantModel
 
 		return $ids;
 		}
-
+    
+  /**
+   * Deletes missing association rows for a given person and table.
+   * @param string $table The name of the association table (e.g., 'phone_numbers', 'addresses', 'emails').
+   * @param int $personId The ID of the person for whom to delete association rows.
+   * @param array $existingIds The array of existing association IDs.
+   * @param array $keptIds The array of kept association IDs.
+   * @return void
+   */
 	private function deleteMissingAssociationRows(string $table, int $personId, array $existingIds, array $keptIds): void
 		{
 		$deleteIds = array_diff(array_keys($existingIds), array_keys($keptIds));
@@ -764,5 +799,4 @@ class Person extends TenantModel
 		return $stmt->fetchAll(\PDO::FETCH_ASSOC);
 		}
 	}
-
 ?>
