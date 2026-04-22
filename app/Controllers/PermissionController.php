@@ -126,6 +126,57 @@ class PermissionController extends Controller
 		}
 
 	/**
+	 * Displays the orphaned permissions report for the manager catalog.
+	 */
+	public function orphaned(): void
+		{
+		$this->currentTenantId();
+
+		$permissionModel = new Permission();
+		$orphaned = $permissionModel->getOrphanedPermissions();
+		$stats = $permissionModel->getOrphanedPermissionStats();
+
+		$this->view('permissions/orphaned', [
+			'orphaned' => $orphaned,
+			'stats' => $stats,
+			'title' => 'Permissões Órfãs',
+		]);
+		}
+
+	/**
+	 * Deletes an orphaned permission from the manager catalog.
+	 *
+	 * @param mixed $id Permission identifier from the route.
+	 */
+	public function deleteOrphaned($id): void
+		{
+		$this->currentTenantId();
+
+		if (strtoupper((string) ($_SERVER['REQUEST_METHOD'] ?? 'GET')) !== 'POST')
+			{
+			$this->redirect('permission/orphaned');
+			}
+
+		$permissionModel = new Permission();
+
+		try
+			{
+			$result = $permissionModel->deleteOrphanedPermission((int) $id);
+
+			if ($result['success'])
+				{
+				$this->redirect('permission/orphaned?deleted=1&users_affected=' . (int) $result['users_affected']);
+				}
+
+			$this->redirect('permission/orphaned?deleted=0&error=not_orphaned');
+			}
+		catch (\Throwable $e)
+			{
+			$this->redirect('permission/orphaned?deleted=0&error=exception');
+			}
+		}
+
+	/**
 	 * Normalizes submitted permission ids into a unique list of positive integers.
 	 */
 	private function normalizePermissionIds($raw): array

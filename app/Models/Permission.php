@@ -14,6 +14,8 @@ use PDO;
  */
 class Permission extends Model
 	{
+	private const CATALOG_SYSTEM = 'manager';
+
 	/**
 	 * Returns the permission catalog grouped by canonical ability.
 	 */
@@ -21,14 +23,16 @@ class Permission extends Model
 		{
 		$permissionsTable = $this->managerTable('permissions');
 
-		$stmt = $this->db->query("
+		$stmt = $this->db->prepare("
 			SELECT MIN(id) AS id,
 			       ability,
 			       MAX(description) AS description
 			FROM {$permissionsTable}
+			WHERE `system` = :system
 			GROUP BY ability
 			ORDER BY ability ASC
 		");
+		$stmt->execute(['system' => self::CATALOG_SYSTEM]);
 		return $stmt->fetchAll(PDO::FETCH_ASSOC);
 		}
 
@@ -53,10 +57,11 @@ class Permission extends Model
 
 		$permissionsTable = $this->managerTable('permissions');
 		$stmt = $this->db->prepare("
-			INSERT INTO {$permissionsTable} (ability, description, created, modified)
-			VALUES (:ability, :description, :created, :modified)
+			INSERT INTO {$permissionsTable} (`system`, ability, description, created, modified)
+			VALUES (:system, :ability, :description, :created, :modified)
 		");
 		$stmt->execute([
+			'system' => self::CATALOG_SYSTEM,
 			'ability' => $ability,
 			'description' => ($description === '' ? null : $description),
 			'created' => date('Y-m-d H:i:s'),
@@ -78,8 +83,8 @@ class Permission extends Model
 		$added = 0;
 		$permissionsTable = $this->managerTable('permissions');
 		$stmt = $this->db->prepare("
-			INSERT INTO {$permissionsTable} (ability, description, created, modified)
-			VALUES (:ability, :description, :created, :modified)
+			INSERT INTO {$permissionsTable} (`system`, ability, description, created, modified)
+			VALUES (:system, :ability, :description, :created, :modified)
 		");
 
 		foreach ($discovered as $ability => $description)
@@ -90,6 +95,7 @@ class Permission extends Model
 				}
 
 			$stmt->execute([
+				'system' => self::CATALOG_SYSTEM,
 				'ability' => $ability,
 				'description' => $description,
 				'created' => date('Y-m-d H:i:s'),
@@ -112,7 +118,12 @@ class Permission extends Model
 	private function getExistingAbilitiesLookup(): array
 		{
 		$permissionsTable = $this->managerTable('permissions');
-		$stmt = $this->db->query("SELECT DISTINCT ability FROM {$permissionsTable}");
+		$stmt = $this->db->prepare("
+			SELECT DISTINCT ability
+			FROM {$permissionsTable}
+			WHERE `system` = :system
+		");
+		$stmt->execute(['system' => self::CATALOG_SYSTEM]);
 
 		$lookup = [];
 		while ($row = $stmt->fetch(PDO::FETCH_ASSOC))
@@ -269,11 +280,17 @@ class Permission extends Model
 			INNER JOIN (
 				SELECT MIN(id) AS id, ability
 				FROM {$permissionsTable}
+				WHERE `system` = :canonical_system
 				GROUP BY ability
 			) canonical ON canonical.ability = p.ability
 			WHERE up.user_id = :user_id
+			  AND p.`system` = :assigned_system
 		");
-		$stmt->execute(['user_id' => $userId]);
+		$stmt->execute([
+			'user_id' => $userId,
+			'canonical_system' => self::CATALOG_SYSTEM,
+			'assigned_system' => self::CATALOG_SYSTEM,
+		]);
 
 		$ids = [];
 		while ($row = $stmt->fetch(PDO::FETCH_ASSOC))
@@ -300,8 +317,18 @@ class Permission extends Model
 		try
 			{
 			$userPermissionsTable = $this->managerTable('user_permissions');
-			$del = $this->db->prepare("DELETE FROM {$userPermissionsTable} WHERE user_id = :user_id");
-			$del->execute(['user_id' => $userId]);
+			$permissionsTable = $this->managerTable('permissions');
+			$del = $this->db->prepare("
+				DELETE up
+				FROM {$userPermissionsTable} up
+				INNER JOIN {$permissionsTable} p ON p.id = up.permission_id
+				WHERE up.user_id = :user_id
+				  AND p.`system` = :system
+			");
+			$del->execute([
+				'user_id' => $userId,
+				'system' => self::CATALOG_SYSTEM,
+			]);
 
 			$canonicalPermissionIds = $this->canonicalizePermissionIds($permissionIds);
 			if ($canonicalPermissionIds !== [])
@@ -357,11 +384,17 @@ class Permission extends Model
 		$stmt = $this->db->prepare("
 			SELECT MIN(canonical.id) AS id
 			FROM {$permissionsTable} selected
-			INNER JOIN {$permissionsTable} canonical ON canonical.ability = selected.ability
-			WHERE selected.id IN ({$placeholders})
+			INNER JOIN {$permissionsTable} canonical
+				ON canonical.ability = selected.ability
+				AND canonical.`system` = ?
+			WHERE selected.`system` = ?
+			  AND selected.id IN ({$placeholders})
 			GROUP BY selected.ability
 		");
-		$stmt->execute($permissionIds);
+		$stmt->execute(array_merge([
+			self::CATALOG_SYSTEM,
+			self::CATALOG_SYSTEM,
+		], $permissionIds));
 
 		$canonicalIds = [];
 		while ($row = $stmt->fetch(PDO::FETCH_ASSOC))
@@ -387,9 +420,13 @@ class Permission extends Model
 			SELECT MIN(id) AS id
 			FROM {$permissionsTable}
 			WHERE ability = :ability
+			  AND `system` = :system
 			LIMIT 1
 		");
-		$stmt->execute(['ability' => $ability]);
+		$stmt->execute([
+			'ability' => $ability,
+			'system' => self::CATALOG_SYSTEM,
+		]);
 
 		$id = $stmt->fetchColumn();
 		return $id !== false ? (int) $id : null;
@@ -435,6 +472,194 @@ class Permission extends Model
 	public function getEffectiveAbilitiesForUser(int $userId): array
 		{
 		return $this->getAbilitiesForUser($userId);
+		}
+
+	/**
+	 * Returns permissions that no longer exist in the manager controllers.
+	 */
+	public function getOrphanedPermissions(): array
+		{
+		$discovered = $this->discoverAbilitiesFromControllers(ROOT_PATH . '/app/Controllers');
+		$permissionsTable = $this->managerTable('permissions');
+		$stmt = $this->db->prepare("
+			SELECT id,
+			       ability,
+			       `system`,
+			       description,
+			       created,
+			       modified
+			FROM {$permissionsTable}
+			WHERE `system` = :system
+			ORDER BY ability ASC, id ASC
+		");
+		$stmt->execute(['system' => self::CATALOG_SYSTEM]);
+
+		$orphaned = [];
+		while ($row = $stmt->fetch(PDO::FETCH_ASSOC))
+			{
+			$ability = trim((string) ($row['ability'] ?? ''));
+			if ($ability === '' || isset($discovered[$ability]))
+				{
+				continue;
+				}
+
+			$orphaned[] = $row;
+			}
+
+		return $orphaned;
+		}
+
+	/**
+	 * Returns statistics for orphaned permissions.
+	 */
+	public function getOrphanedPermissionStats(): array
+		{
+		$orphaned = $this->getOrphanedPermissions();
+		$stats = [
+			'total_orphaned' => count($orphaned),
+			'permissions' => [],
+		];
+
+		if ($orphaned === [])
+			{
+			return $stats;
+			}
+
+		$permissionIds = [];
+		foreach ($orphaned as $perm)
+			{
+			$permissionIds[] = (int) $perm['id'];
+			}
+
+		$userCounts = $this->getUserCountByPermissionIds($permissionIds);
+		foreach ($orphaned as $perm)
+			{
+			$permissionId = (int) $perm['id'];
+			$stats['permissions'][$permissionId] = [
+				'ability' => (string) ($perm['ability'] ?? ''),
+				'description' => (string) ($perm['description'] ?? ''),
+				'user_count' => (int) ($userCounts[$permissionId] ?? 0),
+			];
+			}
+
+		return $stats;
+		}
+
+	/**
+	 * Deletes an orphaned permission and its user assignments.
+	 *
+	 * @return array{success: bool, users_affected: int}
+	 */
+	public function deleteOrphanedPermission(int $permissionId): array
+		{
+		if ($permissionId <= 0)
+			{
+			return ['success' => false, 'users_affected' => 0];
+			}
+
+		$this->db->beginTransaction();
+
+		try
+			{
+			$isOrphaned = false;
+			foreach ($this->getOrphanedPermissions() as $perm)
+				{
+				if ((int) ($perm['id'] ?? 0) === $permissionId)
+					{
+					$isOrphaned = true;
+					break;
+					}
+				}
+
+			if (!$isOrphaned)
+				{
+				$this->db->rollBack();
+				return ['success' => false, 'users_affected' => 0];
+				}
+
+			$userPermissionsTable = $this->managerTable('user_permissions');
+			$permissionsTable = $this->managerTable('permissions');
+
+			$countStmt = $this->db->prepare("
+				SELECT COUNT(*) AS total
+				FROM {$userPermissionsTable}
+				WHERE permission_id = :permission_id
+			");
+			$countStmt->execute(['permission_id' => $permissionId]);
+			$usersAffected = (int) $countStmt->fetchColumn();
+
+			$deleteAssignmentsStmt = $this->db->prepare("
+				DELETE FROM {$userPermissionsTable}
+				WHERE permission_id = :permission_id
+			");
+			$deleteAssignmentsStmt->execute(['permission_id' => $permissionId]);
+
+			$deletePermissionStmt = $this->db->prepare("
+				DELETE FROM {$permissionsTable}
+				WHERE id = :id
+				  AND `system` = :system
+			");
+			$deletePermissionStmt->execute([
+				'id' => $permissionId,
+				'system' => self::CATALOG_SYSTEM,
+			]);
+
+			if ($deletePermissionStmt->rowCount() !== 1)
+				{
+				$this->db->rollBack();
+				return ['success' => false, 'users_affected' => 0];
+				}
+
+			$this->db->commit();
+
+			return [
+				'success' => true,
+				'users_affected' => $usersAffected,
+			];
+			}
+		catch (\Throwable $e)
+			{
+			$this->db->rollBack();
+			throw $e;
+			}
+		}
+
+	/**
+	 * Returns a count of affected users for the given permission ids.
+	 *
+	 * @param array<int> $permissionIds
+	 * @return array<int, int>
+	 */
+	private function getUserCountByPermissionIds(array $permissionIds): array
+		{
+		$permissionIds = array_values(array_unique(array_map('intval', $permissionIds)));
+		$permissionIds = array_values(array_filter($permissionIds, static function ($id)
+			{
+			return $id > 0;
+			}));
+
+		if ($permissionIds === [])
+			{
+			return [];
+			}
+
+		$userPermissionsTable = $this->managerTable('user_permissions');
+		$placeholders = implode(', ', array_fill(0, count($permissionIds), '?'));
+		$stmt = $this->db->prepare("
+			SELECT permission_id, COUNT(*) AS total
+			FROM {$userPermissionsTable}
+			WHERE permission_id IN ({$placeholders})
+			GROUP BY permission_id
+		");
+		$stmt->execute($permissionIds);
+
+		$counts = [];
+		while ($row = $stmt->fetch(PDO::FETCH_ASSOC))
+			{
+			$counts[(int) ($row['permission_id'] ?? 0)] = (int) ($row['total'] ?? 0);
+			}
+
+		return $counts;
 		}
 	}
 ?>
