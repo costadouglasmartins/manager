@@ -42,14 +42,14 @@ class UserController extends Controller
 		}
 
 	/**
-	 * Index method
+	 * Lists users for the current tenant with filters and pagination.
 	 */
 	public function index()
 		{
 		$tenantId = $this->currentTenantId('user.index');
 		$user = new User();
 
-		// Filtros vindos da query string
+		// Filters received from the query string.
 		$filters = [
 			'id'				=> isset($_GET['id'])				? trim($_GET['id'])				: '',
 			'username'	=> isset($_GET['username'])	? trim($_GET['username'])			: '',
@@ -57,21 +57,21 @@ class UserController extends Controller
 			'active'		=> isset($_GET['active'])		? trim($_GET['active'])		: '',
 		];
 
-		// Página atual (?page=2)
+		// Current page (?page=2).
 		$page = isset($_GET['page']) ? (int) $_GET['page'] : 1;
 		if ($page < 1)
 			{
 			$page = 1;
 			}
 
-		// Registros por página
+		// Records per page.
 		$perPage = 10;
 		$offset = ($page - 1) * $perPage;
 
-		// Busca paginada com filtros
+		// Paginated search with filters.
 		$users = $user->search($filters, $perPage, $offset, $tenantId);
 
-		// Total para paginação (com os mesmos filtros)
+		// Total count for pagination using the same filters.
 		$total = $user->count($filters, $tenantId);
 		$totalPages = (int) ceil($total / $perPage);
 		if ($totalPages < 1)
@@ -90,8 +90,9 @@ class UserController extends Controller
 		}
 
 	/**
-	 * Edit method
-	 * @param Integer $id User id
+	 * Renders the user edit form for the requested tenant-scoped user.
+	 *
+	 * @param mixed $id User identifier.
 	 */
 	public function edit($id)
 		{
@@ -106,8 +107,9 @@ class UserController extends Controller
 		}
 
 	/**
-	 * Update method
-	 * @param Integer $id User id
+	 * Updates the requested tenant-scoped user and redirects back to the listing.
+	 *
+	 * @param mixed $id User identifier.
 	 */
 	public function update($id)
 		{
@@ -124,18 +126,18 @@ class UserController extends Controller
 		}
 
 	/**
-	 * Login method
+	 * Displays the login form and handles authentication attempts.
 	 */
 	public function login()
 		{
-		// Se já logado, redireciona para home
+		// If the user is already logged in, redirect to the home page.
 		if (!empty($_SESSION['manager']['user']))
 			{
 			$this->redirect('/');
 			exit;
 			}
 
-		// Se for POST, processa tentativa de login
+		// When the request is POST, process the login attempt.
 		if ($_SERVER['REQUEST_METHOD'] === 'POST')
 			{
 			$email = isset($_POST['email']) ? trim($_POST['email']) : '';
@@ -155,7 +157,7 @@ class UserController extends Controller
 					'name'			=> $user['name']
 				];
 
-				// Auto-selecionar tenant se o usuário tem acesso a apenas um
+				// Auto-select the tenant when the user has access to only one.
 				try
 					{
 					$tenantModel = new Tenant();
@@ -191,7 +193,7 @@ class UserController extends Controller
 					error_log('ERROR LOGIN: Trace: ' . $e->getTraceAsString());
 					}
 
-				// Se chegou aqui, não encontrou tenant ou houve erro - redireciona para home mesmo assim
+				// If execution reaches this point, no tenant was found or an error occurred, so redirect home anyway.
 				$this->redirect('/');
 				exit;
 				}
@@ -203,17 +205,17 @@ class UserController extends Controller
 				}
 			}
 
-		// GET: mostra formulário de login
+		// GET request: render the login form.
 		$this->view('users/login', ['title' => 'Login']);
 		}
 
 	/**
-	 * Logout method
+	 * Ends the current session and redirects the user to the login page.
 	 */
 	public function logout()
 		{
 		\App\Core\Authorization::clearCache();
-		// Destroi sessão e redireciona
+		// Destroy the session and redirect.
 		$_SESSION = [];
 		if (ini_get("session.use_cookies"))
 			{
@@ -229,8 +231,9 @@ class UserController extends Controller
 		}
 
   /**
-   * Informations method
-   * @param Integer $id User id
+   * Displays the details for the requested tenant-scoped user.
+   *
+   * @param mixed $id User identifier.
    */
   public function informations($id)
 		{
@@ -248,5 +251,4 @@ class UserController extends Controller
 		]);
 		}
 	}
-
 ?>

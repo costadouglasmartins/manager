@@ -9,6 +9,9 @@ use App\Models\Permission;
 
 class PermissionController extends Controller
 	{
+	/**
+	 * Returns the current tenant id after validating authentication, tenant context, and permission.
+	 */
 	private function currentTenantId(): int
 		{
 		$this->requireAuth();
@@ -19,6 +22,9 @@ class PermissionController extends Controller
 		return (int) ($tenant['id'] ?? 0);
 		}
 
+	/**
+	 * Displays the permission catalog and the selected user's assigned abilities.
+	 */
 	public function index(): void
 		{
 		$tenantId = $this->currentTenantId();
@@ -51,6 +57,9 @@ class PermissionController extends Controller
 		]);
 		}
 
+	/**
+	 * Replaces the selected user's permissions with the submitted permission ids.
+	 */
 	public function saveUser(): void
 		{
 		$tenantId = $this->currentTenantId();
@@ -69,6 +78,9 @@ class PermissionController extends Controller
 		$this->redirect('permission?user_id=' . $userId);
 		}
 
+	/**
+	 * Synchronizes the permission catalog with abilities discovered in controller actions.
+	 */
 	public function sync(): void
 		{
 		$this->currentTenantId();
@@ -88,6 +100,9 @@ class PermissionController extends Controller
 		$this->redirect($qs);
 		}
 
+	/**
+	 * Creates a new permission entry in the catalog.
+	 */
 	public function create(): void
 		{
 		$this->currentTenantId();
@@ -110,6 +125,9 @@ class PermissionController extends Controller
 		$this->redirect($qs);
 		}
 
+	/**
+	 * Normalizes submitted permission ids into a unique list of positive integers.
+	 */
 	private function normalizePermissionIds($raw): array
 		{
 		if (!is_array($raw))
@@ -130,5 +148,4 @@ class PermissionController extends Controller
 		return array_values(array_unique($out));
 		}
 	}
-
 ?>

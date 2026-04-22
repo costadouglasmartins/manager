@@ -9,6 +9,9 @@ class App
 	protected $method = 'index';
 	protected $params = [];
 
+	/**
+	 * Resolves the controller, method, and route parameters for the current request.
+	 */
 	public function __construct()
 		{
 		$url = $this->parseUrl();
@@ -41,10 +44,14 @@ class App
 		call_user_func_array([$this->controller, $this->method], $this->params);
 		}
 
+	/**
+	 * Parses the `url` query parameter into route segments.
+	 *
+	 * @return array<int, string>
+	 */
 	private function parseUrl()
 		{
 		return isset($_GET['url']) ? explode('/', filter_var(rtrim($_GET['url'], '/'), FILTER_SANITIZE_URL)) : [];
 		}
 	}
-
 ?>

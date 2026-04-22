@@ -14,6 +14,9 @@ use PDO;
  */
 class Permission extends Model
 	{
+	/**
+	 * Returns the permission catalog grouped by canonical ability.
+	 */
 	public function getAll(): array
 		{
 		$permissionsTable = $this->managerTable('permissions');
@@ -103,6 +106,9 @@ class Permission extends Model
 		return $added;
 		}
 
+	/**
+	 * Builds a fast lookup table for existing abilities in the permission catalog.
+	 */
 	private function getExistingAbilitiesLookup(): array
 		{
 		$permissionsTable = $this->managerTable('permissions');
@@ -176,6 +182,9 @@ class Permission extends Model
 		return $abilities;
 		}
 
+	/**
+	 * Returns active users, optionally filtered to a specific tenant.
+	 */
 	public function getUsers(?int $tenantId = null): array
 		{
 		$usersTable = $this->managerTable('users');
@@ -218,6 +227,9 @@ class Permission extends Model
 		return $stmt->fetchAll(PDO::FETCH_ASSOC);
 		}
 
+	/**
+	 * Checks whether a user belongs to the given active tenant.
+	 */
 	public function userBelongsToTenant(int $userId, int $tenantId): bool
 		{
 		if ($userId <= 0 || $tenantId <= 0)
@@ -242,6 +254,9 @@ class Permission extends Model
 		return $stmt->fetchColumn() !== false;
 		}
 
+	/**
+	 * Returns the canonical permission ids currently assigned to the given user.
+	 */
 	public function getPermissionIdsByUser(int $userId): array
 		{
 		$userPermissionsTable = $this->managerTable('user_permissions');
@@ -316,6 +331,9 @@ class Permission extends Model
 			}
 		}
 
+	/**
+	 * Converts submitted permission ids to their canonical catalog ids.
+	 */
 	private function canonicalizePermissionIds(array $permissionIds): array
 		{
 		if ($permissionIds === [])
@@ -359,6 +377,9 @@ class Permission extends Model
 		return array_values(array_unique($canonicalIds));
 		}
 
+	/**
+	 * Returns the canonical permission id for the given ability, if it exists.
+	 */
 	private function findCanonicalPermissionIdByAbility(string $ability): ?int
 		{
 		$permissionsTable = $this->managerTable('permissions');
@@ -416,5 +437,4 @@ class Permission extends Model
 		return $this->getAbilitiesForUser($userId);
 		}
 	}
-
 ?>

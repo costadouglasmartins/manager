@@ -9,7 +9,7 @@ class CountryController extends Controller
 	{
 
 	/**
-	 * Index method
+	 * Lists countries with filters and pagination.
 	 */
 	public function index()
 		{
@@ -17,27 +17,27 @@ class CountryController extends Controller
 		
 		$country = new Country();
 
-		// Filtros vindos da query string
+		// Filters received from the query string.
 		$filters = [
 			'id' => isset($_GET['id']) ? trim($_GET['id']) : '',
 			'name' => isset($_GET['name']) ? trim($_GET['name']) : '',
       'acronym' => isset($_GET['acronym']) ? trim($_GET['acronym']) : '',
 		];
 
-		// Página atual (?page=2)
+		// Current page (?page=2).
 		$page = isset($_GET['page']) ? (int) $_GET['page'] : 1;
 		if ($page < 1)
 			{
 			$page = 1;
 			}
 
-		// Registros por página
+		// Records per page.
 		$perPage = 10;
 		$offset = ($page - 1) * $perPage;
 
-		// Busca paginada com filtros
+		// Paginated search with filters.
 		$countries = $country->search($filters, $perPage, $offset);
-		// Total para paginação (com os mesmos filtros)
+		// Total count for pagination using the same filters.
 		$total = $country->count($filters);
 		$totalPages = (int) ceil($total / $perPage);
 		if ($totalPages < 1)
@@ -57,7 +57,7 @@ class CountryController extends Controller
 			]);
 			}
 
-      // padrão HTML
+      // Default HTML response.
       $this->view('countries/index', [
         'countries' => $countries,
         'title' => 'Lista de países',
@@ -69,7 +69,7 @@ class CountryController extends Controller
 		}
 
 	/**
-	 * Created method
+	 * Renders the country creation form.
 	 */
 	public function create()
 		{
@@ -78,7 +78,7 @@ class CountryController extends Controller
 		}
 
 	/**
-	 * Store method
+	 * Persists a new country and redirects back to the listing.
 	 */
 	public function store()
 		{
@@ -89,8 +89,9 @@ class CountryController extends Controller
 		}
 
 	/**
-	 * Edit method
-	 * @param Integer $id Person id
+	 * Renders the country edit form for the requested record.
+	 *
+	 * @param mixed $id Country identifier.
 	 */
 	public function edit($id)
 		{
@@ -101,8 +102,9 @@ class CountryController extends Controller
 		}
 
 	/**
-	 * Update method
-	 * @param Integer $id Person id
+	 * Updates the requested country and redirects back to the listing.
+	 *
+	 * @param mixed $id Country identifier.
 	 */
 	public function update($id)
 		{
@@ -113,8 +115,9 @@ class CountryController extends Controller
 		}
 
 	/**
-	 * Information method
-	 * @param Integer $id Person id
+	 * Displays the details for the requested country.
+	 *
+	 * @param mixed $id Country identifier.
 	 */
 	public function informations($id)
 		{
@@ -126,7 +129,7 @@ class CountryController extends Controller
 		}
 
 	/**
-	 * Autocomplete method
+	 * Returns autocomplete suggestions for countries.
 	 */
 	public function autocomplete()
 		{
@@ -155,5 +158,4 @@ class CountryController extends Controller
 		$this->json(['items' => $items]);
 		}
 	}
-
 ?>

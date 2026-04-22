@@ -9,8 +9,9 @@ class Country extends Model
 	{
 
 	/**
-	 * Get all method
-	 * @return associative array
+	 * Returns all countries ordered by newest first.
+	 *
+	 * @return array
 	 */
 	public function getAll()
 		{
@@ -20,8 +21,9 @@ class Country extends Model
 		}
 
 	/**
-	 * Create method
-	 * @param Array $data Data to save
+	 * Creates a country and returns the inserted identifier.
+	 *
+	 * @param array $data Data to save.
 	 * @return array
 	 * @throws \Exception
 	 */
@@ -30,7 +32,7 @@ class Country extends Model
 
 		try
 			{
-			// Início da transação
+			// Start the transaction.
 			$this->db->beginTransaction();
 			$countriesTable = $this->managerTable('countries');
 
@@ -45,13 +47,13 @@ class Country extends Model
 				'created' => date('Y-m-d H:i:s'),
 				'modified' => date('Y-m-d H:i:s')
 			]);
-			// Store person id
+			// Store the created country id.
 			$countryId = $this->db->lastInsertId();
 
-			// Confirms the transaction
+			// Commit the transaction.
 			$this->db->commit();
 
-			// Retorna os IDs criados
+			// Return the created identifiers.
 			return [
 				'country_id' => $countryId,
 			];
@@ -65,8 +67,9 @@ class Country extends Model
 		}
 
 	/**
-	 * Find method
-	 * @param Integer $id Person id
+	 * Finds a country by id.
+	 *
+	 * @param mixed $id Country identifier.
 	 * @return array
 	 */
 	public function find($id)
@@ -78,9 +81,10 @@ class Country extends Model
 		}
 
 	/**
-	 * Update method
-	 * @param Integer $id Person id
-	 * @param array $data
+	 * Updates an existing country.
+	 *
+	 * @param mixed $id Country identifier.
+	 * @param array $data Updated country data.
 	 */
 	public function update($id, $data)
     {
@@ -103,7 +107,7 @@ class Country extends Model
     }
 
 	/**
-	 * Search method 
+	 * Searches countries using the provided filters and pagination.
 	 */
 	public function search(array $filters = [], int $limit = 10, int $offset = 0): array
 		{
@@ -111,21 +115,21 @@ class Country extends Model
 		$sql = "SELECT * FROM {$countriesTable} WHERE 1=1";
 		$params = [];
 
-		// Id 
+		// Id filter.
 		if (isset($filters['id']) && $filters['id'] !== '')
 			{
 			$sql .= " AND id = :id";
 			$params['id'] = (int) $filters['id'];
 			}
 
-		// Name
+		// Name filter.
 		if (isset($filters['name']) && $filters['name'] !== '')
 			{
 			$sql .= " AND `name` LIKE :name";
 			$params['name'] = '%' . $filters['name'] . '%';
 			}
 
-		// Type
+		// Acronym filter.
 		if (isset($filters['acronym']) && $filters['acronym'] !== '')
 			{
 			$sql .= " AND `acronym` = :acronym";
@@ -136,14 +140,14 @@ class Country extends Model
 
 		$stmt = $this->db->prepare($sql);
 
-		// Bind dos filtros
+		// Bind filter values.
 		foreach ($params as $key => $value)
 			{
 			$paramType = is_int($value) ? PDO::PARAM_INT : PDO::PARAM_STR;
 			$stmt->bindValue(':' . $key, $value, $paramType);
 			}
 
-		// Bind da paginação
+		// Bind pagination values.
 		$stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
 		$stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
 
@@ -153,8 +157,9 @@ class Country extends Model
 		}
 
 	/**
-	 * Count method
-	 * @param Array $filters
+	 * Counts countries that match the provided filters.
+	 *
+	 * @param array $filters
 	 * @return int
 	 */
 	public function count(array $filters = []): int
@@ -163,21 +168,21 @@ class Country extends Model
 		$sql = "SELECT COUNT(*) AS total FROM {$countriesTable} WHERE 1=1";
 		$params = [];
 
-		// Filtro por ID (igual)
+		// Exact id filter.
 		if (!empty($filters['id']))
 			{
 			$sql .= " AND id = :id";
 			$params['id'] = (int) $filters['id'];
 			}
 
-		// Filtro por Nome (LIKE)
+		// Name filter.
 		if (!empty($filters['name']))
 			{
 			$sql .= " AND name LIKE :name";
 			$params['name'] = '%' . $filters['name'] . '%';
 			}
 
-		// Filtro por Tipo
+		// Acronym filter.
 		if (!empty($filters['acronym']))
 			{
 			$sql .= " AND `acronym` = :acronym";
@@ -198,7 +203,7 @@ class Country extends Model
 		}
 
 	/**
-	 * Find all by person id
+	 * Returns the country details payload used by the information view.
 	 */
 	public function findAllByCountryId($id)
 		{
@@ -210,7 +215,8 @@ class Country extends Model
 		}
 
 	/**
-	 * Autocomplete method
+	 * Returns autocomplete suggestions for countries.
+	 *
 	 * @param string $term
 	 * @param int $limit
 	 * @return array
@@ -238,5 +244,4 @@ class Country extends Model
 		return $stmt->fetchAll(\PDO::FETCH_ASSOC);
 		}
 	}
-
 ?>

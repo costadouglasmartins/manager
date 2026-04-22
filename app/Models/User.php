@@ -9,7 +9,7 @@ class User extends Model
 	{
 
   /**
-	 * Search method
+	 * Searches users with optional tenant filtering and pagination.
 	 */
 	public function search(array $filters = [], int $limit = 10, int $offset = 0, ?int $tenantId = null): array
 		{
@@ -29,35 +29,35 @@ class User extends Model
 
 		$sql .= " WHERE 1=1";
 
-		// Id 
+		// Id filter.
 		if (isset($filters['id']) && $filters['id'] !== '')
 			{
 			$sql .= " AND User.id = :id";
 			$params['id'] = (int) $filters['id'];
 			}
 
-		// Username
+		// Username filter.
 		if (isset($filters['username']) && $filters['username'] !== '')
 			{
 			$sql .= " AND User.username LIKE :username";
 			$params['username'] = '%' . $filters['username'] . '%';
 			}
 
-		// Email
+		// Email filter.
 		if (isset($filters['email']) && $filters['email'] !== '')
 			{
 			$sql .= " AND email LIKE :email";
 			$params['email'] = '%' . $filters['email'] . '%';
 			}
 
-		// Type
+		// Type filter.
 		if (isset($filters['type']) && $filters['type'] !== '')
 			{
 			$sql .= " AND User.`type` = :type";
 			$params['type'] = $filters['type'];
 			}
 
-		// Active
+		// Active status filter.
 		if (isset($filters['active']) && $filters['active'] !== '')
 			{
 			$active = (int) $filters['active'];
@@ -73,14 +73,14 @@ class User extends Model
 
 		$stmt = $this->db->prepare($sql);
 
-		// Bind dos filtros
+		// Bind filter values.
 		foreach ($params as $key => $value)
 			{
 			$paramType = is_int($value) ? PDO::PARAM_INT : PDO::PARAM_STR;
 			$stmt->bindValue(':' . $key, $value, $paramType);
 			}
 
-		// Bind da paginação
+		// Bind pagination values.
 		$stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
 		$stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
 
@@ -90,7 +90,7 @@ class User extends Model
 		}
 
 	/**
-	 * Count method
+	 * Counts users that match the provided filters.
 	 */
 	public function count(array $filters = [], ?int $tenantId = null): int
 		{
@@ -110,28 +110,28 @@ class User extends Model
 
 		$sql .= " WHERE 1=1";
 
-		// Filtro por ID (igual)
+		// Exact id filter.
 		if (!empty($filters['id']))
 			{
 			$sql .= " AND User.id = :id";
 			$params['id'] = (int) $filters['id'];
 			}
 
-		// Filtro por Username (LIKE)
+		// Username filter.
 		if (!empty($filters['username']))
 			{
 			$sql .= " AND User.username LIKE :username";
 			$params['username'] = '%' . $filters['username'] . '%';
 			}
 
-		// Filtro por Fantasia (LIKE)
+		// Email filter.
 		if (!empty($filters['email']))
 			{
 			$sql .= " AND email LIKE :email";
 			$params['email'] = '%' . $filters['email'] . '%';
 			}
 
-    // Filtro por Fantasia (LIKE)
+    // Type filter.
 		if (!empty($filters['type']))
 			{
 			$sql .= " AND User.`type` = :type";
@@ -162,7 +162,7 @@ class User extends Model
 		}
 
 	/**
-	 * Get all method
+	 * Returns all users ordered by newest first.
 	 * @return array
 	 */
 	public function getAll()
@@ -173,8 +173,9 @@ class User extends Model
 		}
 
 	/**
-	 * Find method
-	 * @param Integer $id User id
+	 * Finds a user by id, optionally constrained to a tenant.
+	 *
+	 * @param mixed $id User identifier.
 	 * @return array
 	 */
 	public function find($id, ?int $tenantId = null)
@@ -213,9 +214,10 @@ class User extends Model
 		}
 
 	/**
-	 * Update method
-	 * @param Integer $id User id
-	 * @param array $data
+	 * Updates a user, optionally constrained to a tenant relation.
+	 *
+	 * @param mixed $id User identifier.
+	 * @param array $data Updated user data.
 	 */
 	public function update($id, $data, ?int $tenantId = null)
 		{
@@ -250,8 +252,9 @@ class User extends Model
 		}
 
 	/**
-	 * Find by email method
-	 * @param String $email User e-mail
+	 * Finds an active login-enabled user by email address.
+	 *
+	 * @param string $email User email address.
 	 * @return array
 	 */
 	public function findByEmail(string $email): ?array
@@ -286,10 +289,11 @@ class User extends Model
     }
 
 	/**
-	 * Authenticate method
-	 * @param String $email User email
-	 * @param String $password User password
-	 * @return boolean
+	 * Authenticates a user by email and password.
+	 *
+	 * @param string $email User email.
+	 * @param string $password Plain-text user password.
+	 * @return bool|array
 	 */	
 	public function authenticate($email, $password)
 		{
@@ -306,7 +310,7 @@ class User extends Model
 
 		if (password_verify($password, $user['password']))
 			{
-			// Opcional: rehash if needed
+			// Optionally rehash the password when needed.
 			if (password_needs_rehash($user['password'], PASSWORD_DEFAULT))
 				{
 				$usersTable = $this->managerTable('users');
@@ -314,7 +318,7 @@ class User extends Model
 				$stmt = $this->db->prepare("UPDATE {$usersTable} SET password = :password WHERE id = :id");
 				$stmt->execute(['password' => $newHash, 'id' => $user['id']]);
 				}
-			// Remover senha antes de retornar
+			// Remove the password hash before returning the user payload.
 			unset($user['password']);
 			return $user;
 			}

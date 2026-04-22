@@ -8,9 +8,10 @@ class Controller
 	{
 
 	/**
-	 * View method
-	 * @param String $view View name
-	 * @param Array $data Data array
+	 * Renders a view, optionally wrapping it with the main layout.
+	 *
+	 * @param string $view View name relative to `app/Views`.
+	 * @param array $data Data exposed to the view.
 	 */
 	protected function view(string $view, array $data = [], bool $useLayout = true): void
 		{
@@ -35,16 +36,16 @@ class Controller
 			return;
 			}
 
-		// sem layout
+		// Render without the shared layout.
 		echo $content;
 		}
 
 	/**
-	 * Json method
-	 * @param type $data
-	 * @param int $status
-	 * @param array $headers
-	 * @return void
+	 * Sends a JSON response and stops execution.
+	 *
+	 * @param mixed $data Payload to encode as JSON.
+	 * @param int $status HTTP status code.
+	 * @param array $headers Extra response headers.
 	 */
 	protected function json($data, int $status = 200, array $headers = []): void
 		{
@@ -64,8 +65,7 @@ class Controller
 		}
 
 	/**
-	 * Wats json method
-	 * @return bool
+	 * Determines whether the current request expects a JSON response.
 	 */
 	protected function wantsJson(): bool
 		{
@@ -90,8 +90,7 @@ class Controller
 		}
 
 	/**
-	 * Is authenticated method
-	 * @return boolean 
+	 * Checks whether a manager user is authenticated in the current session.
 	 */
 	protected function isAuthenticated()
 		{
@@ -99,8 +98,9 @@ class Controller
 		}
 
 	/**
-	 * Redirect method
-	 * @param String $path 
+	 * Redirects the client to an application path.
+	 *
+	 * @param string $path Relative application path.
 	 */
 	protected function redirect(string $path)
 		{
@@ -109,14 +109,14 @@ class Controller
 		}
 
 	/**
-	 * Required auth method
+	 * Requires an authenticated session before continuing.
 	 */
 	protected function requireAuth(): void
 		{
 		if (!$this->isAuthenticated())
 			{
 
-			// Se a requisição espera JSON, devolva JSON (não HTML via redirect)
+			// If the request expects JSON, return JSON instead of redirecting with HTML.
 			if ($this->wantsJson())
 				{
 				$this->json([
@@ -125,7 +125,7 @@ class Controller
 					], 401);
 				}
 
-			// Caso contrário, fluxo normal (HTML)
+			// Otherwise, follow the standard HTML redirect flow.
 			$this->redirect('user/login');
 			exit;
 			}
@@ -179,5 +179,4 @@ class Controller
 		exit;
 		}
 	}
-
 ?>

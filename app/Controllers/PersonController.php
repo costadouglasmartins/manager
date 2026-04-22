@@ -12,7 +12,7 @@ class PersonController extends TenantAwareController
 	{
 
 	/**
-	 * Index method
+	 * Lists people with filters and pagination.
 	 */
 	public function index()
 		{
@@ -20,7 +20,7 @@ class PersonController extends TenantAwareController
 		
 		$person = new Person();
 
-		// Filtros vindos da query string
+		// Filters received from the query string.
 		$filters = [
 			'id' => isset($_GET['id']) ? trim($_GET['id']) : '',
 			'name' => isset($_GET['name']) ? trim($_GET['name']) : '',
@@ -30,20 +30,20 @@ class PersonController extends TenantAwareController
 			'active' => isset($_GET['active']) ? trim($_GET['active']) : '',
 		];
 
-		// Página atual (?page=2)
+		// Current page (?page=2).
 		$page = isset($_GET['page']) ? (int) $_GET['page'] : 1;
 		if ($page < 1)
 			{
 			$page = 1;
 			}
 
-		// Registros por página
+		// Records per page.
 		$perPage = 10;
 		$offset = ($page - 1) * $perPage;
 
-		// Busca paginada com filtros
+		// Paginated search with filters.
 		$people = $person->search($filters, $perPage, $offset);
-		// Total para paginação (com os mesmos filtros)
+		// Total count for pagination using the same filters.
 		$total = $person->count($filters);
 		$totalPages = (int) ceil($total / $perPage);
 		if ($totalPages < 1)
@@ -63,7 +63,7 @@ class PersonController extends TenantAwareController
 			]);
 			}
 
-      // padrão HTML
+      // Default HTML response.
       $this->view('people/index', [
         'people' => $people,
         'title' => 'Lista de empresas',
@@ -75,7 +75,7 @@ class PersonController extends TenantAwareController
 		}
 
 	/**
-	 * Created method
+	 * Renders the person creation form.
 	 */
 	public function create()
 		{
@@ -85,7 +85,7 @@ class PersonController extends TenantAwareController
 
 	/**
 	 * Neighborhood search — used by the address autocomplete on the person form.
-	 * Allows create or edit permission, no separate neighborhood permission needed.
+	 * Allows create or edit permission without requiring a separate neighborhood ability.
 	 */
 	public function neighborhoodSearch()
 		{
@@ -180,7 +180,7 @@ class PersonController extends TenantAwareController
 		}
   
 	/**
-	 * Store method
+	 * Persists a new person and redirects back to the listing.
 	 */
 	public function store()
 		{
@@ -191,8 +191,9 @@ class PersonController extends TenantAwareController
 		}
 
 	/**
-	 * Edit method
-	 * @param Integer $id Person id
+	 * Renders the person edit form for the requested record.
+	 *
+	 * @param mixed $id Person identifier.
 	 */
 	public function edit($id)
 		{
@@ -215,8 +216,9 @@ class PersonController extends TenantAwareController
 		}
 
 	/**
-	 * Update method
-	 * @param Integer $id Person id
+	 * Updates the requested person and redirects back to the listing.
+	 *
+	 * @param mixed $id Person identifier.
 	 */
 	public function update($id)
 		{
@@ -227,8 +229,9 @@ class PersonController extends TenantAwareController
 		}
 
 	/**
-	 * Information method
-	 * @param Integer $id Person id
+	 * Displays the details for the requested person and related tenant data.
+	 *
+	 * @param mixed $id Person identifier.
 	 */
 	public function informations($id)
 		{
@@ -246,7 +249,7 @@ class PersonController extends TenantAwareController
 		}
 
 	/**
-	 * Autocomplete method
+	 * Returns autocomplete suggestions for people.
 	 */
 	public function autocomplete()
 		{
@@ -275,6 +278,9 @@ class PersonController extends TenantAwareController
 		$this->json(['items' => $items]);
 		}
 
+	/**
+	 * Allows access to person form helper endpoints when the user can create or edit people.
+	 */
 	private function requirePersonFormAccess(): void
 		{
 		if (Authorization::can('person.create') || Authorization::can('person.edit'))
@@ -285,5 +291,4 @@ class PersonController extends TenantAwareController
 		$this->requirePermission('person.create');
 		}
 	}
-
 ?>

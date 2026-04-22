@@ -7,10 +7,12 @@ use App\Core\TenantContext;
 use App\Models\SchemaVersion;
 
 class HomeController extends Controller
-{
-
+  {
+	/**
+	 * Renders the dashboard and, when a tenant is selected, loads recent schema versions.
+	 */
 	public function index()
-	{
+	  {
 		$this->requireAuth();
 
 		$data = [
@@ -19,15 +21,14 @@ class HomeController extends Controller
 			'schemaVersions' => [],
 		];
 
-		// Se há um tenant selecionado, busca os dados do banco do tenant
+		// When a tenant is selected, load the tenant database data.
 		if (TenantContext::hasTenant())
-		{
+		  {
 			$schemaVersion = new SchemaVersion();
 			$data['schemaVersions'] = $schemaVersion->getLatest(10);
-		}
+		  }
 
 		$this->view('home/index', $data);
-	}
-}
-
+	  }
+  }
 ?>

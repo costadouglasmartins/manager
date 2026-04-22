@@ -6,9 +6,12 @@ use App\Core\Model;
 use PDO;
 
 class Tenant extends Model
-{
+  {
+	/**
+	 * Returns the active tenants accessible to the given user.
+	 */
 	public function getAccessibleByUserId(int $userId): array
-	{
+	  {
 		$tenantsTable = $this->managerTable('tenants');
 		$tenantUsersTable = $this->managerTable('tenant_users');
 
@@ -31,10 +34,13 @@ class Tenant extends Model
 		$stmt->execute(['user_id' => $userId]);
 
 		return $stmt->fetchAll(PDO::FETCH_ASSOC);
-	}
+	  }
 
+	/**
+	 * Returns a single active tenant accessible to the given user.
+	 */
 	public function findByIdForUser(int $tenantId, int $userId): ?array
-	{
+	  {
 		$tenantsTable = $this->managerTable('tenants');
 		$tenantUsersTable = $this->managerTable('tenant_users');
 
@@ -61,10 +67,13 @@ class Tenant extends Model
 
 		$row = $stmt->fetch(PDO::FETCH_ASSOC);
 		return $row ?: null;
-	}
+	  }
 
+	/**
+	 * Finds a tenant by its database number.
+	 */
 	public function findByDatabaseNumber(string $databaseNumber): ?array
-	{
+	  {
 		$tenantsTable = $this->managerTable('tenants');
 
 		$stmt = $this->db->prepare("
@@ -77,10 +86,13 @@ class Tenant extends Model
 
 		$row = $stmt->fetch(PDO::FETCH_ASSOC);
 		return $row ?: null;
-	}
+	  }
 
+	/**
+	 * Creates a tenant and returns its identifier.
+	 */
 	public function create(array $data): int
-	{
+	  {
 		$now = date('Y-m-d H:i:s');
 		$tenantsTable = $this->managerTable('tenants');
 
@@ -99,10 +111,13 @@ class Tenant extends Model
 		]);
 
 		return (int) $this->db->lastInsertId();
-	}
+	  }
 
+	/**
+	 * Links a user to a tenant and updates the relation when it already exists.
+	 */
 	public function linkUser(int $tenantId, int $userId, string $role = 'user', bool $active = true): void
-	{
+	  {
 		$now = date('Y-m-d H:i:s');
 		$tenantUsersTable = $this->managerTable('tenant_users');
 
@@ -122,7 +137,6 @@ class Tenant extends Model
 			'created' => $now,
 			'modified' => $now,
 		]);
-	}
-}
-
+	  }
+  }
 ?>

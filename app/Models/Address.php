@@ -10,17 +10,29 @@ class Address extends TenantModel
 	{
 	private PDO $managerDb;
 
+	/**
+	 * Initializes the tenant and manager database connections used by address queries.
+	 */
 	public function __construct()
 		{
 		parent::__construct();
 		$this->managerDb = Database::getManagerConnection();
 		}
 
+	/**
+	 * Returns the base address query with the related person name.
+	 */
 	private function baseSelectSql(): string
 		{
 		return "SELECT a.*, p.name AS person_name FROM addresses a LEFT JOIN people p ON p.id = a.person_id";
 		}
 
+	/**
+	 * Appends neighborhood and city names to a list of address rows.
+	 *
+	 * @param array $rows Address rows to enrich.
+	 * @return array
+	 */
 	private function appendNeighborhoodNames(array $rows): array
 		{
 		if ($rows === [])
@@ -78,6 +90,12 @@ class Address extends TenantModel
 		return $rows;
 		}
 
+	/**
+	 * Appends neighborhood metadata to a single address row.
+	 *
+	 * @param mixed $row Address row or non-array value.
+	 * @return mixed
+	 */
 	private function appendNeighborhoodName($row)
 		{
 		if (!is_array($row))
@@ -279,5 +297,4 @@ class Address extends TenantModel
 		return ['address' => $this->appendNeighborhoodName($data)];
 		}
 	}
-
 ?>
