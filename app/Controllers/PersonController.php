@@ -3,6 +3,7 @@
 namespace App\Controllers;
 
 use App\Core\Authorization;
+use App\Core\TenantContext;
 use App\Core\TenantAwareController;
 use App\Models\Person;
 use App\Models\Neighborhood;
@@ -19,6 +20,7 @@ class PersonController extends TenantAwareController
 		$this->requirePermission('person.index');
 		
 		$person = new Person();
+		$tenantId = $this->currentTenantId();
 
 		// Filters received from the query string.
 		$filters = [
@@ -42,9 +44,9 @@ class PersonController extends TenantAwareController
 		$offset = ($page - 1) * $perPage;
 
 		// Paginated search with filters.
-		$people = $person->search($filters, $perPage, $offset);
+		$people = $person->search($filters, $perPage, $offset, $tenantId);
 		// Total count for pagination using the same filters.
-		$total = $person->count($filters);
+		$total = $person->count($filters, $tenantId);
 		$totalPages = (int) ceil($total / $perPage);
 		if ($totalPages < 1)
 			{
@@ -186,8 +188,40 @@ class PersonController extends TenantAwareController
 		{
 		$this->requirePermission('person.store');
 		$person = new Person();
-		$person->create($_POST);
-		$this->redirect('person');
+
+		try
+			{
+			$person->create($_POST);
+			$this->redirect('person');
+			}
+		catch (\InvalidArgumentException $e)
+			{
+			if ($this->wantsJson())
+				{
+				$this->json(['error' => $e->getMessage()], 422);
+				}
+
+			http_response_code(422);
+			$this->view('people/create', [
+				'title' => 'Nova pessoa',
+				'formData' => $_POST,
+				'formError' => $e->getMessage(),
+			]);
+			}
+		catch (\Throwable $e)
+			{
+			if ($this->wantsJson())
+				{
+				$this->json(['error' => 'Não foi possível salvar a pessoa agora.'], 500);
+				}
+
+			http_response_code(500);
+			$this->view('people/create', [
+				'title' => 'Nova pessoa',
+				'formData' => $_POST,
+				'formError' => 'Não foi possível salvar a pessoa agora.',
+			]);
+			}
 		}
 
 	/**
@@ -259,7 +293,7 @@ class PersonController extends TenantAwareController
 		$limit = isset($_GET['limit']) ? (int) $_GET['limit'] : 100;
 
 		$person = new Person();
-		$rows = $person->autocomplete((string) $term, $limit);
+		$rows = $person->autocomplete((string) $term, $limit, $this->currentTenantId());
 
 		$items = array_map(function ($r)
 			{
@@ -289,6 +323,15 @@ class PersonController extends TenantAwareController
 			}
 
 		$this->requirePermission('person.create');
+		}
+
+	/**
+	 * Returns the active tenant id from session context.
+	 */
+	private function currentTenantId(): int
+		{
+		$tenant = TenantContext::tenant();
+		return (int) ($tenant['id'] ?? 0);
 		}
 	}
 ?>

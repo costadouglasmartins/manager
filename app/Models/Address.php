@@ -3,10 +3,10 @@
 namespace App\Models;
 
 use App\Core\Database;
-use App\Core\TenantModel;
+use App\Core\Model;
 use PDO;
 
-class Address extends TenantModel
+class Address extends Model
 	{
 	private PDO $managerDb;
 

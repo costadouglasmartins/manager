@@ -2,15 +2,14 @@
 
 namespace App\Models;
 
-use App\Core\Database;
-use App\Core\TenantModel;
+use App\Core\Model;
+use App\Core\TenantContext;
 use PDO;
 
-class Person extends TenantModel
+class Person extends Model
 	{
 	/**
-	 * Get all method
-	 * @return associative array
+	 * Returns all people ordered by newest first.
 	 */
 	public function getAll()
 		{
@@ -19,164 +18,87 @@ class Person extends TenantModel
 		}
 
 	/**
-	 * Create method - saves person, optional user, phones, addresses and emails in a single transaction
-	 * @param Array $data Data to save
+	 * Creates a person and, optionally, a linked manager user.
+	 *
+	 * @param array $data Request payload from the person form.
 	 * @return array
 	 * @throws \Exception
 	 */
 	public function create($data)
 		{
+		$personData = $this->normalizePersonPayload(
+			(is_array($data['person'] ?? null) ? $data['person'] : [])
+		);
+		$emails = (is_array($data['emails'] ?? null) ? $data['emails'] : []);
+		$userData = $this->normalizeUserPayload($data, $personData['active']);
+		$now = date('Y-m-d H:i:s');
 
 		try
 			{
 			$this->db->beginTransaction();
 
-			// Save person
-			$sqlPerson = "INSERT INTO people
-                        (`name`, `fantasy`, `type`, `document`, `active`, `birthdate`, `created`, `modified`)
-                      VALUES
-                        (:name, :fantasy, :type, :document, :active, :birthdate, :created, :modified)";
+			$this->assertLoginEmailsAvailable($emails);
 
-			$birthdate = (!empty($data['person']['birthdate'])) ? dateBrToUs($data['person']['birthdate']) : null;
-
-			$stmtPerson = $this->db->prepare($sqlPerson);
+			$stmtPerson = $this->db->prepare("
+				INSERT INTO people
+					(name, fantasy, type, document, active, birthdate, created, modified)
+				VALUES
+					(:name, :fantasy, :type, :document, :active, :birthdate, :created, :modified)
+			");
 			$stmtPerson->execute([
-				'name'      => $data['person']['name'],
-				'fantasy'   => $data['person']['fantasy'] ?? '',
-				'type'      => $data['person']['type'],
-				'document'  => onlyDigits($data['person']['document']),
-				'active'    => intval($data['person']['active'] ?? 1),
-				'birthdate' => $birthdate,
-				'created'   => date('Y-m-d H:i:s'),
-				'modified'  => date('Y-m-d H:i:s'),
+				'name' => $personData['name'],
+				'fantasy' => $personData['fantasy'],
+				'type' => $personData['type'],
+				'document' => $personData['document'],
+				'active' => $personData['active'],
+				'birthdate' => $personData['birthdate'],
+				'created' => $now,
+				'modified' => $now,
 			]);
-			$personId = $this->db->lastInsertId();
+			$personId = (int) $this->db->lastInsertId();
+
+			$this->insertPhoneNumbers($personId, (is_array($data['phones'] ?? null) ? $data['phones'] : []), $now);
+			$this->insertAddresses($personId, (is_array($data['addresses'] ?? null) ? $data['addresses'] : []), $now);
+			$this->insertEmails($personId, $emails, $now);
 
 			$userId = null;
-			$hasUserData = !empty($data['user']) && is_array($data['user']) && (
-				trim((string) ($data['user']['username'] ?? '')) !== ''
-				|| trim((string) ($data['user']['password'] ?? '')) !== ''
-				|| trim((string) ($data['user']['type'] ?? '')) !== ''
-			);
 
-			if ($hasUserData)
+			if ($userData['should_create'])
 				{
-				$username = trim((string) ($data['user']['username'] ?? ''));
-				$password = (string) ($data['user']['password'] ?? '');
-				$type     = trim((string) ($data['user']['type'] ?? ''));
+				$loginEmail = $this->findLoginEmailPayload($emails);
 
-				if ($username === '' || $password === '' || $type === '')
+				if ($loginEmail === null)
 					{
-					throw new \InvalidArgumentException('Dados do usuário incompletos.');
+					throw new \InvalidArgumentException('Informe ao menos um e-mail válido marcado como e-mail de login para criar o usuário.');
 					}
 
-				$sqlUser = "INSERT INTO users
-                      (`person_id`, `username`, `password`, `type`, `active`, `created`, `modified`)
-                    VALUES
-                      (:person_id, :username, :password, :type, :active, :created, :modified)";
-				$stmtUser = $this->db->prepare($sqlUser);
-				$stmtUser->execute([
-					'person_id' => $personId,
-					'username'  => $username,
-					'password'  => password_hash($password, PASSWORD_DEFAULT),
-					'type'      => $type,
-					'active'    => intval($data['user']['active'] ?? 1),
-					'created'   => date('Y-m-d H:i:s'),
-					'modified'  => date('Y-m-d H:i:s'),
-				]);
-				$userId = $this->db->lastInsertId();
-				}
-
-			// Save phones
-			if (!empty($data['phones']) && is_array($data['phones']))
-				{
-				$sqlPhone = "INSERT INTO phone_numbers (`phone_number`, `observations`, `person_id`, `created`, `modified`)
-                             VALUES (:phone_number, :observations, :person_id, :created, :modified)";
-				$stmtPhone = $this->db->prepare($sqlPhone);
-				foreach ($data['phones'] as $phone)
-					{
-					if (empty($phone['number']))
-						{
-						continue;
-						}
-					$stmtPhone->execute([
-						'phone_number' => onlyDigits($phone['number']),
-						'observations' => $phone['notes'] ?? null,
-						'person_id'    => $personId,
-						'created'      => date('Y-m-d H:i:s'),
-						'modified'     => date('Y-m-d H:i:s'),
-					]);
-					}
-				}
-
-			// Save addresses
-			if (!empty($data['addresses']) && is_array($data['addresses']))
-				{
-				$sqlAddress = "INSERT INTO addresses
-								(`zip_code`, `street`, `number`, `observations`, `person_id`, `neighborhood_id`, `created`, `modified`)
-							  VALUES
-								(:zip_code, :street, :number, :observations, :person_id, :neighborhood_id, :created, :modified)";
-				$stmtAddress = $this->db->prepare($sqlAddress);
-				foreach ($data['addresses'] as $address)
-					{
-					if (empty($address['street']) || empty($address['neighborhood_id']))
-						{
-						continue;
-						}
-					$stmtAddress->execute([
-						'zip_code'        => $address['zip_code'] ?? '',
-						'street'          => $address['street'],
-						'number'          => $address['number'] ?? '',
-						'observations'    => $address['observations'] ?? null,
-						'person_id'       => $personId,
-						'neighborhood_id' => (int) $address['neighborhood_id'],
-						'created'         => date('Y-m-d H:i:s'),
-						'modified'        => date('Y-m-d H:i:s'),
-					]);
-					}
-				}
-
-			// Save emails
-			if (!empty($data['emails']) && is_array($data['emails']))
-				{
-				$sqlEmail = "INSERT INTO emails (`email`, `observations`, `is_login`, `person_id`, `created`, `modified`)
-                             VALUES (:email, :observations, :is_login, :person_id, :created, :modified)";
-				$stmtEmail = $this->db->prepare($sqlEmail);
-				foreach ($data['emails'] as $email)
-					{
-					if (empty($email['address']))
-						{
-						continue;
-						}
-					$stmtEmail->execute([
-						'email'        => $email['address'],
-						'observations' => $email['description'] ?? null,
-						'is_login'     => intval($email['is_login'] ?? 0),
-						'person_id'    => $personId,
-						'created'      => date('Y-m-d H:i:s'),
-						'modified'     => date('Y-m-d H:i:s'),
-					]);
-					}
+				$this->assertManagerUsernameAvailable($userData['username']);
+				$userId = $this->createManagerUserForTenant($personId, $userData, $now);
 				}
 
 			$this->db->commit();
 
 			return [
 				'person_id' => $personId,
-				'user_id'   => $userId,
+				'user_id' => $userId,
 			];
 			}
 		catch (\Exception $e)
 			{
-			$this->db->rollBack();
+			if ($this->db->inTransaction())
+				{
+				$this->db->rollBack();
+				}
+
 			throw $e;
 			}
 		}
 
 	/**
-	 * Find method
-	 * @param Integer $id Person id
-	 * @return array
+	 * Finds a person by id.
+	 *
+	 * @param mixed $id
+	 * @return array|false
 	 */
 	public function find($id)
 		{
@@ -186,40 +108,45 @@ class Person extends TenantModel
 		}
 
 	/**
-	 * Update method
-	 * @param Integer $id Person id
+	 * Updates a person and its related records.
+	 *
+	 * @param mixed $id
 	 * @param array $data
 	 */
 	public function update($id, $data)
 		{
 		$personData = (isset($data['person']) && is_array($data['person'])) ? $data['person'] : $data;
+		$normalizedPersonData = $this->normalizePersonPayload($personData);
+		$emails = (is_array($data['emails'] ?? null) ? $data['emails'] : []);
+		$now = date('Y-m-d H:i:s');
 
 		try
 			{
 			$this->db->beginTransaction();
 
+			$this->assertLoginEmailsAvailable($emails, (int) $id);
+
 			$stmt = $this->db->prepare("
 				UPDATE people
 				SET
-					`name`      = :name,
-					`fantasy`   = :fantasy,
-					`type`      = :type,
-					`document`  = :document,
-					`active`    = :active,
-					`birthdate` = :birthdate,
-					`modified`  = :modified
+					name = :name,
+					fantasy = :fantasy,
+					type = :type,
+					document = :document,
+					active = :active,
+					birthdate = :birthdate,
+					modified = :modified
 				WHERE id = :id
 			");
-
 			$stmt->execute([
-				'name'      => $personData['name'],
-				'fantasy'   => $personData['fantasy'] ?? '',
-				'type'      => $personData['type'],
-				'document'  => onlyDigits($personData['document']),
-				'active'    => intval($personData['active'] ?? 1),
-				'birthdate' => (!empty($personData['birthdate']) ? dateBrToUs($personData['birthdate']) : null),
-				'modified'  => date('Y-m-d H:i:s'),
-				'id'        => $id,
+				'name' => $normalizedPersonData['name'],
+				'fantasy' => $normalizedPersonData['fantasy'],
+				'type' => $normalizedPersonData['type'],
+				'document' => $normalizedPersonData['document'],
+				'active' => $normalizedPersonData['active'],
+				'birthdate' => $normalizedPersonData['birthdate'],
+				'modified' => $now,
+				'id' => $id,
 			]);
 
 			if (array_key_exists('phones', $data) && is_array($data['phones']))
@@ -251,54 +178,58 @@ class Person extends TenantModel
 		}
 
 	/**
-	 * Search method
+	 * Searches people with filters and pagination.
 	 */
-	public function search(array $filters = [], int $limit = 10, int $offset = 0): array
+	public function search(array $filters = [], int $limit = 10, int $offset = 0, ?int $tenantId = null): array
 		{
-		$sql = "SELECT * FROM people WHERE 1=1";
+		$peopleTable = $this->managerTable('people');
+		$sql = "SELECT Person.* FROM {$peopleTable} AS Person WHERE 1=1";
 		$params = [];
+
+		$this->appendTenantScope($sql, $params, $tenantId);
 
 		if (isset($filters['id']) && $filters['id'] !== '')
 			{
-			$sql .= " AND id = :id";
+			$sql .= " AND Person.id = :id";
 			$params['id'] = (int) $filters['id'];
 			}
 
 		if (isset($filters['name']) && $filters['name'] !== '')
 			{
-			$sql .= " AND `name` LIKE :name";
+			$sql .= " AND Person.name LIKE :name";
 			$params['name'] = '%' . $filters['name'] . '%';
 			}
 
 		if (isset($filters['type']) && $filters['type'] !== '')
 			{
-			$sql .= " AND `type` = :type";
+			$sql .= " AND Person.type = :type";
 			$params['type'] = $filters['type'];
 			}
 
 		if (isset($filters['document']) && $filters['document'] !== '')
 			{
-			$sql .= " AND document LIKE :document";
+			$sql .= " AND Person.document LIKE :document";
 			$params['document'] = onlyDigits($filters['document']);
 			}
 
 		if (isset($filters['active']) && $filters['active'] !== '')
 			{
 			$active = (int) $filters['active'];
+
 			if (in_array($active, [0, 1], true))
 				{
-				$sql .= " AND active = :active";
+				$sql .= " AND Person.active = :active";
 				$params['active'] = $active;
 				}
 			}
 
 		if (isset($filters['birthdate']) && $filters['birthdate'] !== '')
 			{
-			$sql .= " AND birthdate = :birthdate";
+			$sql .= " AND Person.birthdate = :birthdate";
 			$params['birthdate'] = dateBrToUs($filters['birthdate']);
 			}
 
-		$sql .= " ORDER BY id DESC LIMIT :limit OFFSET :offset";
+		$sql .= " ORDER BY Person.id DESC LIMIT :limit OFFSET :offset";
 
 		$stmt = $this->db->prepare($sql);
 
@@ -310,58 +241,59 @@ class Person extends TenantModel
 
 		$stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
 		$stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
-
 		$stmt->execute();
 
 		return $stmt->fetchAll(PDO::FETCH_ASSOC);
 		}
 
 	/**
-	 * Count method
-	 * @param Array $filters
-	 * @return int
+	 * Counts people matching the provided filters.
 	 */
-	public function count(array $filters = []): int
+	public function count(array $filters = [], ?int $tenantId = null): int
 		{
-		$sql = "SELECT COUNT(*) AS total FROM people WHERE 1=1";
+		$peopleTable = $this->managerTable('people');
+		$sql = "SELECT COUNT(*) AS total FROM {$peopleTable} AS Person WHERE 1=1";
 		$params = [];
+
+		$this->appendTenantScope($sql, $params, $tenantId);
 
 		if (!empty($filters['id']))
 			{
-			$sql .= " AND id = :id";
+			$sql .= " AND Person.id = :id";
 			$params['id'] = (int) $filters['id'];
 			}
 
 		if (!empty($filters['name']))
 			{
-			$sql .= " AND name LIKE :name";
+			$sql .= " AND Person.name LIKE :name";
 			$params['name'] = '%' . $filters['name'] . '%';
 			}
 
 		if (!empty($filters['type']))
 			{
-			$sql .= " AND `type` = :type";
+			$sql .= " AND Person.type = :type";
 			$params['type'] = $filters['type'];
 			}
 
 		if (!empty($filters['document']))
 			{
-			$sql .= " AND document LIKE :document";
+			$sql .= " AND Person.document LIKE :document";
 			$params['document'] = onlyDigits($filters['document']);
 			}
 
 		if (!empty($filters['birthdate']))
 			{
-			$sql .= " AND birthdate = :birthdate";
+			$sql .= " AND Person.birthdate = :birthdate";
 			$params['birthdate'] = dateBrToUs($filters['birthdate']);
 			}
 
 		if (isset($filters['active']) && $filters['active'] !== '')
 			{
 			$active = (int) $filters['active'];
+
 			if (in_array($active, [0, 1], true))
 				{
-				$sql .= " AND active = :active";
+				$sql .= " AND Person.active = :active";
 				$params['active'] = $active;
 				}
 			}
@@ -380,14 +312,15 @@ class Person extends TenantModel
 		}
 
 	/**
-	 * Find all by person id - returns person, user, phones, emails and addresses
-	 * @param Integer $id Person id
+	 * Returns a person with related data for the information/edit screens.
+	 *
+	 * @param mixed $id
 	 * @return array
 	 */
 	public function findAllByPersonId($id)
 		{
-		$managerNeighborhoodsTable = sprintf('`%s`.`%s`', Database::getManagerDatabaseName(), 'neighborhoods');
-		$managerCitiesTable = sprintf('`%s`.`%s`', Database::getManagerDatabaseName(), 'cities');
+		$neighborhoodsTable = $this->managerTable('neighborhoods');
+		$citiesTable = $this->managerTable('cities');
 
 		$stmt = $this->db->prepare("
 			SELECT p.*,
@@ -433,8 +366,7 @@ class Person extends TenantModel
 			       		) AS email_rows
 			       	),
 			       	JSON_ARRAY()
-			       ) AS emails_json
-			       ,
+			       ) AS emails_json,
 			       COALESCE(
 			       	(
 			       		SELECT JSON_ARRAYAGG(
@@ -465,8 +397,8 @@ class Person extends TenantModel
 			       			       n.name AS neighborhood_name,
 			       			       c.name AS neighborhood_city_name
 			       			FROM addresses a
-			       			LEFT JOIN {$managerNeighborhoodsTable} n ON n.id = a.neighborhood_id
-			       			LEFT JOIN {$managerCitiesTable} c ON c.id = n.city_id
+			       			LEFT JOIN {$neighborhoodsTable} n ON n.id = a.neighborhood_id
+			       			LEFT JOIN {$citiesTable} c ON c.id = n.city_id
 			       			WHERE a.person_id = :addresses_person_id
 			       			ORDER BY a.id ASC
 			       		) AS address_rows
@@ -498,56 +430,210 @@ class Person extends TenantModel
 			unset($person['phones_json'], $person['emails_json'], $person['addresses_json']);
 			}
 
-		// Tenant databases do not have a users table; keep the person details view
-		// focused on tenant-owned data and expose no user block when unavailable.
 		$user = null;
+
+		if (is_array($person))
+			{
+			$user = $this->findUserByPersonId(
+				(int) ($person['id'] ?? 0),
+				$this->currentTenantId()
+			);
+			}
 
 		return [
 			'person' => $person,
-			'user'   => $user,
+			'user' => $user,
 			'phones' => $phones,
 			'emails' => $emails,
 			'addresses' => $addresses,
 		];
 		}
 
-  /**
-   * Helper method to decode JSON arrays stored in the database, ensuring a consistent return type of array
-   * even if the stored value is null, empty, or invalid JSON.
-   * @param mixed $json The JSON string to decode
-   * @return array The decoded array, or an empty array if the input is not a valid JSON string representing an array
-   */
-	private function decodeJsonArray($json): array
+	/**
+	 * Returns autocomplete suggestions for people.
+	 */
+	public function autocomplete(string $term, int $limit = 100, ?int $tenantId = null): array
 		{
-		if (!is_string($json) || trim($json) === '')
+		$term = trim($term);
+
+		if ($term === '')
 			{
 			return [];
 			}
 
-		$data = json_decode($json, true);
-		return is_array($data) ? $data : [];
+		$limit = max(1, min(50, (int) $limit));
+
+		$peopleTable = $this->managerTable('people');
+		$sql = "SELECT Person.id, Person.name
+			FROM {$peopleTable} AS Person
+			WHERE Person.name LIKE :term";
+		$params = ['term' => '%' . $term . '%'];
+
+		$this->appendTenantScope($sql, $params, $tenantId);
+
+		$sql .= "
+			ORDER BY COALESCE(Person.name) ASC
+			LIMIT {$limit}";
+
+		$stmt = $this->db->prepare($sql);
+		$stmt->execute($params);
+
+		return $stmt->fetchAll(PDO::FETCH_ASSOC);
 		}
 
-  /**
-   * Synchronizes phone numbers for a given person.
-   * @param int $personId The ID of the person for whom to synchronize phone numbers.
-   * @param array $phones The array of phone numbers to synchronize.
-   */
+	/**
+	 * Restricts person queries to the requested tenant through manager users.
+	 */
+	private function appendTenantScope(string &$sql, array &$params, ?int $tenantId): void
+		{
+		if ($tenantId === null)
+			{
+			return;
+			}
+
+		$usersTable = $this->managerTable('users');
+		$tenantUsersTable = $this->managerTable('tenant_users');
+		$sql .= "
+			AND EXISTS (
+				SELECT 1
+				FROM {$usersTable} AS User
+				INNER JOIN {$tenantUsersTable} AS TenantUser
+					ON TenantUser.user_id = User.id
+					AND TenantUser.tenant_id = :tenant_id
+					AND TenantUser.active = 1
+				WHERE User.person_id = Person.id
+			)
+		";
+		$params['tenant_id'] = $tenantId;
+		}
+
+	/**
+	 * Inserts the initial set of phone numbers.
+	 */
+	private function insertPhoneNumbers(int $personId, array $phones, string $now): void
+		{
+		if ($phones === [])
+			{
+			return;
+			}
+
+		$stmt = $this->db->prepare("
+			INSERT INTO phone_numbers (phone_number, observations, person_id, created, modified)
+			VALUES (:phone_number, :observations, :person_id, :created, :modified)
+		");
+
+		foreach ($phones as $phone)
+			{
+			$number = trim((string) ($phone['number'] ?? ''));
+
+			if ($number === '')
+				{
+				continue;
+				}
+
+			$stmt->execute([
+				'phone_number' => onlyDigits($number),
+				'observations' => $this->nullableTrim($phone['notes'] ?? null),
+				'person_id' => $personId,
+				'created' => $now,
+				'modified' => $now,
+			]);
+			}
+		}
+
+	/**
+	 * Inserts the initial set of addresses.
+	 */
+	private function insertAddresses(int $personId, array $addresses, string $now): void
+		{
+		if ($addresses === [])
+			{
+			return;
+			}
+
+		$stmt = $this->db->prepare("
+			INSERT INTO addresses
+				(zip_code, street, number, observations, person_id, neighborhood_id, created, modified)
+			VALUES
+				(:zip_code, :street, :number, :observations, :person_id, :neighborhood_id, :created, :modified)
+		");
+
+		foreach ($addresses as $address)
+			{
+			$street = trim((string) ($address['street'] ?? ''));
+			$neighborhoodId = (int) ($address['neighborhood_id'] ?? 0);
+
+			if ($street === '' || $neighborhoodId === 0)
+				{
+				continue;
+				}
+
+			$stmt->execute([
+				'zip_code' => trim((string) ($address['zip_code'] ?? '')),
+				'street' => $street,
+				'number' => trim((string) ($address['number'] ?? '')),
+				'observations' => $this->nullableTrim($address['observations'] ?? null),
+				'person_id' => $personId,
+				'neighborhood_id' => $neighborhoodId,
+				'created' => $now,
+				'modified' => $now,
+			]);
+			}
+		}
+
+	/**
+	 * Inserts the initial set of emails.
+	 */
+	private function insertEmails(int $personId, array $emails, string $now): void
+		{
+		if ($emails === [])
+			{
+			return;
+			}
+
+		$stmt = $this->db->prepare("
+			INSERT INTO emails (email, observations, is_login, person_id, created, modified)
+			VALUES (:email, :observations, :is_login, :person_id, :created, :modified)
+		");
+
+		foreach ($emails as $email)
+			{
+			$address = trim((string) ($email['address'] ?? ''));
+
+			if ($address === '')
+				{
+				continue;
+				}
+
+			$stmt->execute([
+				'email' => $address,
+				'observations' => $this->nullableTrim($email['description'] ?? null),
+				'is_login' => (int) ($email['is_login'] ?? 0),
+				'person_id' => $personId,
+				'created' => $now,
+				'modified' => $now,
+			]);
+			}
+		}
+
+	/**
+	 * Synchronizes phone numbers for the requested person.
+	 */
 	private function syncPhoneNumbers(int $personId, array $phones): void
 		{
 		$existingIds = $this->fetchAssociationIds('phone_numbers', $personId);
 		$keptIds = [];
 
 		$insertStmt = $this->db->prepare("
-			INSERT INTO phone_numbers (`phone_number`, `observations`, `person_id`, `created`, `modified`)
+			INSERT INTO phone_numbers (phone_number, observations, person_id, created, modified)
 			VALUES (:phone_number, :observations, :person_id, :created, :modified)
 		");
 		$updateStmt = $this->db->prepare("
 			UPDATE phone_numbers
 			SET
-				`phone_number` = :phone_number,
-				`observations` = :observations,
-				`modified` = :modified
+				phone_number = :phone_number,
+				observations = :observations,
+				modified = :modified
 			WHERE id = :id
 			  AND person_id = :person_id
 		");
@@ -567,8 +653,8 @@ class Person extends TenantModel
 			$params = [
 				'phone_number' => onlyDigits($number),
 				'observations' => ($notes !== '' ? $notes : null),
-				'person_id'    => $personId,
-				'modified'     => date('Y-m-d H:i:s'),
+				'person_id' => $personId,
+				'modified' => date('Y-m-d H:i:s'),
 			];
 
 			if ($rowId > 0 && isset($existingIds[$rowId]))
@@ -586,11 +672,9 @@ class Person extends TenantModel
 		$this->deleteMissingAssociationRows('phone_numbers', $personId, $existingIds, $keptIds);
 		}
 
-  /**
-   * Synchronizes addresses for a given person.
-   * @param int $personId The ID of the person for whom to synchronize addresses.
-   * @param array $addresses The array of addresses to synchronize.
-   */
+	/**
+	 * Synchronizes addresses for the requested person.
+	 */
 	private function syncAddresses(int $personId, array $addresses): void
 		{
 		$existingIds = $this->fetchAssociationIds('addresses', $personId);
@@ -598,19 +682,19 @@ class Person extends TenantModel
 
 		$insertStmt = $this->db->prepare("
 			INSERT INTO addresses
-				(`zip_code`, `street`, `number`, `observations`, `person_id`, `neighborhood_id`, `created`, `modified`)
+				(zip_code, street, number, observations, person_id, neighborhood_id, created, modified)
 			VALUES
 				(:zip_code, :street, :number, :observations, :person_id, :neighborhood_id, :created, :modified)
 		");
 		$updateStmt = $this->db->prepare("
 			UPDATE addresses
 			SET
-				`zip_code` = :zip_code,
-				`street` = :street,
-				`number` = :number,
-				`observations` = :observations,
-				`neighborhood_id` = :neighborhood_id,
-				`modified` = :modified
+				zip_code = :zip_code,
+				street = :street,
+				number = :number,
+				observations = :observations,
+				neighborhood_id = :neighborhood_id,
+				modified = :modified
 			WHERE id = :id
 			  AND person_id = :person_id
 		");
@@ -637,13 +721,13 @@ class Person extends TenantModel
 
 			$rowId = (int) ($address['id'] ?? 0);
 			$params = [
-				'zip_code'        => $zipCode,
-				'street'          => $street,
-				'number'          => $number,
-				'observations'    => ($observations !== '' ? $observations : null),
-				'person_id'       => $personId,
+				'zip_code' => $zipCode,
+				'street' => $street,
+				'number' => $number,
+				'observations' => ($observations !== '' ? $observations : null),
+				'person_id' => $personId,
 				'neighborhood_id' => $neighborhoodId,
-				'modified'        => date('Y-m-d H:i:s'),
+				'modified' => date('Y-m-d H:i:s'),
 			];
 
 			if ($rowId > 0 && isset($existingIds[$rowId]))
@@ -661,27 +745,25 @@ class Person extends TenantModel
 		$this->deleteMissingAssociationRows('addresses', $personId, $existingIds, $keptIds);
 		}
 
-  /**
-   * Synchronizes emails for a given person.
-   * @param int $personId The ID of the person for whom to synchronize emails.
-   * @param array $emails The array of emails to synchronize.
-   */
+	/**
+	 * Synchronizes emails for the requested person.
+	 */
 	private function syncEmails(int $personId, array $emails): void
 		{
 		$existingIds = $this->fetchAssociationIds('emails', $personId);
 		$keptIds = [];
 
 		$insertStmt = $this->db->prepare("
-			INSERT INTO emails (`email`, `observations`, `is_login`, `person_id`, `created`, `modified`)
+			INSERT INTO emails (email, observations, is_login, person_id, created, modified)
 			VALUES (:email, :observations, :is_login, :person_id, :created, :modified)
 		");
 		$updateStmt = $this->db->prepare("
 			UPDATE emails
 			SET
-				`email` = :email,
-				`observations` = :observations,
-				`is_login` = :is_login,
-				`modified` = :modified
+				email = :email,
+				observations = :observations,
+				is_login = :is_login,
+				modified = :modified
 			WHERE id = :id
 			  AND person_id = :person_id
 		");
@@ -690,7 +772,7 @@ class Person extends TenantModel
 			{
 			$address = trim((string) ($email['address'] ?? ''));
 			$description = trim((string) ($email['description'] ?? ''));
-			$isLogin = intval($email['is_login'] ?? 0);
+			$isLogin = (int) ($email['is_login'] ?? 0);
 			$hasContent = ($address !== '' || $description !== '' || $isLogin === 1);
 
 			if (!$hasContent || $address === '')
@@ -700,11 +782,11 @@ class Person extends TenantModel
 
 			$rowId = (int) ($email['id'] ?? 0);
 			$params = [
-				'email'        => $address,
+				'email' => $address,
 				'observations' => ($description !== '' ? $description : null),
-				'is_login'     => $isLogin,
-				'person_id'    => $personId,
-				'modified'     => date('Y-m-d H:i:s'),
+				'is_login' => $isLogin,
+				'person_id' => $personId,
+				'modified' => date('Y-m-d H:i:s'),
 			];
 
 			if ($rowId > 0 && isset($existingIds[$rowId]))
@@ -722,12 +804,9 @@ class Person extends TenantModel
 		$this->deleteMissingAssociationRows('emails', $personId, $existingIds, $keptIds);
 		}
 
-  /**
-   * Helper method to fetch existing association IDs for a given person and table.
-   * @param string $table The name of the association table (e.g., 'phone_numbers', 'addresses', 'emails').
-   * @param int $personId The ID of the person for whom to fetch association IDs.
-   * @return array An associative array where keys are existing association IDs and values are true, used for quick existence checks during synchronization.
-   */
+	/**
+	 * Fetches existing association row ids for a person.
+	 */
 	private function fetchAssociationIds(string $table, int $personId): array
 		{
 		$stmt = $this->db->prepare("SELECT id FROM {$table} WHERE person_id = :person_id");
@@ -742,15 +821,10 @@ class Person extends TenantModel
 
 		return $ids;
 		}
-    
-  /**
-   * Deletes missing association rows for a given person and table.
-   * @param string $table The name of the association table (e.g., 'phone_numbers', 'addresses', 'emails').
-   * @param int $personId The ID of the person for whom to delete association rows.
-   * @param array $existingIds The array of existing association IDs.
-   * @param array $keptIds The array of kept association IDs.
-   * @return void
-   */
+
+	/**
+	 * Deletes association rows that were removed from the form payload.
+	 */
 	private function deleteMissingAssociationRows(string $table, int $personId, array $existingIds, array $keptIds): void
 		{
 		$deleteIds = array_diff(array_keys($existingIds), array_keys($keptIds));
@@ -772,31 +846,338 @@ class Person extends TenantModel
 		}
 
 	/**
-	 * Autocomplete method
-	 * @param string $term
-	 * @param int $limit
-	 * @return array
+	 * Normalizes the person form payload.
 	 */
-	public function autocomplete(string $term, int $limit = 100): array
+	private function normalizePersonPayload(array $personData): array
 		{
-		$term = trim($term);
-		if ($term === '')
+		return [
+			'name' => trim((string) ($personData['name'] ?? '')),
+			'fantasy' => trim((string) ($personData['fantasy'] ?? '')),
+			'type' => trim((string) ($personData['type'] ?? '')),
+			'document' => onlyDigits((string) ($personData['document'] ?? '')),
+			'active' => (int) ($personData['active'] ?? 1),
+			'birthdate' => (!empty($personData['birthdate']) ? dateBrToUs($personData['birthdate']) : null),
+		];
+		}
+
+	/**
+	 * Normalizes the optional user form payload.
+	 */
+	private function normalizeUserPayload(array $data, int $defaultActive): array
+		{
+		$rawUserData = (is_array($data['user'] ?? null) ? $data['user'] : []);
+		$hasUserPayload = (
+			trim((string) ($rawUserData['username'] ?? '')) !== ''
+			|| trim((string) ($rawUserData['password'] ?? '')) !== ''
+			|| trim((string) ($rawUserData['type'] ?? '')) !== ''
+		);
+		$rawCreateUser = (string) ($data['create_user'] ?? '');
+		$shouldCreate = ($rawCreateUser === '1') || ($rawCreateUser === '' && $hasUserPayload);
+
+		$username = trim((string) ($rawUserData['username'] ?? ''));
+		$password = (string) ($rawUserData['password'] ?? '');
+		$type = trim((string) ($rawUserData['type'] ?? ''));
+		$active = isset($rawUserData['active']) ? (int) $rawUserData['active'] : $defaultActive;
+
+		if (!$shouldCreate)
+			{
+			return [
+				'should_create' => false,
+				'username' => $username,
+				'password' => $password,
+				'type' => $type,
+				'active' => $active,
+			];
+			}
+
+		if ($username === '' || $password === '' || $type === '')
+			{
+			throw new \InvalidArgumentException('Preencha todos os dados do usuário para gerar o acesso.');
+			}
+
+		if (!in_array($type, ['root', 'admin', 'user'], true))
+			{
+			throw new \InvalidArgumentException('Selecione um tipo de usuário válido.');
+			}
+
+		if (strlen($username) > 45)
+			{
+			throw new \InvalidArgumentException('O nome de usuário deve ter no máximo 45 caracteres.');
+			}
+
+		return [
+			'should_create' => true,
+			'username' => $username,
+			'password' => $password,
+			'type' => $type,
+			'active' => ($active === 0 ? 0 : 1),
+		];
+		}
+
+	/**
+	 * Ensures login emails are valid and unique among people.
+	 */
+	private function assertLoginEmailsAvailable(array $emails, ?int $personId = null): void
+		{
+		$seen = [];
+
+		foreach ($emails as $email)
+			{
+			$address = trim((string) ($email['address'] ?? ''));
+			$isLogin = (int) ($email['is_login'] ?? 0);
+
+			if ($isLogin !== 1)
+				{
+				continue;
+				}
+
+			if ($address === '' || !filter_var($address, FILTER_VALIDATE_EMAIL))
+				{
+				throw new \InvalidArgumentException('Informe um e-mail de login válido.');
+				}
+
+			$key = strtolower($address);
+
+			if (isset($seen[$key]))
+				{
+				continue;
+				}
+
+			$seen[$key] = true;
+			$this->assertLoginEmailAvailable($address, $personId);
+			}
+		}
+
+	/**
+	 * Ensures the chosen login email is not already assigned to another person.
+	 */
+	private function assertLoginEmailAvailable(string $address, ?int $personId = null): void
+		{
+		$emailsTable = $this->managerTable('emails');
+		$sql = "
+			SELECT id
+			FROM {$emailsTable}
+			WHERE email = :email
+			  AND is_login = 1
+		";
+		$params = ['email' => $address];
+
+		if ($personId !== null)
+			{
+			$sql .= " AND person_id <> :person_id";
+			$params['person_id'] = $personId;
+			}
+
+		$sql .= " LIMIT 1";
+
+		$stmt = $this->db->prepare($sql);
+		$stmt->execute($params);
+
+		if ((int) ($stmt->fetchColumn() ?: 0) > 0)
+			{
+			throw new \InvalidArgumentException('O e-mail de login informado já está associado a outra pessoa.');
+			}
+		}
+
+	/**
+	 * Returns the first valid login email from the payload.
+	 */
+	private function findLoginEmailPayload(array $emails): ?array
+		{
+		foreach ($emails as $email)
+			{
+			$address = trim((string) ($email['address'] ?? ''));
+			$isLogin = (int) ($email['is_login'] ?? 0);
+
+			if ($isLogin === 1 && $address !== '' && filter_var($address, FILTER_VALIDATE_EMAIL))
+				{
+				return [
+					'address' => $address,
+					'description' => trim((string) ($email['description'] ?? '')),
+				];
+				}
+			}
+
+		return null;
+		}
+
+	/**
+	 * Creates the user in manager_main and links it to the active tenant.
+	 */
+	private function createManagerUserForTenant(int $personId, array $userData, string $now): int
+		{
+		$tenantId = $this->currentTenantId();
+
+		if ($tenantId <= 0)
+			{
+			throw new \RuntimeException('Nenhum tenant ativo foi encontrado para vincular o usuário.');
+			}
+
+		$usersTable = $this->managerTable('users');
+		$stmt = $this->db->prepare("
+			INSERT INTO {$usersTable}
+				(person_id, tenant_id, username, password, type, active, created, modified)
+			VALUES
+				(:person_id, :tenant_id, :username, :password, :type, :active, :created, :modified)
+		");
+		$stmt->execute([
+			'person_id' => $personId,
+			'tenant_id' => $tenantId,
+			'username' => $userData['username'],
+			'password' => password_hash($userData['password'], PASSWORD_DEFAULT),
+			'type' => $userData['type'],
+			'active' => $userData['active'],
+			'created' => $now,
+			'modified' => $now,
+		]);
+
+		$userId = (int) $this->db->lastInsertId();
+		$this->linkManagerUserToTenant($tenantId, $userId, $userData['type'], $now);
+
+		return $userId;
+		}
+
+	/**
+	 * Ensures the username is unique in manager_main.users.
+	 */
+	private function assertManagerUsernameAvailable(string $username, ?int $ignoreUserId = null): void
+		{
+		$usersTable = $this->managerTable('users');
+		$stmt = $this->db->prepare("
+			SELECT id
+			FROM {$usersTable}
+			WHERE username = :username
+			LIMIT 1
+		");
+		$stmt->execute(['username' => $username]);
+		$existingId = (int) ($stmt->fetchColumn() ?: 0);
+
+		if ($existingId > 0 && $existingId !== (int) $ignoreUserId)
+			{
+			throw new \InvalidArgumentException('O nome de usuário informado já está em uso.');
+			}
+		}
+
+	/**
+	 * Links a user to the current tenant in tenant_users.
+	 */
+	private function linkManagerUserToTenant(int $tenantId, int $userId, string $userType, string $now): void
+		{
+		$tenantUsersTable = $this->managerTable('tenant_users');
+		$role = $this->mapUserTypeToTenantRole($userType);
+
+		$stmt = $this->db->prepare("
+			INSERT INTO {$tenantUsersTable}
+				(tenant_id, user_id, role, active, created, modified)
+			VALUES
+				(:tenant_id, :user_id, :role, 1, :created, :modified)
+			ON DUPLICATE KEY UPDATE
+				role = VALUES(role),
+				active = VALUES(active),
+				modified = VALUES(modified)
+		");
+		$stmt->execute([
+			'tenant_id' => $tenantId,
+			'user_id' => $userId,
+			'role' => $role,
+			'created' => $now,
+			'modified' => $now,
+		]);
+		}
+
+	/**
+	 * Finds the user associated with the person, optionally constrained to a tenant.
+	 */
+	private function findUserByPersonId(int $personId, ?int $tenantId = null): ?array
+		{
+		if ($personId <= 0)
+			{
+			return null;
+			}
+
+		$usersTable = $this->managerTable('users');
+		$emailsTable = $this->managerTable('emails');
+		$tenantUsersTable = $this->managerTable('tenant_users');
+		$sql = "
+			SELECT User.id,
+			       User.person_id,
+			       User.username,
+			       User.type,
+			       User.active,
+			       (
+			       	SELECT Email.email
+			       	FROM {$emailsTable} AS Email
+			       	WHERE Email.person_id = User.person_id
+			       	  AND Email.is_login = 1
+			       	ORDER BY Email.id ASC
+			       	LIMIT 1
+			       ) AS email
+			FROM {$usersTable} AS User
+		";
+		$params = ['person_id' => $personId];
+
+		if ($tenantId !== null && $tenantId > 0)
+			{
+			$sql .= "
+				INNER JOIN {$tenantUsersTable} AS TenantUser
+					ON TenantUser.user_id = User.id
+					AND TenantUser.tenant_id = :tenant_id
+					AND TenantUser.active = 1
+			";
+			$params['tenant_id'] = $tenantId;
+			}
+
+		$sql .= "
+			WHERE User.person_id = :person_id
+			ORDER BY User.id DESC
+			LIMIT 1
+		";
+
+		$stmt = $this->db->prepare($sql);
+		$stmt->execute($params);
+
+		$row = $stmt->fetch(PDO::FETCH_ASSOC);
+		return ($row ?: null);
+		}
+
+	/**
+	 * Returns the current tenant id from session.
+	 */
+	private function currentTenantId(): int
+		{
+		$tenant = TenantContext::tenant();
+		return (int) ($tenant['id'] ?? 0);
+		}
+
+	/**
+	 * Maps the manager user type to the tenant_users role.
+	 */
+	private function mapUserTypeToTenantRole(string $userType): string
+		{
+		return ($userType === 'admin' || $userType === 'root') ? 'admin' : 'user';
+		}
+
+	/**
+	 * Decodes JSON array values from the aggregated detail query.
+	 */
+	private function decodeJsonArray($json): array
+		{
+		if (!is_string($json) || trim($json) === '')
 			{
 			return [];
 			}
 
-		$limit = max(1, min(50, (int) $limit));
+		$data = json_decode($json, true);
+		return is_array($data) ? $data : [];
+		}
 
-		$sql = "SELECT id, `name`
-						FROM people
-						WHERE `name` LIKE :t
-						ORDER BY COALESCE(`name`) ASC
-						LIMIT {$limit}";
-
-		$stmt = $this->db->prepare($sql);
-		$stmt->execute([':t' => '%' . $term . '%']);
-
-		return $stmt->fetchAll(\PDO::FETCH_ASSOC);
+	/**
+	 * Returns a trimmed string or null when the value is empty.
+	 */
+	private function nullableTrim($value): ?string
+		{
+		$text = trim((string) $value);
+		return ($text !== '' ? $text : null);
 		}
 	}
 ?>

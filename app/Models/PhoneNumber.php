@@ -2,10 +2,10 @@
 
 namespace App\Models;
 
-use App\Core\TenantModel;
+use App\Core\Model;
 use PDO;
 
-class PhoneNumber extends TenantModel
+class PhoneNumber extends Model
 	{
 
 	/**
