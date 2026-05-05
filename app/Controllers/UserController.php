@@ -146,52 +146,56 @@ class UserController extends Controller
 			$userModel = new \App\Models\User();
 			$user = $userModel->authenticate($email, $password);
 
-			if ($user)
-				{
-				\App\Core\Authorization::clearCache();
-				$_SESSION['manager']['user'] = [
-					'id'				=> $user['id'],
-					'username'	=> $user['username'],
-					'email'			=> $user['email'],
-					'type'			=> $user['type'],
-					'name'			=> $user['name']
-				];
-
-				// Auto-select the tenant when the user has access to only one.
-				try
+				if ($user)
 					{
-					$tenantModel = new Tenant();
-					$tenants = $tenantModel->getAccessibleByUserId((int) $user['id']);
+					\App\Core\Authorization::clearCache();
+					$_SESSION['manager']['user'] = [
+						'id'				=> $user['id'],
+						'username'	=> $user['username'],
+						'email'			=> $user['email'],
+						'type'			=> $user['type'],
+						'name'			=> $user['name'],
+						'tenant_id'	=> (int) ($user['tenant_id'] ?? 0)
+					];
 
-					error_log('DEBUG LOGIN: User ID ' . $user['id'] . ' has ' . count($tenants) . ' tenants');
-					if (!empty($tenants))
+					// Select the user's own tenant first, then fall back to the accessible tenant list.
+					try
 						{
-						error_log('DEBUG LOGIN: Tenants found: ' . json_encode($tenants));
-						}
+						$tenantModel = new Tenant();
+						$userId = (int) $user['id'];
+						$userTenantId = (int) ($user['tenant_id'] ?? 0);
 
-					if (count($tenants) === 1)
-						{
-						TenantContext::setTenant($tenants[0]);
-						error_log('DEBUG LOGIN: Auto-selected tenant ID ' . $tenants[0]['id']);
-						$this->redirect('/');
-						exit;
+						if ($userTenantId > 0)
+							{
+							$tenant = $tenantModel->findByIdForUser($userTenantId, $userId);
+
+							if ($tenant)
+								{
+								TenantContext::setTenant($tenant);
+								$this->redirect('/');
+								exit;
+								}
+							}
+
+						$tenants = $tenantModel->getAccessibleByUserId($userId);
+
+						if (count($tenants) === 1)
+							{
+							TenantContext::setTenant($tenants[0]);
+							$this->redirect('/');
+							exit;
+							}
+						elseif (count($tenants) > 1)
+							{
+							$this->redirect('tenant/select');
+							exit;
+							}
 						}
-					elseif (count($tenants) > 1)
+					catch (\Exception $e)
 						{
-						error_log('DEBUG LOGIN: Multiple tenants, redirecting to selection page');
-						$this->redirect('tenant/select');
-						exit;
+						error_log('ERROR LOGIN: Exception during tenant selection: ' . $e->getMessage());
+						error_log('ERROR LOGIN: Trace: ' . $e->getTraceAsString());
 						}
-					else
-						{
-						error_log('DEBUG LOGIN: No tenants found for user ' . $user['id']);
-						}
-					}
-				catch (\Exception $e)
-					{
-					error_log('ERROR LOGIN: Exception during tenant selection: ' . $e->getMessage());
-					error_log('ERROR LOGIN: Trace: ' . $e->getTraceAsString());
-					}
 
 				// If execution reaches this point, no tenant was found or an error occurred, so redirect home anyway.
 				$this->redirect('/');

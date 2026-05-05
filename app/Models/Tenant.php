@@ -14,22 +14,34 @@ class Tenant extends Model
 	  {
 		$tenantsTable = $this->managerTable('tenants');
 		$tenantUsersTable = $this->managerTable('tenant_users');
+		$usersTable = $this->managerTable('users');
 
 		$stmt = $this->db->prepare("
-			SELECT t.id,
-			       t.name,
-			       t.fantasy,
-			       t.document,
+			SELECT DISTINCT
+			       t.id,
+			       CONCAT('Tenant ', t.database_number) AS name,
+			       COALESCE(t.observations, '') AS fantasy,
+			       '' AS document,
 			       t.database_number,
 			       t.status,
-			       tu.role,
-			       tu.active AS user_active
+			       COALESCE(
+			           tu.role,
+			           CASE
+			               WHEN u.type = 'admin' THEN 'admin'
+			               WHEN u.type = 'root' THEN 'owner'
+			               ELSE 'user'
+			           END
+			       ) AS role
 			FROM {$tenantsTable} t
-			INNER JOIN {$tenantUsersTable} tu ON tu.tenant_id = t.id
-			WHERE tu.user_id = :user_id
-			  AND tu.active = 1
+			LEFT JOIN {$tenantUsersTable} tu
+				ON tu.tenant_id = t.id
+				AND tu.user_id = :user_id
+			LEFT JOIN {$usersTable} u
+				ON u.id = :user_id
+				AND u.tenant_id = t.id
+			WHERE (tu.user_id IS NOT NULL OR u.id IS NOT NULL)
 			  AND t.status = 'active'
-			ORDER BY t.name ASC
+			ORDER BY t.database_number ASC
 		");
 		$stmt->execute(['user_id' => $userId]);
 
@@ -43,21 +55,33 @@ class Tenant extends Model
 	  {
 		$tenantsTable = $this->managerTable('tenants');
 		$tenantUsersTable = $this->managerTable('tenant_users');
+		$usersTable = $this->managerTable('users');
 
 		$stmt = $this->db->prepare("
 			SELECT t.id,
-			       t.name,
-			       t.fantasy,
-			       t.document,
+			       CONCAT('Tenant ', t.database_number) AS name,
+			       COALESCE(t.observations, '') AS fantasy,
+			       '' AS document,
 			       t.database_number,
 			       t.status,
-			       tu.role,
-			       tu.active AS user_active
+			       COALESCE(
+			           tu.role,
+			           CASE
+			               WHEN u.type = 'admin' THEN 'admin'
+			               WHEN u.type = 'root' THEN 'owner'
+			               ELSE 'user'
+			           END
+			       ) AS role
 			FROM {$tenantsTable} t
-			INNER JOIN {$tenantUsersTable} tu ON tu.tenant_id = t.id
+			LEFT JOIN {$tenantUsersTable} tu
+				ON tu.tenant_id = t.id
+				AND tu.user_id = :user_id
+			LEFT JOIN {$usersTable} u
+				ON u.id = :user_id
+				AND u.tenant_id = t.id
 			WHERE t.id = :tenant_id
-			  AND tu.user_id = :user_id
-			  AND tu.active = 1
+			  AND (tu.user_id IS NOT NULL OR u.id IS NOT NULL)
+			  AND t.status = 'active'
 			LIMIT 1
 		");
 		$stmt->execute([
@@ -77,7 +101,14 @@ class Tenant extends Model
 		$tenantsTable = $this->managerTable('tenants');
 
 		$stmt = $this->db->prepare("
-			SELECT id, name, fantasy, document, database_number, status, created, modified
+			SELECT id,
+			       CONCAT('Tenant ', database_number) AS name,
+			       COALESCE(observations, '') AS fantasy,
+			       '' AS document,
+			       database_number,
+			       status,
+			       created,
+			       modified
 			FROM {$tenantsTable}
 			WHERE database_number = :database_number
 			LIMIT 1
@@ -97,15 +128,13 @@ class Tenant extends Model
 		$tenantsTable = $this->managerTable('tenants');
 
 		$stmt = $this->db->prepare("
-			INSERT INTO {$tenantsTable} (name, fantasy, document, database_number, status, created, modified)
-			VALUES (:name, :fantasy, :document, :database_number, :status, :created, :modified)
+			INSERT INTO {$tenantsTable} (database_number, status, observations, created, modified)
+			VALUES (:database_number, :status, :observations, :created, :modified)
 		");
 		$stmt->execute([
-			'name' => trim((string) ($data['name'] ?? '')),
-			'fantasy' => trim((string) ($data['fantasy'] ?? '')),
-			'document' => trim((string) ($data['document'] ?? '')),
 			'database_number' => trim((string) ($data['database_number'] ?? '')),
 			'status' => trim((string) ($data['status'] ?? 'pending')),
+			'observations' => trim((string) ($data['observations'] ?? $data['fantasy'] ?? $data['name'] ?? '')),
 			'created' => $now,
 			'modified' => $now,
 		]);
@@ -116,24 +145,22 @@ class Tenant extends Model
 	/**
 	 * Links a user to a tenant and updates the relation when it already exists.
 	 */
-	public function linkUser(int $tenantId, int $userId, string $role = 'user', bool $active = true): void
+	public function linkUser(int $tenantId, int $userId, string $role = 'user'): void
 	  {
 		$now = date('Y-m-d H:i:s');
 		$tenantUsersTable = $this->managerTable('tenant_users');
 
 		$stmt = $this->db->prepare("
-			INSERT INTO {$tenantUsersTable} (tenant_id, user_id, role, active, created, modified)
-			VALUES (:tenant_id, :user_id, :role, :active, :created, :modified)
+			INSERT INTO {$tenantUsersTable} (tenant_id, user_id, role, created, modified)
+			VALUES (:tenant_id, :user_id, :role, :created, :modified)
 			ON DUPLICATE KEY UPDATE
 				role = VALUES(role),
-				active = VALUES(active),
 				modified = VALUES(modified)
 		");
 		$stmt->execute([
 			'tenant_id' => $tenantId,
 			'user_id' => $userId,
 			'role' => $role,
-			'active' => $active ? 1 : 0,
 			'created' => $now,
 			'modified' => $now,
 		]);

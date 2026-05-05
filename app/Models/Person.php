@@ -500,7 +500,6 @@ class Person extends Model
 				INNER JOIN {$tenantUsersTable} AS TenantUser
 					ON TenantUser.user_id = User.id
 					AND TenantUser.tenant_id = :tenant_id
-					AND TenantUser.active = 1
 				WHERE User.person_id = Person.id
 			)
 		";
@@ -1068,12 +1067,11 @@ class Person extends Model
 
 		$stmt = $this->db->prepare("
 			INSERT INTO {$tenantUsersTable}
-				(tenant_id, user_id, role, active, created, modified)
+				(tenant_id, user_id, role, created, modified)
 			VALUES
-				(:tenant_id, :user_id, :role, 1, :created, :modified)
+				(:tenant_id, :user_id, :role, :created, :modified)
 			ON DUPLICATE KEY UPDATE
 				role = VALUES(role),
-				active = VALUES(active),
 				modified = VALUES(modified)
 		");
 		$stmt->execute([
@@ -1122,7 +1120,6 @@ class Person extends Model
 				INNER JOIN {$tenantUsersTable} AS TenantUser
 					ON TenantUser.user_id = User.id
 					AND TenantUser.tenant_id = :tenant_id
-					AND TenantUser.active = 1
 			";
 			$params['tenant_id'] = $tenantId;
 			}

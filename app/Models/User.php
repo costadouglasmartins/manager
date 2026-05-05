@@ -22,8 +22,7 @@ class User extends Model
 			{
 			$sql .= " INNER JOIN {$tenantUsersTable} AS TenantUser
 				ON TenantUser.user_id = User.id
-				AND TenantUser.tenant_id = :tenant_id
-				AND TenantUser.active = 1";
+				AND TenantUser.tenant_id = :tenant_id";
 			$params['tenant_id'] = $tenantId;
 			}
 
@@ -103,8 +102,7 @@ class User extends Model
 			{
 			$sql .= " INNER JOIN {$tenantUsersTable} AS TenantUser
 				ON TenantUser.user_id = User.id
-				AND TenantUser.tenant_id = :tenant_id
-				AND TenantUser.active = 1";
+				AND TenantUser.tenant_id = :tenant_id";
 			$params['tenant_id'] = $tenantId;
 			}
 
@@ -199,8 +197,7 @@ class User extends Model
 			{
 			$sql .= " INNER JOIN {$tenantUsersTable} AS TenantUser
 				ON TenantUser.user_id = User.id
-				AND TenantUser.tenant_id = :tenant_id
-				AND TenantUser.active = 1";
+				AND TenantUser.tenant_id = :tenant_id";
 			$params['tenant_id'] = $tenantId;
 			}
 
@@ -236,8 +233,7 @@ class User extends Model
 			{
 			$sql .= " INNER JOIN {$tenantUsersTable} AS TenantUser
 				ON TenantUser.user_id = User.id
-				AND TenantUser.tenant_id = :tenant_id
-				AND TenantUser.active = 1";
+				AND TenantUser.tenant_id = :tenant_id";
 			$params['tenant_id'] = $tenantId;
 			}
 
@@ -263,16 +259,17 @@ class User extends Model
     $peopleTable = $this->managerTable('people');
     $emailsTable = $this->managerTable('emails');
 
-    $sql = "SELECT  User.id,
-                    User.username,
-                    User.password,
-                    User.active,
-                    Email.email,
-                    User.type,
-                    Person.name,
-                    Person.type AS person_type,
-                    Person.document
-            FROM {$usersTable} AS User
+	    $sql = "SELECT  User.id,
+	                    User.username,
+	                    User.password,
+	                    User.active,
+	                    User.tenant_id,
+	                    Email.email,
+	                    User.type,
+	                    Person.name,
+	                    Person.type AS person_type,
+	                    Person.document
+	            FROM {$usersTable} AS User
             INNER JOIN {$peopleTable} AS Person ON Person.id = User.person_id
             INNER JOIN {$emailsTable} AS Email ON Email.person_id = Person.id
             WHERE User.active = 1

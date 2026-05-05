@@ -222,7 +222,6 @@ class Permission extends Model
 			INNER JOIN {$tenantUsersTable} AS TenantUser
 				ON TenantUser.user_id = User.id
 				AND TenantUser.tenant_id = :tenant_id
-				AND TenantUser.active = 1
 			";
 			$params['tenant_id'] = $tenantId;
 			}
@@ -239,7 +238,7 @@ class Permission extends Model
 		}
 
 	/**
-	 * Checks whether a user belongs to the given active tenant.
+	 * Checks whether a user belongs to the given tenant.
 	 */
 	public function userBelongsToTenant(int $userId, int $tenantId): bool
 		{
@@ -254,7 +253,6 @@ class Permission extends Model
 			FROM {$tenantUsersTable}
 			WHERE user_id = :user_id
 			  AND tenant_id = :tenant_id
-			  AND active = 1
 			LIMIT 1
 		");
 		$stmt->execute([
