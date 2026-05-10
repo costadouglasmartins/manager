@@ -53,17 +53,6 @@ $initialEmails = array_map(function ($email)
 
 $jsonFlags = JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT;
 ?>
-
-<!-- Breadcrumbs -->
-<nav aria-label="breadcrumb">
-  <ol class="breadcrumb">
-    <li class="breadcrumb-item"><a href="<?= url('home'); ?>">Início</a></li>
-    <li class="breadcrumb-item"><a href="<?= url('person'); ?>">Pessoas</a></li>
-    <li class="breadcrumb-item active" aria-current="page">Editar - <?= htmlspecialchars($person['name'] ?? '', ENT_QUOTES, 'UTF-8'); ?></li>
-  </ol>
-</nav>
-<!-- /Breadcrumbs -->
-
 <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
   <div>
     <h5 class="mb-0">Editar pessoa</h5>

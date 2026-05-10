@@ -1,14 +1,3 @@
-
-<!-- Breadcrumbs -->
-<nav aria-label="breadcrumb">
-  <ol class="breadcrumb">
-    <li class="breadcrumb-item"><a href="<?= url('home'); ?>">Início</a></li>
-    <li class="breadcrumb-item"><a href="<?= url('phone_number'); ?>">Telefones</a></li>
-    <li class="breadcrumb-item active" aria-current="page">Telefone - <?= htmlspecialchars($phone_number['phone_number'], ENT_QUOTES, 'UTF-8'); ?> - editar</li>
-  </ol>
-</nav>
-<!-- /Breadcrumbs -->
-
 <!-- Telefone -->
 <h5>Editar telefone</h5>
 <form action="<?= url('phone_number/update/' . $phone_number['id']); ?>" method="POST">

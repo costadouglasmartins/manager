@@ -10,14 +10,6 @@ $queryFilters = http_build_query([
   'person_id'    => $filters['person_id'],
 ]);
 ?>
-
-<nav aria-label="breadcrumb">
-  <ol class="breadcrumb">
-    <li class="breadcrumb-item"><a href="<?= url('home'); ?>">Início</a></li>
-    <li class="breadcrumb-item active" aria-current="page">Telefones</li>
-  </ol>
-</nav>
-
 <h5>Lista de Telefones</h5>
 
 <form action="<?= url('phone_number'); ?>" class="row g-3 mb-3" method="get">

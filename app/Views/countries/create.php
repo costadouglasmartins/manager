@@ -1,14 +1,3 @@
-
-<!-- Breadcrumbs -->
-<nav aria-label="breadcrumb">
-  <ol class="breadcrumb">
-    <li class="breadcrumb-item"><a href="<?= url('home'); ?>">Início</a></li>
-    <li class="breadcrumb-item"><a href="<?= url('country'); ?>">Países</a></li>
-    <li class="breadcrumb-item active" aria-current="page">País - criar</li>
-  </ol>
-</nav>
-<!-- /Breadcrumbs -->
-
 <!-- País -->
 <h5>Criar país</h5>
 <form action="<?= url('country/store/'); ?>" method="POST">

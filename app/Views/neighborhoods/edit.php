@@ -1,14 +1,3 @@
-
-<!-- Breadcrumbs -->
-<nav aria-label="breadcrumb">
-  <ol class="breadcrumb">
-    <li class="breadcrumb-item"><a href="<?= url('home'); ?>">Início</a></li>
-    <li class="breadcrumb-item"><a href="<?= url('neighborhood'); ?>">Bairros</a></li>
-    <li class="breadcrumb-item active" aria-current="page">Bairro - <?= htmlspecialchars($neighborhood['name'], ENT_QUOTES, 'UTF-8'); ?> - editar</li>
-  </ol>
-</nav>
-<!-- /Breadcrumbs -->
-
 <!-- Bairro -->
 <h5>Editar bairro</h5>
 <form action="<?= url('neighborhood/update/' . $neighborhood['id']); ?>" method="POST">

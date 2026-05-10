@@ -1,14 +1,3 @@
-
-<!-- Breadcrumbs -->
-<nav aria-label="breadcrumb">
-  <ol class="breadcrumb">
-    <li class="breadcrumb-item"><a href="<?= url('home'); ?>">Início</a></li>
-    <li class="breadcrumb-item"><a href="<?= url('email'); ?>">E-mails</a></li>
-    <li class="breadcrumb-item active" aria-current="page">E-mail - criar</li>
-  </ol>
-</nav>
-<!-- /Breadcrumbs -->
-
 <!-- E-mail -->
 <h5>Criar e-mail</h5>
 <form action="<?= url('email/store/'); ?>" method="POST">

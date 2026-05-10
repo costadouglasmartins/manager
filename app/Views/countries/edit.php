@@ -1,14 +1,3 @@
-
-<!-- Breadcrumbs -->
-<nav aria-label="breadcrumb">
-  <ol class="breadcrumb">
-    <li class="breadcrumb-item"><a href="<?= url('home'); ?>">Início</a></li>
-    <li class="breadcrumb-item"><a href="<?= url('country'); ?>">Países</a></li>
-    <li class="breadcrumb-item active" aria-current="page">País - <?= $country['name']; ?> - editar</li>
-  </ol>
-</nav>
-<!-- /Breadcrumbs -->
-
 <!-- País -->
 <h5>Editar país</h5>
 <form action="<?= url('country/update/' . $country['id']); ?>" method="POST">

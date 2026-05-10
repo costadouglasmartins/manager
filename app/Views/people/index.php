@@ -15,15 +15,6 @@ $queryFilters = http_build_query([
 	'birthdate' => $filters['birthdate'],
 	]);
 ?>
-
-<!-- Breadcrumbs -->
-<nav aria-label="breadcrumb">
-  <ol class="breadcrumb">
-    <li class="breadcrumb-item"><a href="<?= url('home'); ?>">Início</a></li>
-    <li class="breadcrumb-item active" aria-current="page">Pessoas</li>
-  </ol>
-</nav>
-<!-- /Breadcrumbs -->
 <h5>Lista de Pessoas</h5>
 <!-- Search form -->
 <form action="<?= url('person'); ?>" class="row g-3 mb-3" method="get">

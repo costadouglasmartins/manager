@@ -19,15 +19,6 @@ if (isset($_GET['error']))
 	$error = (string) $_GET['error'];
 	}
 ?>
-
-<nav aria-label="breadcrumb">
-  <ol class="breadcrumb">
-    <li class="breadcrumb-item"><a href="<?= url('home'); ?>">Início</a></li>
-    <li class="breadcrumb-item"><a href="<?= url('permission'); ?>">Permissões</a></li>
-    <li class="breadcrumb-item active" aria-current="page">Permissões Órfãs</li>
-  </ol>
-</nav>
-
 <div class="d-flex justify-content-between align-items-center mb-3">
   <h5>Permissões Órfãs</h5>
   <a href="<?= url('permission'); ?>" class="btn btn-secondary btn-sm">Voltar</a>

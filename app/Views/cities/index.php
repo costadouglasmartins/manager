@@ -10,14 +10,6 @@ $queryFilters = http_build_query([
   'state_id' => $filters['state_id'],
 ]);
 ?>
-
-<nav aria-label="breadcrumb">
-  <ol class="breadcrumb">
-    <li class="breadcrumb-item"><a href="<?= url('home'); ?>">Início</a></li>
-    <li class="breadcrumb-item active" aria-current="page">Cidades</li>
-  </ol>
-</nav>
-
 <h5>Lista de Cidades</h5>
 
 <form action="<?= url('city'); ?>" class="row g-3 mb-3" method="get">

@@ -1,14 +1,3 @@
-
-<!-- Breadcrumbs -->
-<nav aria-label="breadcrumb">
-  <ol class="breadcrumb">
-    <li class="breadcrumb-item"><a href="<?= url('home'); ?>">Início</a></li>
-    <li class="breadcrumb-item"><a href="<?= url('state'); ?>">Estados</a></li>
-    <li class="breadcrumb-item active" aria-current="page">Estado - <?= htmlspecialchars($state['name'], ENT_QUOTES, 'UTF-8'); ?> - editar</li>
-  </ol>
-</nav>
-<!-- /Breadcrumbs -->
-
 <!-- Estado -->
 <h5>Editar estado</h5>
 <form action="<?= url('state/update/' . $state['id']); ?>" method="POST">

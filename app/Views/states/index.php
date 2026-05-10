@@ -10,14 +10,6 @@ $queryFilters = http_build_query([
   'acronym' => $filters['acronym'],
 ]);
 ?>
-
-<nav aria-label="breadcrumb">
-  <ol class="breadcrumb">
-    <li class="breadcrumb-item"><a href="<?= url('home'); ?>">Início</a></li>
-    <li class="breadcrumb-item active" aria-current="page">Estados</li>
-  </ol>
-</nav>
-
 <h5>Lista de Estados</h5>
 
 <form action="<?= url('state'); ?>" class="row g-3 mb-3" method="get">

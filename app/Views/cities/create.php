@@ -1,14 +1,3 @@
-
-<!-- Breadcrumbs -->
-<nav aria-label="breadcrumb">
-  <ol class="breadcrumb">
-    <li class="breadcrumb-item"><a href="<?= url('home'); ?>">Início</a></li>
-    <li class="breadcrumb-item"><a href="<?= url('city'); ?>">Cidades</a></li>
-    <li class="breadcrumb-item active" aria-current="page">Cidade - criar</li>
-  </ol>
-</nav>
-<!-- /Breadcrumbs -->
-
 <!-- Cidade -->
 <h5>Criar cidade</h5>
 <form action="<?= url('city/store/'); ?>" method="POST">

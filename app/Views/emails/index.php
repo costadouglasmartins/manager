@@ -11,14 +11,6 @@ $queryFilters = http_build_query([
   'person_name' => $filters['person_name'],
 ]);
 ?>
-
-<nav aria-label="breadcrumb">
-  <ol class="breadcrumb">
-    <li class="breadcrumb-item"><a href="<?= url('home'); ?>">Início</a></li>
-    <li class="breadcrumb-item active" aria-current="page">E-mails</li>
-  </ol>
-</nav>
-
 <h5>Lista de E-mails</h5>
 
 <form action="<?= url('email'); ?>" class="row g-3 mb-3" method="get">

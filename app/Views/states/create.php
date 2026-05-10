@@ -1,14 +1,3 @@
-
-<!-- Breadcrumbs -->
-<nav aria-label="breadcrumb">
-  <ol class="breadcrumb">
-    <li class="breadcrumb-item"><a href="<?= url('home'); ?>">Início</a></li>
-    <li class="breadcrumb-item"><a href="<?= url('state'); ?>">Estados</a></li>
-    <li class="breadcrumb-item active" aria-current="page">Estado - criar</li>
-  </ol>
-</nav>
-<!-- /Breadcrumbs -->
-
 <!-- Estado -->
 <h5>Criar estado</h5>
 <form action="<?= url('state/store/'); ?>" method="POST">

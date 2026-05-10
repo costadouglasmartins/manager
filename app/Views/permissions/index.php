@@ -37,15 +37,6 @@ if (isset($_GET['created']))
 	$created = (int) $_GET['created'];
 	}
 ?>
-
-<!-- Breadcrumbs -->
-<nav aria-label="breadcrumb">
-  <ol class="breadcrumb">
-    <li class="breadcrumb-item"><a href="<?= url('home'); ?>">Início</a></li>
-    <li class="breadcrumb-item active" aria-current="page">Permissões</li>
-  </ol>
-</nav>
-
 <h5 class="mb-3">Gerenciar permissões (por usuário)</h5>
 
 <?php if ($syncCount !== null): ?>

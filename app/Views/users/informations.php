@@ -1,14 +1,3 @@
-<!-- Breadcrumbs -->
-<nav aria-label="breadcrumb">
-  <ol class="breadcrumb">
-    <li class="breadcrumb-item"><a href="<?= url('home'); ?>">Início</a></li>
-    <li class="breadcrumb-item"><a href="<?= url('person'); ?>">Pessoas</a></li>
-    <li class="breadcrumb-item"><a href="<?= url('user'); ?>">Usuários(as)</a></li>
-    <li class="breadcrumb-item active" aria-current="page">Informações sobre <?= $data['user']['username']; ?></li>
-  </ol>
-</nav>
-<!-- /Breadcrumbs -->
-
 <h5>Dados gerais da pessoa</h5><div class="table-responsive mb-3">
 <table class="table table-hover align-middle">
   <tbody>

@@ -1,13 +1,3 @@
-<!-- Breadcrumbs -->
-<nav aria-label="breadcrumb">
-  <ol class="breadcrumb">
-    <li class="breadcrumb-item"><a href="<?= url('home'); ?>">Início</a></li>
-    <li class="breadcrumb-item"><a href="<?= url('phone_number'); ?>">Telefones</a></li>
-    <li class="breadcrumb-item active" aria-current="page">Informações sobre <?= htmlspecialchars($phone_number['phone_number'], ENT_QUOTES, 'UTF-8'); ?></li>
-  </ol>
-</nav>
-<!-- /Breadcrumbs -->
-
 <h5>Dados do telefone</h5>
 <div class="table-responsive mb-3">
   <table class="table table-hover align-middle">

@@ -1,12 +1,3 @@
-<!-- Breadcrumbs -->
-<nav aria-label="breadcrumb">
-  <ol class="breadcrumb">
-    <li class="breadcrumb-item"><a href="<?= url('/'); ?>">Início</a></li>
-    <li class="breadcrumb-item active" aria-current="page">Acesso negado</li>
-  </ol>
-</nav>
-<!-- /Breadcrumbs -->
-
 <div class="row">
   <div class="col-12 col-lg-8">
     <h5 class="mb-3">Acesso negado</h5>

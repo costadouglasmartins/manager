@@ -12,13 +12,6 @@ $queryFilters = http_build_query([
 ]);
 ?>
 
-<nav aria-label="breadcrumb">
-  <ol class="breadcrumb">
-    <li class="breadcrumb-item"><a href="<?= url('home'); ?>">Início</a></li>
-    <li class="breadcrumb-item active" aria-current="page">Endereços</li>
-  </ol>
-</nav>
-
 <h5>Lista de Endereços</h5>
 
 <form action="<?= url('address'); ?>" class="row g-3 mb-3" method="get">

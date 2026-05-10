@@ -1,14 +1,3 @@
-
-<!-- Breadcrumbs -->
-<nav aria-label="breadcrumb">
-  <ol class="breadcrumb">
-    <li class="breadcrumb-item"><a href="<?= url('home'); ?>">Início</a></li>
-    <li class="breadcrumb-item"><a href="<?= url('email'); ?>">E-mails</a></li>
-    <li class="breadcrumb-item active" aria-current="page">E-mail - <?= htmlspecialchars($email['email'], ENT_QUOTES, 'UTF-8'); ?> - editar</li>
-  </ol>
-</nav>
-<!-- /Breadcrumbs -->
-
 <!-- E-mail -->
 <h5>Editar e-mail</h5>
 <form action="<?= url('email/update/' . $email['id']); ?>" method="POST">

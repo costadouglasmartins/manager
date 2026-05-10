@@ -13,17 +13,6 @@ $queryFilters = http_build_query([
 	'active' => $filters['active']
 	]);
 ?>
-
-<!-- Breadcrumbs -->
-<nav aria-label="breadcrumb">
-  <ol class="breadcrumb">
-    <li class="breadcrumb-item"><a href="<?= url('home'); ?>">Início</a></li>
-    <li class="breadcrumb-item"><a href="<?= url('person'); ?>">Pessoas</a></li>
-    <li class="breadcrumb-item active" aria-current="page">Usuários</li>
-  </ol>
-</nav>
-<!-- /Breadcrumbs -->
-
 <h5>Lista de usuários</h5>
 
 <!-- Search form -->

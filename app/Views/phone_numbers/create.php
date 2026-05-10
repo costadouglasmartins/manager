@@ -1,14 +1,3 @@
-
-<!-- Breadcrumbs -->
-<nav aria-label="breadcrumb">
-  <ol class="breadcrumb">
-    <li class="breadcrumb-item"><a href="<?= url('home'); ?>">Início</a></li>
-    <li class="breadcrumb-item"><a href="<?= url('phone_number'); ?>">Telefones</a></li>
-    <li class="breadcrumb-item active" aria-current="page">Telefone - criar</li>
-  </ol>
-</nav>
-<!-- /Breadcrumbs -->
-
 <!-- Telefone -->
 <h5>Criar telefone</h5>
 <form action="<?= url('phone_number/store/'); ?>" method="POST">
