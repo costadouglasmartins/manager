@@ -85,10 +85,17 @@ class PhoneNumber extends Model
 	/**
 	 * Search method
 	 */
-	public function search(array $filters = [], int $limit = 10, int $offset = 0): array
+	public function search(array $filters = [], int $limit = 10, int $offset = 0, ?int $tenantId = null): array
 		{
-		$sql = "SELECT ph.*, p.name AS person_name FROM phone_numbers ph LEFT JOIN people p ON p.id = ph.person_id WHERE 1=1";
+		$phoneNumbersTable = $this->managerTable('phone_numbers');
+		$peopleTable = $this->managerTable('people');
+		$sql = "SELECT ph.*, p.name AS person_name
+		        FROM {$phoneNumbersTable} ph
+		        LEFT JOIN {$peopleTable} p ON p.id = ph.person_id
+		        WHERE 1=1";
 		$params = [];
+
+		$this->appendTenantScope($sql, $params, $tenantId);
 
 		if (isset($filters['id']) && $filters['id'] !== '')
 			{
@@ -129,26 +136,33 @@ class PhoneNumber extends Model
 	/**
 	 * Count method
 	 */
-	public function count(array $filters = []): int
+	public function count(array $filters = [], ?int $tenantId = null): int
 		{
-		$sql = "SELECT COUNT(*) AS total FROM phone_numbers WHERE 1=1";
+		$phoneNumbersTable = $this->managerTable('phone_numbers');
+		$peopleTable = $this->managerTable('people');
+		$sql = "SELECT COUNT(*) AS total
+		        FROM {$phoneNumbersTable} ph
+		        LEFT JOIN {$peopleTable} p ON p.id = ph.person_id
+		        WHERE 1=1";
 		$params = [];
+
+		$this->appendTenantScope($sql, $params, $tenantId);
 
 		if (!empty($filters['id']))
 			{
-			$sql .= " AND id = :id";
+			$sql .= " AND ph.id = :id";
 			$params['id'] = (int) $filters['id'];
 			}
 
 		if (!empty($filters['phone_number']))
 			{
-			$sql .= " AND `phone_number` LIKE :phone_number";
+			$sql .= " AND ph.`phone_number` LIKE :phone_number";
 			$params['phone_number'] = '%' . $filters['phone_number'] . '%';
 			}
 
 		if (!empty($filters['person_id']))
 			{
-			$sql .= " AND person_id = :person_id";
+			$sql .= " AND ph.person_id = :person_id";
 			$params['person_id'] = (int) $filters['person_id'];
 			}
 
@@ -163,6 +177,31 @@ class PhoneNumber extends Model
 		$stmt->execute();
 
 		return (int) $stmt->fetchColumn();
+		}
+
+	/**
+	 * Restricts phone number queries to people linked to the requested tenant.
+	 */
+	private function appendTenantScope(string &$sql, array &$params, ?int $tenantId): void
+		{
+		if ($tenantId === null)
+			{
+			return;
+			}
+
+		$usersTable = $this->managerTable('users');
+		$tenantUsersTable = $this->managerTable('tenant_users');
+		$sql .= "
+			AND EXISTS (
+				SELECT 1
+				FROM {$usersTable} AS User
+				INNER JOIN {$tenantUsersTable} AS TenantUser
+					ON TenantUser.user_id = User.id
+					AND TenantUser.tenant_id = :tenant_id
+				WHERE User.person_id = p.id
+			)
+		";
+		$params['tenant_id'] = $tenantId;
 		}
 
 	/**

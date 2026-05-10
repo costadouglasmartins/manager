@@ -83,30 +83,43 @@ class Email extends Model
 	/**
 	 * Search method
 	 */
-	public function search(array $filters = [], int $limit = 10, int $offset = 0): array
+	public function search(array $filters = [], int $limit = 10, int $offset = 0, ?int $tenantId = null): array
 		{
-		$sql = "SELECT e.*, p.name AS person_name FROM emails e LEFT JOIN people p ON p.id = e.person_id WHERE 1=1";
+		$emailsTable = $this->managerTable('emails');
+		$peopleTable = $this->managerTable('people');
+		$sql = "SELECT Email.*, Person.name AS person_name
+		        FROM {$emailsTable} AS Email
+		        LEFT JOIN {$peopleTable} AS Person ON Person.id = Email.person_id
+		        WHERE 1=1";
 		$params = [];
+
+		$this->appendTenantScope($sql, $params, $tenantId);
 
 		if (isset($filters['id']) && $filters['id'] !== '')
 			{
-			$sql .= " AND e.id = :id";
+			$sql .= " AND Email.id = :id";
 			$params['id'] = (int) $filters['id'];
 			}
 
 		if (isset($filters['email']) && $filters['email'] !== '')
 			{
-			$sql .= " AND e.`email` LIKE :email";
+			$sql .= " AND Email.`email` LIKE :email";
 			$params['email'] = '%' . $filters['email'] . '%';
 			}
 
 		if (isset($filters['person_id']) && $filters['person_id'] !== '')
 			{
-			$sql .= " AND e.person_id = :person_id";
+			$sql .= " AND Email.person_id = :person_id";
 			$params['person_id'] = (int) $filters['person_id'];
 			}
 
-		$sql .= " ORDER BY e.id DESC LIMIT :limit OFFSET :offset";
+		if (isset($filters['person_name']) && $filters['person_name'] !== '')
+			{
+			$sql .= " AND Person.name LIKE :person_name";
+			$params['person_name'] = '%' . $filters['person_name'] . '%';
+			}
+
+		$sql .= " ORDER BY Email.id DESC LIMIT :limit OFFSET :offset";
 
 		$stmt = $this->db->prepare($sql);
 
@@ -127,27 +140,40 @@ class Email extends Model
 	/**
 	 * Count method
 	 */
-	public function count(array $filters = []): int
+	public function count(array $filters = [], ?int $tenantId = null): int
 		{
-		$sql = "SELECT COUNT(*) AS total FROM emails WHERE 1=1";
+		$emailsTable = $this->managerTable('emails');
+		$peopleTable = $this->managerTable('people');
+		$sql = "SELECT COUNT(*) AS total
+		        FROM {$emailsTable} AS Email
+		        LEFT JOIN {$peopleTable} AS Person ON Person.id = Email.person_id
+		        WHERE 1=1";
 		$params = [];
+
+		$this->appendTenantScope($sql, $params, $tenantId);
 
 		if (!empty($filters['id']))
 			{
-			$sql .= " AND id = :id";
+			$sql .= " AND Email.id = :id";
 			$params['id'] = (int) $filters['id'];
 			}
 
 		if (!empty($filters['email']))
 			{
-			$sql .= " AND `email` LIKE :email";
+			$sql .= " AND Email.`email` LIKE :email";
 			$params['email'] = '%' . $filters['email'] . '%';
 			}
 
 		if (!empty($filters['person_id']))
 			{
-			$sql .= " AND person_id = :person_id";
+			$sql .= " AND Email.person_id = :person_id";
 			$params['person_id'] = (int) $filters['person_id'];
+			}
+
+		if (!empty($filters['person_name']))
+			{
+			$sql .= " AND Person.name LIKE :person_name";
+			$params['person_name'] = '%' . $filters['person_name'] . '%';
 			}
 
 		$stmt = $this->db->prepare($sql);
@@ -161,6 +187,31 @@ class Email extends Model
 		$stmt->execute();
 
 		return (int) $stmt->fetchColumn();
+		}
+
+	/**
+	 * Restricts email queries to people linked to the requested tenant.
+	 */
+	private function appendTenantScope(string &$sql, array &$params, ?int $tenantId): void
+		{
+		if ($tenantId === null)
+			{
+			return;
+			}
+
+		$usersTable = $this->managerTable('users');
+		$tenantUsersTable = $this->managerTable('tenant_users');
+		$sql .= "
+			AND EXISTS (
+				SELECT 1
+				FROM {$usersTable} AS User
+				INNER JOIN {$tenantUsersTable} AS TenantUser
+					ON TenantUser.user_id = User.id
+					AND TenantUser.tenant_id = :tenant_id
+				WHERE User.person_id = Person.id
+			)
+		";
+		$params['tenant_id'] = $tenantId;
 		}
 
 	/**

@@ -2,6 +2,7 @@
 
 namespace App\Controllers;
 
+use App\Core\TenantContext;
 use App\Core\TenantAwareController;
 use App\Models\Address;
 
@@ -16,6 +17,7 @@ class AddressController extends TenantAwareController
 		$this->requirePermission('address.index');
 
 		$address = new Address();
+		$tenantId = $this->currentTenantId();
 
 		$filters = [
 			'id'        => isset($_GET['id'])        ? trim($_GET['id'])        : '',
@@ -33,8 +35,8 @@ class AddressController extends TenantAwareController
 		$perPage = 10;
 		$offset = ($page - 1) * $perPage;
 
-		$addresses = $address->search($filters, $perPage, $offset);
-		$total = $address->count($filters);
+		$addresses = $address->search($filters, $perPage, $offset, $tenantId);
+		$total = $address->count($filters, $tenantId);
 		$totalPages = (int) ceil($total / $perPage);
 		if ($totalPages < 1)
 			{
@@ -117,6 +119,15 @@ class AddressController extends TenantAwareController
 		$address = new Address();
 		$data = $address->findAllByAddressId($id);
 		$this->view('addresses/informations', ['title' => 'Informações sobre o endereço', 'address' => $data['address']]);
+		}
+
+	/**
+	 * Returns the active tenant id from session context.
+	 */
+	private function currentTenantId(): int
+		{
+		$tenant = TenantContext::tenant();
+		return (int) ($tenant['id'] ?? 0);
 		}
 	}
 

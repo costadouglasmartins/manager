@@ -24,7 +24,12 @@ class Address extends Model
 	 */
 	private function baseSelectSql(): string
 		{
-		return "SELECT a.*, p.name AS person_name FROM addresses a LEFT JOIN people p ON p.id = a.person_id";
+		$addressesTable = $this->managerTable('addresses');
+		$peopleTable = $this->managerTable('people');
+
+		return "SELECT a.*, p.name AS person_name
+		        FROM {$addressesTable} a
+		        LEFT JOIN {$peopleTable} p ON p.id = a.person_id";
 		}
 
 	/**
@@ -194,10 +199,12 @@ class Address extends Model
 	/**
 	 * Search method
 	 */
-	public function search(array $filters = [], int $limit = 10, int $offset = 0): array
+	public function search(array $filters = [], int $limit = 10, int $offset = 0, ?int $tenantId = null): array
 		{
 		$sql = $this->baseSelectSql() . " WHERE 1=1";
 		$params = [];
+
+		$this->appendTenantScope($sql, $params, $tenantId);
 
 		if (isset($filters['id']) && $filters['id'] !== '')
 			{
@@ -244,32 +251,39 @@ class Address extends Model
 	/**
 	 * Count method
 	 */
-	public function count(array $filters = []): int
+	public function count(array $filters = [], ?int $tenantId = null): int
 		{
-		$sql = "SELECT COUNT(*) AS total FROM addresses WHERE 1=1";
+		$addressesTable = $this->managerTable('addresses');
+		$peopleTable = $this->managerTable('people');
+		$sql = "SELECT COUNT(*) AS total
+		        FROM {$addressesTable} a
+		        LEFT JOIN {$peopleTable} p ON p.id = a.person_id
+		        WHERE 1=1";
 		$params = [];
+
+		$this->appendTenantScope($sql, $params, $tenantId);
 
 		if (!empty($filters['id']))
 			{
-			$sql .= " AND id = :id";
+			$sql .= " AND a.id = :id";
 			$params['id'] = (int) $filters['id'];
 			}
 
 		if (!empty($filters['street']))
 			{
-			$sql .= " AND `street` LIKE :street";
+			$sql .= " AND a.`street` LIKE :street";
 			$params['street'] = '%' . $filters['street'] . '%';
 			}
 
 		if (!empty($filters['zip_code']))
 			{
-			$sql .= " AND `zip_code` LIKE :zip_code";
+			$sql .= " AND a.`zip_code` LIKE :zip_code";
 			$params['zip_code'] = '%' . $filters['zip_code'] . '%';
 			}
 
 		if (!empty($filters['person_id']))
 			{
-			$sql .= " AND person_id = :person_id";
+			$sql .= " AND a.person_id = :person_id";
 			$params['person_id'] = (int) $filters['person_id'];
 			}
 
@@ -284,6 +298,31 @@ class Address extends Model
 		$stmt->execute();
 
 		return (int) $stmt->fetchColumn();
+		}
+
+	/**
+	 * Restricts address queries to people linked to the requested tenant.
+	 */
+	private function appendTenantScope(string &$sql, array &$params, ?int $tenantId): void
+		{
+		if ($tenantId === null)
+			{
+			return;
+			}
+
+		$usersTable = $this->managerTable('users');
+		$tenantUsersTable = $this->managerTable('tenant_users');
+		$sql .= "
+			AND EXISTS (
+				SELECT 1
+				FROM {$usersTable} AS User
+				INNER JOIN {$tenantUsersTable} AS TenantUser
+					ON TenantUser.user_id = User.id
+					AND TenantUser.tenant_id = :tenant_id
+				WHERE User.person_id = p.id
+			)
+		";
+		$params['tenant_id'] = $tenantId;
 		}
 
 	/**

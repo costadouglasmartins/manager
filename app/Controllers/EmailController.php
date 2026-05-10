@@ -2,6 +2,7 @@
 
 namespace App\Controllers;
 
+use App\Core\TenantContext;
 use App\Core\TenantAwareController;
 use App\Models\Email;
 
@@ -16,6 +17,7 @@ class EmailController extends TenantAwareController
 		$this->requirePermission('email.index');
 
 		$email = new Email();
+		$tenantId = $this->currentTenantId();
 
 		$filters = [
 			'id'          => isset($_GET['id'])          ? trim($_GET['id'])          : '',
@@ -33,8 +35,8 @@ class EmailController extends TenantAwareController
 		$perPage = 10;
 		$offset = ($page - 1) * $perPage;
 
-		$emails = $email->search($filters, $perPage, $offset);
-		$total = $email->count($filters);
+		$emails = $email->search($filters, $perPage, $offset, $tenantId);
+		$total = $email->count($filters, $tenantId);
 		$totalPages = (int) ceil($total / $perPage);
 		if ($totalPages < 1)
 			{
@@ -117,6 +119,15 @@ class EmailController extends TenantAwareController
 		$email = new Email();
 		$data = $email->findAllByEmailId($id);
 		$this->view('emails/informations', ['title' => 'Informações sobre o e-mail', 'email' => $data['email']]);
+		}
+
+	/**
+	 * Returns the active tenant id from session context.
+	 */
+	private function currentTenantId(): int
+		{
+		$tenant = TenantContext::tenant();
+		return (int) ($tenant['id'] ?? 0);
 		}
 	}
 

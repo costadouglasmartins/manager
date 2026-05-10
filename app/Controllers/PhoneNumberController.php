@@ -2,6 +2,7 @@
 
 namespace App\Controllers;
 
+use App\Core\TenantContext;
 use App\Core\TenantAwareController;
 use App\Models\PhoneNumber;
 
@@ -16,6 +17,7 @@ class PhoneNumberController extends TenantAwareController
 		$this->requirePermission('phone_number.index');
 
 		$phoneNumber = new PhoneNumber();
+		$tenantId = $this->currentTenantId();
 
 		$filters = [
 			'id'           => isset($_GET['id'])           ? trim($_GET['id'])           : '',
@@ -32,8 +34,8 @@ class PhoneNumberController extends TenantAwareController
 		$perPage = 10;
 		$offset = ($page - 1) * $perPage;
 
-		$phoneNumbers = $phoneNumber->search($filters, $perPage, $offset);
-		$total = $phoneNumber->count($filters);
+		$phoneNumbers = $phoneNumber->search($filters, $perPage, $offset, $tenantId);
+		$total = $phoneNumber->count($filters, $tenantId);
 		$totalPages = (int) ceil($total / $perPage);
 		if ($totalPages < 1)
 			{
@@ -116,6 +118,15 @@ class PhoneNumberController extends TenantAwareController
 		$phoneNumber = new PhoneNumber();
 		$data = $phoneNumber->findAllByPhoneNumberId($id);
 		$this->view('phone_numbers/informations', ['title' => 'Informações sobre o telefone', 'phone_number' => $data['phone_number']]);
+		}
+
+	/**
+	 * Returns the active tenant id from session context.
+	 */
+	private function currentTenantId(): int
+		{
+		$tenant = TenantContext::tenant();
+		return (int) ($tenant['id'] ?? 0);
 		}
 	}
 
