@@ -4,6 +4,13 @@
 const popoverTriggerList = document.querySelectorAll('[data-bs-toggle="popover"]')
 const popoverList = [...popoverTriggerList].map(popoverTriggerEl => new bootstrap.Popover(popoverTriggerEl))
 
+document.querySelectorAll(".table-responsive").forEach((tableWrapper) => {
+  if (!tableWrapper.hasAttribute("tabindex"))
+    {
+    tableWrapper.setAttribute("tabindex", "0");
+    }
+});
+
 /**
  * Applies a mask in CPF's and CNPJ's
  * @param {String} value 

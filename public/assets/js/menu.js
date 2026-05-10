@@ -1,6 +1,6 @@
 document.addEventListener("DOMContentLoaded", () => {
-  // Time to open menu when mouse is hovering
-  const HOVER_DELAY = 2000;
+  // Time to open menus when the pointer is hovering on desktop.
+  const HOVER_DELAY = 300;
 
   /**
    * Theme
@@ -20,6 +20,9 @@ document.addEventListener("DOMContentLoaded", () => {
       root.setAttribute("data-bs-theme", theme);
       localStorage.setItem("theme", theme);
       themeIcon.className = theme === "dark" ? "bi bi-sun-fill" : "bi bi-moon-fill";
+      const label = theme === "dark" ? "Alternar para tema claro" : "Alternar para tema escuro";
+      themeBtn.setAttribute("aria-label", label);
+      themeBtn.setAttribute("title", label);
       }
 
     applyTheme(localStorage.getItem("theme") || "light");
