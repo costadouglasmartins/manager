@@ -1,6 +1,6 @@
 document.addEventListener("DOMContentLoaded", () => {
   // Time to open menus when the pointer is hovering on desktop.
-  const HOVER_DELAY = 300;
+  const HOVER_DELAY = 1000;
 
   /**
    * Theme
@@ -80,7 +80,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   /**
    * Main dropdowns — level 1 (navbar → dropdown)
-   * Desktop: hovering for 2 seconds opens it; moving the pointer away closes it if it was opened by hover.
+   * Desktop: hovering for 1 second opens it; moving the pointer away closes it if it was opened by hover.
    * Click: Bootstrap already handles it; we set openedByHover = false.
    */
   document.querySelectorAll(".nav-item.dropdown").forEach(navItem => {
@@ -98,6 +98,7 @@ document.addEventListener("DOMContentLoaded", () => {
         {
         return;
         }
+      clearTimeout(hoverTimer);
       hoverTimer = setTimeout(() => {
         openedByHover = true;
         bootstrap.Dropdown.getOrCreateInstance(toggle).show();
@@ -128,7 +129,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   /**
    * Submenus — levels 3, 4, …
-   * Desktop: hovering for 2 seconds opens it; moving the pointer away closes it immediately.
+   * Desktop: hovering for 1 second opens it; moving the pointer away closes it immediately.
    * Clicking opens it right away (toggle).
    * Mobile:  click only (toggle), no timer.
    */
@@ -147,6 +148,7 @@ document.addEventListener("DOMContentLoaded", () => {
         {
         return;
         }
+      clearTimeout(hoverTimer);
       hoverTimer = setTimeout(() => openSubmenu(submenu), HOVER_DELAY);
     });
 

@@ -165,7 +165,6 @@ $userName = $isAuthenticated ? (string) ($managerUser['name'] ?? 'Usuário(a)') 
               </li>
             </ul>
           </li>
-          <!-- Menu Exemplo (4 níveis) 
           <li class="nav-item dropdown">
             <a class="nav-link dropdown-toggle" href="#" id="menuExemplo" role="button" data-bs-toggle="dropdown" aria-expanded="false">
               <i class="bi bi-layers me-1"></i> Cadastros essenciais
@@ -230,7 +229,6 @@ $userName = $isAuthenticated ? (string) ($managerUser['name'] ?? 'Usuário(a)') 
 
             </ul>
           </li>
-          /Menu Exemplo -->
           <?php endif; ?>
         </ul>
         <!-- Sistema -->
@@ -290,7 +288,7 @@ $userName = $isAuthenticated ? (string) ($managerUser['name'] ?? 'Usuário(a)') 
   </main>
   
   <script src="<?= url('assets/js/bootstrap.bundle.min.js'); ?>"></script>
-  <script src="<?= url('assets/js/menu.js?v=2'); ?>"></script>
+  <script src="<?= url('assets/js/menu.js?v=3'); ?>"></script>
   <script src="<?= url('assets/js/main.js?v=2'); ?>"></script>
 </body>
 </html>
