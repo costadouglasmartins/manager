@@ -62,49 +62,10 @@ class CityController extends Controller
 		]);
 		}
 
-	/**
-	 * Create method
-	 */
-	public function create()
-		{
-		$this->requirePermission('city.create');
-		$this->view('cities/create', ['title' => 'Nova cidade']);
-		}
 
-	/**
-	 * Store method
-	 */
-	public function store()
-		{
-		$this->requirePermission('city.store');
-		$city = new City();
-		$city->create($_POST);
-		$this->redirect('city');
-		}
+	
 
-	/**
-	 * Edit method
-	 * @param Integer $id City id
-	 */
-	public function edit($id)
-		{
-		$this->requirePermission('city.edit');
-		$city = new City();
-		$data = $city->find($id);
-		$this->view('cities/edit', ['title' => 'Editar cidade', 'city' => $data]);
-		}
-
-	/**
-	 * Update method
-	 * @param Integer $id City id
-	 */
-	public function update($id)
-		{
-		$this->requirePermission('city.update');
-		$city = new City();
-		$city->update($id, $_POST);
-		$this->redirect('city');
-		}
+	
 
 	/**
 	 * Informations method

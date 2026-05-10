@@ -89,32 +89,6 @@ class CountryController extends Controller
 		}
 
 	/**
-	 * Renders the country edit form for the requested record.
-	 *
-	 * @param mixed $id Country identifier.
-	 */
-	public function edit($id)
-		{
-		$this->requirePermission('country.edit');
-		$country = new Country();
-		$data = $country->find($id);
-		$this->view('countries/edit', ['title' => 'Editar país', 'country' => $data]);
-		}
-
-	/**
-	 * Updates the requested country and redirects back to the listing.
-	 *
-	 * @param mixed $id Country identifier.
-	 */
-	public function update($id)
-		{
-		$this->requirePermission('country.update');
-		$country = new Country();
-		$country->update($id, $_POST);
-		$this->redirect('country');
-		}
-
-	/**
 	 * Displays the details for the requested country.
 	 *
 	 * @param mixed $id Country identifier.
