@@ -7,17 +7,6 @@ $rawAddresses = (is_array($formData['addresses'] ?? null) ? array_values($formDa
 $rawPhones = (is_array($formData['phones'] ?? null) ? array_values($formData['phones']) : []);
 $rawEmails = (is_array($formData['emails'] ?? null) ? array_values($formData['emails']) : []);
 
-$hasUserPayload = (
-  trim((string) ($userForm['username'] ?? '')) !== ''
-  || trim((string) ($userForm['password'] ?? '')) !== ''
-  || trim((string) ($userForm['type'] ?? '')) !== ''
-);
-$createUserValue = (string) ($formData['create_user'] ?? '');
-if ($createUserValue === '')
-  {
-  $createUserValue = $hasUserPayload ? '1' : '0';
-  }
-
 $initialAddresses = array_map(function ($address)
   {
   return [
@@ -48,302 +37,268 @@ $initialEmails = array_map(function ($email)
   }, $rawEmails);
 
 $initialUser = [
-  'create_user' => $createUserValue,
+  'create_user' => '1',
   'username' => $userForm['username'] ?? '',
   'type' => $userForm['type'] ?? 'user',
-  'active' => isset($userForm['active'])
-    ? (string) $userForm['active']
-    : (isset($personForm['active']) && $personForm['active'] !== '' ? (string) $personForm['active'] : '1'),
+  'active' => '1',
 ];
 
 $jsonFlags = JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT;
 ?>
-<div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
-  <div>
-    <h5 class="mb-0">Cadastrar pessoa</h5>
-    <div class="text-body-secondary small">Cadastre a pessoa na base principal `manager_main` e, se quiser, gere também um usuário associado ao tenant atual.</div>
+<link rel="stylesheet" href="<?= url('assets/css/people/create.css?v=1'); ?>">
+
+<div class="person-create-page">
+  <div class="person-create-header">
+    <div>
+      <span class="person-create-kicker"><i class="bi bi-person-fill-add"></i> Pessoas</span>
+      <h5>Cadastrar pessoa</h5>
+    </div>
+    <a href="<?= url('person'); ?>" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> Voltar</a>
   </div>
-  <a href="<?= url('person'); ?>" class="btn btn-outline-secondary">Voltar</a>
-</div>
 
-<form action="<?= url('person/store'); ?>" method="POST" id="personCreateForm" class="needs-validation" novalidate>
-  <div class="card shadow-sm mb-3">
-    <div class="card-body">
-      <div class="alert alert-danger <?= ($formError !== '' ? '' : 'd-none'); ?> mb-4" id="formAlert" role="alert"><?= htmlspecialchars($formError, ENT_QUOTES, 'UTF-8'); ?></div>
+  <form action="<?= url('person/store'); ?>" method="POST" id="personCreateForm" class="needs-validation person-create-form" novalidate>
+    <input type="hidden" id="personActive" name="person[active]" value="1">
+    <input type="hidden" id="createSystemUser" name="create_user" value="1">
+    <input type="hidden" class="js-user-required" id="userActive" name="user[active]" value="1">
 
-      <section class="mb-4">
-        <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
-          <div>
-            <h2 class="h6 mb-0">Dados da pessoa</h2>
-            <div class="text-body-secondary small">Os campos marcados com * são obrigatórios.</div>
-          </div>
+    <div class="alert alert-danger <?= ($formError !== '' ? '' : 'd-none'); ?>" id="formAlert" role="alert"><?= htmlspecialchars($formError, ENT_QUOTES, 'UTF-8'); ?></div>
+
+    <section class="person-create-section">
+      <div class="person-create-section-header">
+        <div class="person-create-section-title">
+          <i class="bi bi-person-vcard"></i>
+          <h2>Dados da pessoa</h2>
+        </div>
+      </div>
+
+      <div class="row g-3">
+        <div class="col-12 col-xl-7">
+          <label class="form-label" for="personName">Nome *</label>
+          <input autocomplete="off" class="form-control" id="personName" name="person[name]" placeholder="Nome completo ou razão social" type="text" required value="<?= htmlspecialchars($personForm['name'] ?? '', ENT_QUOTES, 'UTF-8'); ?>" />
+          <div class="invalid-feedback">Informe o nome.</div>
         </div>
 
-        <div class="row g-3">
-          <div class="col-12 col-md-6">
-            <label class="form-label" for="personName">Nome *</label>
-            <input autocomplete="off" class="form-control" id="personName" name="person[name]" placeholder="Nome completo ou razão social" type="text" required value="<?= htmlspecialchars($personForm['name'] ?? '', ENT_QUOTES, 'UTF-8'); ?>" />
-            <div class="invalid-feedback">Informe o nome.</div>
-          </div>
-
-          <div class="col-12 col-md-6">
-            <label class="form-label" for="personFantasy">Nome fantasia</label>
-            <input autocomplete="off" class="form-control" id="personFantasy" name="person[fantasy]" placeholder="Nome fantasia" type="text" value="<?= htmlspecialchars($personForm['fantasy'] ?? '', ENT_QUOTES, 'UTF-8'); ?>" />
-          </div>
-
-          <div class="col-12 col-md-4">
-            <label class="form-label" for="personType">Tipo *</label>
-            <select autocomplete="off" class="form-select" id="personType" name="person[type]" required>
-              <option value="" disabled <?= empty($personForm['type']) ? 'selected' : ''; ?>>Selecione...</option>
-              <option value="individual" <?= (($personForm['type'] ?? '') === 'individual' ? 'selected' : ''); ?>>Pessoa física</option>
-              <option value="company" <?= (($personForm['type'] ?? '') === 'company' ? 'selected' : ''); ?>>Pessoa jurídica</option>
-            </select>
-            <div class="invalid-feedback">Selecione o tipo.</div>
-          </div>
-
-          <div class="col-12 col-md-4">
-            <label class="form-label" for="personDocument">Documento *</label>
-            <input autocomplete="off" class="form-control mask-cpf-cnpj" id="personDocument" name="person[document]" maxlength="18" placeholder="CPF ou CNPJ" type="text" required value="<?= htmlspecialchars($personForm['document'] ?? '', ENT_QUOTES, 'UTF-8'); ?>" />
-            <div class="invalid-feedback">Informe o documento.</div>
-          </div>
-
-          <div class="col-12 col-md-2">
-            <label class="form-label" for="personActive">Ativo *</label>
-            <select autocomplete="off" class="form-select" id="personActive" name="person[active]" required>
-              <option value="" disabled <?= (!isset($personForm['active']) || $personForm['active'] === '') ? 'selected' : ''; ?>>Selecione...</option>
-              <option value="1" <?= ((string) ($personForm['active'] ?? '') === '1' ? 'selected' : ''); ?>>Sim</option>
-              <option value="0" <?= ((string) ($personForm['active'] ?? '') === '0' ? 'selected' : ''); ?>>Não</option>
-            </select>
-            <div class="invalid-feedback">Selecione a situação.</div>
-          </div>
-
-          <div class="col-12 col-md-2">
-            <label class="form-label" for="personBirthdate">Data de nascimento</label>
-            <input autocomplete="off" class="form-control mask-date" id="personBirthdate" name="person[birthdate]" placeholder="DD/MM/AAAA" type="text" value="<?= htmlspecialchars($personForm['birthdate'] ?? '', ENT_QUOTES, 'UTF-8'); ?>" />
-            <div class="invalid-feedback">Informe uma data válida.</div>
-          </div>
-        </div>
-      </section>
-
-      <section class="mb-4">
-        <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
-          <div>
-            <h2 class="h6 mb-0">Usuário do sistema</h2>
-            <div class="text-body-secondary small">Escolha se esta pessoa também deve receber acesso ao sistema. Os dados do usuário também serão gravados em `manager_main`.</div>
-          </div>
+        <div class="col-12 col-xl-5">
+          <label class="form-label" for="personFantasy">Nome fantasia</label>
+          <input autocomplete="off" class="form-control" id="personFantasy" name="person[fantasy]" placeholder="Nome fantasia" type="text" value="<?= htmlspecialchars($personForm['fantasy'] ?? '', ENT_QUOTES, 'UTF-8'); ?>" />
         </div>
 
-        <div class="row g-3">
-          <div class="col-12 col-md-4">
-            <label class="form-label" for="createSystemUser">Gerar usuário associado? *</label>
-            <select autocomplete="off" class="form-select" id="createSystemUser" name="create_user" required>
-              <option value="0" <?= ($initialUser['create_user'] !== '1' ? 'selected' : ''); ?>>Não</option>
-              <option value="1" <?= ($initialUser['create_user'] === '1' ? 'selected' : ''); ?>>Sim</option>
-            </select>
-            <div class="invalid-feedback">Informe se deseja gerar o usuário.</div>
-          </div>
+        <div class="col-12 col-md-4">
+          <label class="form-label" for="personType">Tipo *</label>
+          <select autocomplete="off" class="form-select" id="personType" name="person[type]" required>
+            <option value="" disabled <?= empty($personForm['type']) ? 'selected' : ''; ?>>Selecione...</option>
+            <option value="individual" <?= (($personForm['type'] ?? '') === 'individual' ? 'selected' : ''); ?>>Pessoa física</option>
+            <option value="company" <?= (($personForm['type'] ?? '') === 'company' ? 'selected' : ''); ?>>Pessoa jurídica</option>
+          </select>
+          <div class="invalid-feedback">Selecione o tipo.</div>
         </div>
 
-        <div class="border rounded p-3 mt-3 <?= ($initialUser['create_user'] === '1' ? '' : 'd-none'); ?>" id="userFieldsSection">
-          <div class="text-body-secondary small mb-3">Quando a opção for "Sim", os dados abaixo passam a ser obrigatórios. O login por e-mail usará o primeiro e-mail marcado como "E-mail de login" na seção de e-mails.</div>
+        <div class="col-12 col-md-4">
+          <label class="form-label" for="personDocument">Documento *</label>
+          <input autocomplete="off" class="form-control mask-cpf-cnpj" id="personDocument" name="person[document]" maxlength="18" placeholder="CPF ou CNPJ" type="text" required value="<?= htmlspecialchars($personForm['document'] ?? '', ENT_QUOTES, 'UTF-8'); ?>" />
+          <div class="invalid-feedback">Informe o documento.</div>
+        </div>
+
+        <div class="col-12 col-md-4">
+          <label class="form-label" for="personBirthdate">Data de nascimento</label>
+          <input autocomplete="off" class="form-control mask-date" id="personBirthdate" name="person[birthdate]" placeholder="DD/MM/AAAA" type="text" value="<?= htmlspecialchars($personForm['birthdate'] ?? '', ENT_QUOTES, 'UTF-8'); ?>" />
+          <div class="invalid-feedback">Informe uma data válida.</div>
+        </div>
+      </div>
+    </section>
+
+    <section class="person-create-section" id="userFieldsSection">
+      <div class="person-create-section-header">
+        <div class="person-create-section-title">
+          <i class="bi bi-person-badge"></i>
+          <h2>Usuário do sistema</h2>
+        </div>
+      </div>
+
+      <div class="row g-3">
+        <div class="col-12 col-lg-5">
+          <label class="form-label" for="userUsername">Usuário *</label>
+          <input autocomplete="off" class="form-control js-user-required" id="userUsername" maxlength="45" name="user[username]" placeholder="nome.sobrenome" type="text" required value="<?= htmlspecialchars($initialUser['username'], ENT_QUOTES, 'UTF-8'); ?>" />
+          <div class="invalid-feedback">Informe o nome de usuário.</div>
+        </div>
+
+        <div class="col-12 col-lg-4">
+          <label class="form-label" for="userPassword">Senha *</label>
+          <input autocomplete="new-password" class="form-control js-user-required" id="userPassword" name="user[password]" placeholder="Defina uma senha" type="password" required />
+          <div class="invalid-feedback">Informe a senha do usuário.</div>
+        </div>
+
+        <div class="col-12 col-lg-3">
+          <label class="form-label" for="userType">Tipo *</label>
+          <select autocomplete="off" class="form-select js-user-required" id="userType" name="user[type]" required>
+            <option value="" disabled <?= empty($initialUser['type']) ? 'selected' : ''; ?>>Selecione...</option>
+            <option value="admin" <?= ($initialUser['type'] === 'admin' ? 'selected' : ''); ?>>Administrador</option>
+            <option value="user" <?= ($initialUser['type'] === 'user' ? 'selected' : ''); ?>>Usuário</option>
+          </select>
+          <div class="invalid-feedback">Selecione o tipo do usuário.</div>
+        </div>
+      </div>
+    </section>
+
+    <section class="person-create-section">
+      <div class="person-create-section-header">
+        <div class="person-create-section-title">
+          <i class="bi bi-signpost-split"></i>
+          <h2>Endereços</h2>
+        </div>
+        <button type="button" class="btn btn-outline-primary btn-sm" id="btnAddAddress"><i class="bi bi-plus-lg"></i> Adicionar</button>
+      </div>
+
+      <div id="addressesContainer" class="person-create-block-list"></div>
+
+      <template id="addressTemplate">
+        <div class="person-create-block js-address-item">
+          <div class="person-create-block-header">
+            <div class="fw-semibold js-block-title">Endereço</div>
+            <button type="button" class="btn btn-outline-danger btn-sm" data-remove-group="address"><i class="bi bi-trash"></i> Remover</button>
+          </div>
 
           <div class="row g-3">
-            <div class="col-12 col-md-4">
-              <label class="form-label" for="userUsername">Usuário *</label>
-              <input autocomplete="off" class="form-control js-user-required" id="userUsername" maxlength="45" name="user[username]" placeholder="nome.sobrenome" type="text" value="<?= htmlspecialchars($initialUser['username'], ENT_QUOTES, 'UTF-8'); ?>" />
-              <div class="invalid-feedback">Informe o nome de usuário.</div>
+            <div class="col-12 col-lg-2">
+              <label class="form-label">CEP</label>
+              <input class="form-control mask-cep js-address-zip" name="addresses[__INDEX__][zip_code]" type="text" maxlength="9" placeholder="00000-000" />
             </div>
 
-            <div class="col-12 col-md-4">
-              <label class="form-label" for="userPassword">Senha *</label>
-              <input autocomplete="new-password" class="form-control js-user-required" id="userPassword" name="user[password]" placeholder="Defina uma senha" type="password" />
-              <div class="invalid-feedback">Informe a senha do usuário.</div>
+            <div class="col-12 col-lg-5">
+              <label class="form-label">Logradouro</label>
+              <input class="form-control js-address-street" name="addresses[__INDEX__][street]" type="text" maxlength="255" placeholder="Rua, Avenida, etc." />
+              <div class="invalid-feedback">Informe o logradouro.</div>
             </div>
 
-            <div class="col-12 col-md-2">
-              <label class="form-label" for="userType">Tipo *</label>
-              <select autocomplete="off" class="form-select js-user-required" id="userType" name="user[type]">
-                <option value="" disabled <?= empty($initialUser['type']) ? 'selected' : ''; ?>>Selecione...</option>
-                <option value="root" <?= ($initialUser['type'] === 'root' ? 'selected' : ''); ?>>Root</option>
-                <option value="admin" <?= ($initialUser['type'] === 'admin' ? 'selected' : ''); ?>>Administrador</option>
-                <option value="user" <?= ($initialUser['type'] === 'user' ? 'selected' : ''); ?>>Usuário</option>
-              </select>
-              <div class="invalid-feedback">Selecione o tipo do usuário.</div>
+            <div class="col-12 col-md-4 col-lg-2">
+              <label class="form-label">Número</label>
+              <input class="form-control js-address-number" name="addresses[__INDEX__][number]" type="text" maxlength="10" placeholder="Nº" />
             </div>
 
-            <div class="col-12 col-md-2">
-              <label class="form-label" for="userActive">Ativo *</label>
-              <select autocomplete="off" class="form-select js-user-required" id="userActive" name="user[active]">
-                <option value="" disabled <?= ($initialUser['active'] === '' ? 'selected' : ''); ?>>Selecione...</option>
-                <option value="1" <?= ((string) $initialUser['active'] === '1' ? 'selected' : ''); ?>>Sim</option>
-                <option value="0" <?= ((string) $initialUser['active'] === '0' ? 'selected' : ''); ?>>Não</option>
-              </select>
-              <div class="invalid-feedback">Selecione a situação do usuário.</div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <section class="mb-4">
-        <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
-          <div>
-            <h2 class="h6 mb-0">Endereços</h2>
-            <div class="text-body-secondary small">Você pode adicionar quantos endereços quiser. Se um bloco ficar vazio, ele será ignorado.</div>
-          </div>
-          <button type="button" class="btn btn-outline-primary btn-sm" id="btnAddAddress">Adicionar endereço</button>
-        </div>
-
-        <div id="addressesContainer" class="d-grid gap-3"></div>
-
-        <template id="addressTemplate">
-          <div class="border rounded p-3 js-address-item">
-            <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
-              <div class="fw-semibold js-block-title">Endereço</div>
-              <button type="button" class="btn btn-outline-danger btn-sm" data-remove-group="address">Remover</button>
+            <div class="col-12 col-md-8 col-lg-3">
+              <label class="form-label">Observações</label>
+              <input class="form-control js-address-observations" name="addresses[__INDEX__][observations]" type="text" maxlength="255" placeholder="Complemento, referência..." />
             </div>
 
-            <div class="row g-3">
-              <div class="col-12 col-md-3">
-                <label class="form-label">CEP</label>
-                <input class="form-control mask-cep js-address-zip" name="addresses[__INDEX__][zip_code]" type="text" maxlength="9" placeholder="00000-000" />
-              </div>
+            <div class="col-12 position-relative">
+              <label class="form-label">Bairro</label>
+              <input type="hidden" class="addr-neighborhood-id" name="addresses[__INDEX__][neighborhood_id]" value="" />
+              <input type="text" class="form-control addr-neighborhood-input" name="addresses[__INDEX__][neighborhood_label]" autocomplete="off" placeholder="Digite o nome do bairro..." />
+              <div class="invalid-feedback">Selecione ou cadastre um bairro.</div>
+              <ul class="list-group addr-neighborhood-results person-create-results mt-1"></ul>
+            </div>
 
-              <div class="col-12 col-md-5">
-                <label class="form-label">Logradouro</label>
-                <input class="form-control js-address-street" name="addresses[__INDEX__][street]" type="text" maxlength="255" placeholder="Rua, Avenida, etc." />
-                <div class="invalid-feedback">Informe o logradouro.</div>
-              </div>
+            <div class="col-12 addr-create-panel d-none">
+              <div class="person-create-inline-panel">
+                <p class="fw-semibold small mb-2">Cadastrar novo bairro</p>
+                <div class="row g-2 align-items-end">
+                  <div class="col-12 col-md-5">
+                    <label class="form-label small">Nome do bairro</label>
+                    <input type="text" class="form-control form-control-sm addr-new-neighborhood-name" placeholder="Ex.: Centro" />
+                  </div>
 
-              <div class="col-12 col-md-2">
-                <label class="form-label">Número</label>
-                <input class="form-control js-address-number" name="addresses[__INDEX__][number]" type="text" maxlength="10" placeholder="Nº" />
-              </div>
+                  <div class="col-12 col-md-5 position-relative">
+                    <label class="form-label small">Cidade</label>
+                    <input type="hidden" class="addr-new-city-id" value="" />
+                    <input type="text" class="form-control form-control-sm addr-new-city-input" autocomplete="off" placeholder="Digite o nome da cidade..." />
+                    <ul class="list-group addr-new-city-results person-create-results person-create-results-compact mt-1"></ul>
+                  </div>
 
-              <div class="col-12 col-md-2">
-                <label class="form-label">Observações</label>
-                <input class="form-control js-address-observations" name="addresses[__INDEX__][observations]" type="text" maxlength="255" placeholder="Complemento, referência..." />
-              </div>
-
-              <div class="col-12 position-relative">
-                <label class="form-label">Bairro</label>
-                <input type="hidden" class="addr-neighborhood-id" name="addresses[__INDEX__][neighborhood_id]" value="" />
-                <input type="text" class="form-control addr-neighborhood-input" name="addresses[__INDEX__][neighborhood_label]" autocomplete="off" placeholder="Digite o nome do bairro..." />
-                <div class="invalid-feedback">Selecione ou cadastre um bairro.</div>
-                <ul class="list-group addr-neighborhood-results mt-1" style="display:none; position:absolute; width:100%; z-index:1050; max-height:220px; overflow-y:auto;"></ul>
-              </div>
-
-              <div class="col-12 addr-create-panel d-none">
-                <div class="border border-warning rounded p-3 bg-warning-subtle">
-                  <p class="fw-semibold small mb-2">Cadastrar novo bairro</p>
-                  <div class="row g-2 align-items-end">
-                    <div class="col-12 col-md-5">
-                      <label class="form-label small">Nome do bairro</label>
-                      <input type="text" class="form-control form-control-sm addr-new-neighborhood-name" placeholder="Ex.: Centro" />
-                    </div>
-
-                    <div class="col-12 col-md-5 position-relative">
-                      <label class="form-label small">Cidade</label>
-                      <input type="hidden" class="addr-new-city-id" value="" />
-                      <input type="text" class="form-control form-control-sm addr-new-city-input" autocomplete="off" placeholder="Digite o nome da cidade..." />
-                      <ul class="list-group addr-new-city-results mt-1" style="display:none; position:absolute; width:100%; z-index:1060; max-height:180px; overflow-y:auto;"></ul>
-                    </div>
-
-                    <div class="col-12 col-md-2 d-flex gap-2 align-items-end flex-wrap">
-                      <button type="button" class="btn btn-warning btn-sm addr-btn-save-neighborhood">Salvar</button>
-                      <button type="button" class="btn btn-link btn-sm p-0 text-secondary addr-btn-cancel-neighborhood">Cancelar</button>
-                    </div>
+                  <div class="col-12 col-md-2 d-flex gap-2 align-items-end flex-wrap">
+                    <button type="button" class="btn btn-warning btn-sm addr-btn-save-neighborhood">Salvar</button>
+                    <button type="button" class="btn btn-link btn-sm p-0 text-secondary addr-btn-cancel-neighborhood">Cancelar</button>
                   </div>
                 </div>
               </div>
             </div>
           </div>
-        </template>
-      </section>
-
-      <section class="mb-4">
-        <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
-          <div>
-            <h2 class="h6 mb-0">Telefones</h2>
-            <div class="text-body-secondary small">Você pode adicionar quantos telefones quiser. Se um bloco ficar vazio, ele será ignorado.</div>
-          </div>
-          <button type="button" class="btn btn-outline-primary btn-sm" id="btnAddPhone">Adicionar telefone</button>
         </div>
+      </template>
+    </section>
 
-        <div id="phonesContainer" class="d-grid gap-3"></div>
-
-        <template id="phoneTemplate">
-          <div class="border rounded p-3 js-phone-item">
-            <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
-              <div class="fw-semibold js-block-title">Telefone</div>
-              <button type="button" class="btn btn-outline-danger btn-sm" data-remove-group="phone">Remover</button>
-            </div>
-
-            <div class="row g-3">
-              <div class="col-12 col-md-4">
-                <label class="form-label">Número</label>
-                <input class="form-control js-phone-number" name="phones[__INDEX__][number]" type="text" inputmode="numeric" placeholder="(XX) XXXXX-XXXX" />
-                <div class="invalid-feedback">Informe o número do telefone.</div>
-              </div>
-
-              <div class="col-12 col-md-8">
-                <label class="form-label">Observações</label>
-                <input class="form-control js-phone-notes" name="phones[__INDEX__][notes]" type="text" placeholder="Ex.: celular, comercial, WhatsApp" />
-              </div>
-            </div>
-          </div>
-        </template>
-      </section>
-
-      <section>
-        <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
-          <div>
-            <h2 class="h6 mb-0">E-mails</h2>
-            <div class="text-body-secondary small">Você pode adicionar quantos e-mails quiser. Se um bloco ficar vazio, ele será ignorado.</div>
-          </div>
-          <button type="button" class="btn btn-outline-primary btn-sm" id="btnAddEmail">Adicionar e-mail</button>
+    <section class="person-create-section">
+      <div class="person-create-section-header">
+        <div class="person-create-section-title">
+          <i class="bi bi-telephone"></i>
+          <h2>Telefones</h2>
         </div>
+        <button type="button" class="btn btn-outline-primary btn-sm" id="btnAddPhone"><i class="bi bi-plus-lg"></i> Adicionar</button>
+      </div>
 
-        <div id="emailsContainer" class="d-grid gap-3"></div>
+      <div id="phonesContainer" class="person-create-block-list"></div>
 
-        <template id="emailTemplate">
-          <div class="border rounded p-3 js-email-item">
-            <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
-              <div class="fw-semibold js-block-title">E-mail</div>
-              <button type="button" class="btn btn-outline-danger btn-sm" data-remove-group="email">Remover</button>
+      <template id="phoneTemplate">
+        <div class="person-create-block js-phone-item">
+          <div class="person-create-block-header">
+            <div class="fw-semibold js-block-title">Telefone</div>
+            <button type="button" class="btn btn-outline-danger btn-sm" data-remove-group="phone"><i class="bi bi-trash"></i> Remover</button>
+          </div>
+
+          <div class="row g-3">
+            <div class="col-12 col-md-4">
+              <label class="form-label">Número</label>
+              <input class="form-control js-phone-number" name="phones[__INDEX__][number]" type="text" inputmode="numeric" placeholder="(XX) XXXXX-XXXX" />
+              <div class="invalid-feedback">Informe o número do telefone.</div>
             </div>
 
-            <div class="row g-3">
-              <div class="col-12 col-md-5">
-                <label class="form-label">Endereço de e-mail</label>
-                <input class="form-control js-email-address" name="emails[__INDEX__][address]" type="email" placeholder="exemplo@email.com" />
-                <div class="invalid-feedback">Informe um e-mail válido.</div>
-              </div>
-
-              <div class="col-12 col-md-4">
-                <label class="form-label">Descrição</label>
-                <input class="form-control js-email-description" name="emails[__INDEX__][description]" type="text" placeholder="Ex.: financeiro, pessoal, comercial" />
-              </div>
-
-              <div class="col-12 col-md-3">
-                <label class="form-label">E-mail de login?</label>
-                <select class="form-select js-email-login" name="emails[__INDEX__][is_login]">
-                  <option value="0" selected>Não</option>
-                  <option value="1">Sim</option>
-                </select>
-                <div class="invalid-feedback">Marque ao menos um e-mail de login para gerar o usuário.</div>
-              </div>
+            <div class="col-12 col-md-8">
+              <label class="form-label">Observações</label>
+              <input class="form-control js-phone-notes" name="phones[__INDEX__][notes]" type="text" placeholder="Ex.: celular, comercial, WhatsApp" />
             </div>
           </div>
-        </template>
-      </section>
-    </div>
+        </div>
+      </template>
+    </section>
 
-    <div class="card-footer bg-body d-flex justify-content-end gap-2">
+    <section class="person-create-section">
+      <div class="person-create-section-header">
+        <div class="person-create-section-title">
+          <i class="bi bi-envelope-paper"></i>
+          <h2>E-mails</h2>
+        </div>
+        <button type="button" class="btn btn-outline-primary btn-sm" id="btnAddEmail"><i class="bi bi-plus-lg"></i> Adicionar</button>
+      </div>
+
+      <div id="emailsContainer" class="person-create-block-list"></div>
+
+      <template id="emailTemplate">
+        <div class="person-create-block js-email-item">
+          <div class="person-create-block-header">
+            <div class="fw-semibold js-block-title">E-mail</div>
+            <button type="button" class="btn btn-outline-danger btn-sm" data-remove-group="email"><i class="bi bi-trash"></i> Remover</button>
+          </div>
+
+          <div class="row g-3">
+            <div class="col-12 col-lg-5">
+              <label class="form-label">Endereço de e-mail</label>
+              <input class="form-control js-email-address" name="emails[__INDEX__][address]" type="email" placeholder="exemplo@email.com" />
+              <div class="invalid-feedback">Informe um e-mail válido.</div>
+            </div>
+
+            <div class="col-12 col-lg-4">
+              <label class="form-label">Descrição</label>
+              <input class="form-control js-email-description" name="emails[__INDEX__][description]" type="text" placeholder="Ex.: financeiro, pessoal, comercial" />
+            </div>
+
+            <div class="col-12 col-lg-3">
+              <label class="form-label">E-mail de login?</label>
+              <select class="form-select js-email-login" name="emails[__INDEX__][is_login]">
+                <option value="0" selected>Não</option>
+                <option value="1">Sim</option>
+              </select>
+              <div class="invalid-feedback">Marque ao menos um e-mail de login.</div>
+            </div>
+          </div>
+        </div>
+      </template>
+    </section>
+
+    <div class="person-create-actions">
       <a href="<?= url('person'); ?>" class="btn btn-secondary">Cancelar</a>
-      <button type="submit" class="btn btn-primary">Salvar</button>
+      <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg"></i> Salvar</button>
     </div>
-  </div>
-</form>
+  </form>
+</div>
 
 <script>
   const PERSON_NEIGHBORHOOD_SEARCH_URL = "<?= url('person/neighborhoodSearch'); ?>";
@@ -1017,11 +972,12 @@ $jsonFlags = JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JS
 
       function addEmailBlock(data)
         {
+          const shouldUseLoginDefault = !data && emailIndex === 0;
           const block = cloneTemplate(emailTemplate);
           applyIndexedNames(block, "__INDEX__", emailIndex);
           emailIndex += 1;
           emailsContainer.appendChild(block);
-          populateEmailBlock(block, data);
+          populateEmailBlock(block, data || (shouldUseLoginDefault ? {is_login: 1} : null));
           updateBlockTitles(emailsContainer, ".js-email-item", "E-mail");
         }
 

@@ -1,0 +1,148 @@
+.person-edit-page {
+  display: grid;
+  gap: 1rem;
+}
+
+.person-edit-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.person-edit-header h5 {
+  margin: 0.25rem 0 0;
+  color: var(--app-text);
+  font-size: 1.45rem;
+  font-weight: 850;
+  letter-spacing: 0;
+  line-height: 1.2;
+}
+
+.person-edit-kicker {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  color: var(--app-accent);
+  font-size: 0.78rem;
+  font-weight: 850;
+  letter-spacing: 0;
+  line-height: 1.2;
+  text-transform: uppercase;
+}
+
+.person-edit-form {
+  display: grid;
+  gap: 1rem;
+}
+
+.person-edit-section,
+.person-edit-actions {
+  border: 1px solid var(--app-border);
+  border-radius: 8px;
+  background: var(--app-surface);
+  box-shadow: var(--app-shadow-sm);
+}
+
+.person-edit-section {
+  padding: 1rem;
+}
+
+.person-edit-section-header,
+.person-edit-block-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.person-edit-section-title {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 0.65rem;
+}
+
+.person-edit-section-title i {
+  display: inline-flex;
+  width: 36px;
+  height: 36px;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--app-accent) 12%, transparent);
+  color: var(--app-accent);
+  font-size: 1rem;
+}
+
+.person-edit-section-title h2 {
+  margin: 0;
+  color: var(--app-text);
+  font-size: 1.05rem;
+  font-weight: 850;
+  letter-spacing: 0;
+  line-height: 1.25;
+}
+
+.person-edit-block-list {
+  display: grid;
+  gap: 0.85rem;
+}
+
+.person-edit-block {
+  padding: 0.9rem;
+  border: 1px solid var(--app-border);
+  border-radius: 8px;
+  background: var(--app-surface-raised);
+}
+
+.person-edit-block-header {
+  min-height: 34px;
+}
+
+.person-edit-inline-panel {
+  padding: 0.9rem;
+  border: 1px solid color-mix(in srgb, var(--app-warning) 46%, var(--app-border));
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--app-warning) 12%, var(--app-surface));
+}
+
+.person-edit-results {
+  display: none;
+  position: absolute;
+  width: 100%;
+  z-index: 1050;
+  max-height: 220px;
+  overflow-y: auto;
+}
+
+.person-edit-results-compact {
+  z-index: 1060;
+  max-height: 180px;
+}
+
+.person-edit-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.6rem;
+  padding: 0.9rem 1rem;
+}
+
+@media (max-width: 767.98px) {
+  .person-edit-header,
+  .person-edit-section-header,
+  .person-edit-block-header,
+  .person-edit-actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .person-edit-header .btn,
+  .person-edit-section-header .btn,
+  .person-edit-block-header .btn,
+  .person-edit-actions .btn {
+    width: 100%;
+  }
+}
