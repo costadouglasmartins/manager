@@ -62,49 +62,13 @@ class StateController extends Controller
 		]);
 		}
 
-	/**
-	 * Create method
-	 */
-	public function create()
-		{
-		$this->requirePermission('state.create');
-		$this->view('states/create', ['title' => 'Novo estado']);
-		}
+	
 
-	/**
-	 * Store method
-	 */
-	public function store()
-		{
-		$this->requirePermission('state.store');
-		$state = new State();
-		$state->create($_POST);
-		$this->redirect('state');
-		}
+	
 
-	/**
-	 * Edit method
-	 * @param Integer $id State id
-	 */
-	public function edit($id)
-		{
-		$this->requirePermission('state.edit');
-		$state = new State();
-		$data = $state->find($id);
-		$this->view('states/edit', ['title' => 'Editar estado', 'state' => $data]);
-		}
+	
 
-	/**
-	 * Update method
-	 * @param Integer $id State id
-	 */
-	public function update($id)
-		{
-		$this->requirePermission('state.update');
-		$state = new State();
-		$state->update($id, $_POST);
-		$this->redirect('state');
-		}
+	
 
 	/**
 	 * Informations method
@@ -149,5 +113,4 @@ class StateController extends Controller
 		$this->json(['items' => $items]);
 		}
 	}
-
 ?>
