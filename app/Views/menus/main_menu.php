@@ -16,126 +16,6 @@
     <div class="collapse navbar-collapse" id="mainNav">
       <ul class="navbar-nav app-navbar-nav me-auto mb-2 mb-lg-0">
         <?php if ($isAuthenticated): ?>
-        <!-- Menu Cadastros (2 níveis) -->
-        <li class="nav-item dropdown">
-          <a class="nav-link dropdown-toggle app-nav-link" href="#" id="menuCadastros" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-            <i class="bi bi-folder-fill me-1"></i> Cadastros
-          </a>
-          <ul class="dropdown-menu" aria-labelledby="menuCadastros">
-            <li class="dropdown-submenu">
-              <a class="dropdown-item submenu-toggle" href="#">Bairros</a>
-              <ul class="dropdown-menu">
-                <?php if (authCan('neighborhood.index')): ?>
-                  <li><a class="dropdown-item" href="<?= url('neighborhood'); ?>"><i class="bi bi-list-ul me-2"></i> Listar</a></li>
-                  <li><hr class="dropdown-divider" /></li>
-                <?php endif; ?>
-                <?php if (authCan('neighborhood.create')): ?>
-                  <li><a class="dropdown-item" href="<?= url('neighborhood/create'); ?>"><i class="bi bi-plus-circle me-2"></i> Cadastrar</a></li>
-                <?php endif; ?>
-              </ul>
-            </li>
-            <li><hr class="dropdown-divider" /></li>
-            <li class="dropdown-submenu">
-              <a class="dropdown-item submenu-toggle" href="#">Cidades</a>
-              <ul class="dropdown-menu">
-                <?php if (authCan('city.index')): ?>
-                  <li><a class="dropdown-item" href="<?= url('city'); ?>"><i class="bi bi-list-ul me-2"></i> Listar</a></li>
-                  <li><hr class="dropdown-divider" /></li>
-                <?php endif; ?>
-                <?php if (authCan('city.create')): ?>
-                  <li><a class="dropdown-item" href="<?= url('city/create'); ?>"><i class="bi bi-plus-circle me-2"></i> Cadastrar</a></li>
-                <?php endif; ?>
-              </ul>
-            </li>
-            <li><hr class="dropdown-divider" /></li>
-            <li class="dropdown-submenu">
-              <a class="dropdown-item submenu-toggle" href="#">E-mails</a>
-              <ul class="dropdown-menu">
-                <?php if (authCan('email.index')): ?>
-                  <li><a class="dropdown-item" href="<?= url('email'); ?>"><i class="bi bi-list-ul me-2"></i> Listar</a></li>
-                  <li><hr class="dropdown-divider" /></li>
-                <?php endif; ?>
-                <?php if (authCan('email.create')): ?>
-                  <li><a class="dropdown-item" href="<?= url('email/create'); ?>"><i class="bi bi-plus-circle me-2"></i> Cadastrar</a></li>
-                <?php endif; ?>
-              </ul>
-            </li>
-            <li><hr class="dropdown-divider" /></li>
-            <li class="dropdown-submenu">
-              <a class="dropdown-item submenu-toggle" href="#">Endereços</a>
-              <ul class="dropdown-menu">
-                <?php if (authCan('address.index')): ?>
-                  <li><a class="dropdown-item" href="<?= url('address'); ?>"><i class="bi bi-list-ul me-2"></i> Listar</a></li>
-                  <li><hr class="dropdown-divider" /></li>
-                <?php endif; ?>
-                <?php if (authCan('address.create')): ?>
-                  <li><a class="dropdown-item" href="<?= url('address/create'); ?>"><i class="bi bi-plus-circle me-2"></i> Cadastrar</a></li>
-                <?php endif; ?>
-              </ul>
-            </li>
-            <li><hr class="dropdown-divider" /></li>
-            <li class="dropdown-submenu">
-              <a class="dropdown-item submenu-toggle" href="#">Estados</a>
-              <ul class="dropdown-menu">
-                <?php if (authCan('state.index')): ?>
-                  <li><a class="dropdown-item" href="<?= url('state'); ?>"><i class="bi bi-list-ul me-2"></i> Listar</a></li>
-                  <li><hr class="dropdown-divider" /></li>
-                <?php endif; ?>
-                <?php if (authCan('state.create')): ?>
-                  <li><a class="dropdown-item" href="<?= url('state/create'); ?>"><i class="bi bi-plus-circle me-2"></i> Cadastrar</a></li>
-                <?php endif; ?>
-              </ul>
-            </li>
-            <li><hr class="dropdown-divider" /></li>
-            <li class="dropdown-submenu">
-              <a class="dropdown-item submenu-toggle" href="#">Países</a>
-              <ul class="dropdown-menu">
-                <?php if (authCan('country.index')): ?>
-                  <li><a class="dropdown-item" href="<?= url('country'); ?>"><i class="bi bi-list-ul me-2"></i> Listar</a></li>
-                  <li><hr class="dropdown-divider" /></li>
-                <?php endif; ?>
-                <?php if (authCan('country.create')): ?>
-                  <li><a class="dropdown-item" href="<?= url('country/create'); ?>"><i class="bi bi-plus-circle me-2"></i> Cadastrar</a></li>
-                <?php endif; ?>
-              </ul>
-            </li>
-            <li><hr class="dropdown-divider" /></li>
-            <li class="dropdown-submenu">
-              <a class="dropdown-item submenu-toggle" href="#">Pessoas</a>
-              <ul class="dropdown-menu">
-                <?php if (authCan('person.index')): ?>
-                  <li><a class="dropdown-item" href="<?= url('person'); ?>"><i class="bi bi-list-ul me-2"></i> Listar</a></li>
-                  <li><hr class="dropdown-divider" /></li>
-                <?php endif; ?>
-                <?php if (authCan('person.create')): ?>
-                  <li><a class="dropdown-item" href="<?= url('person/create'); ?>"><i class="bi bi-plus-circle me-2"></i> Cadastrar</a></li>
-                <?php endif; ?>
-              </ul>
-            </li>
-            <li><hr class="dropdown-divider" /></li>
-            <li class="dropdown-submenu">
-              <a class="dropdown-item submenu-toggle" href="#">Telefones</a>
-              <ul class="dropdown-menu">
-                <?php if (authCan('phone_number.index')): ?>
-                  <li><a class="dropdown-item" href="<?= url('phone_number'); ?>"><i class="bi bi-list-ul me-2"></i> Listar</a></li>
-                  <li><hr class="dropdown-divider" /></li>
-                <?php endif; ?>
-                <?php if (authCan('phone_number.create')): ?>
-                  <li><a class="dropdown-item" href="<?= url('phone_number/create'); ?>"><i class="bi bi-plus-circle me-2"></i> Cadastrar</a></li>
-                <?php endif; ?>
-              </ul>
-            </li>
-            <li><hr class="dropdown-divider" /></li>
-            <li class="dropdown-submenu">
-              <a class="dropdown-item submenu-toggle" href="#">Usuários</a>
-              <ul class="dropdown-menu">
-                <?php if (authCan('user.index')): ?>
-                  <li><a class="dropdown-item" href="<?= url('user'); ?>"><i class="bi bi-person-lines-fill me-2"></i> Listar</a></li>
-                <?php endif; ?>
-              </ul>
-            </li>
-          </ul>
-        </li>
         <!-- Menu cadastros essenciais -->
         <li class="nav-item dropdown">
           <a class="nav-link dropdown-toggle" href="#" id="menuExemplo" role="button" data-bs-toggle="dropdown" aria-expanded="false">
@@ -144,30 +24,90 @@
           <ul class="dropdown-menu" aria-labelledby="menuExemplo">
 
             <li class="dropdown-submenu">
-              <a class="dropdown-item submenu-toggle" href="#"><i class="bi bi-folder me-2"></i>Bairros</a>
+              <a class="dropdown-item submenu-toggle" href="#"><i class="bi bi-signpost-split me-2"></i>Bairros</a>
               <ul class="dropdown-menu">
+                <?php if (authCan('neighborhood.create')): ?>
+                  <li><a class="dropdown-item" href="<?= url('neighborhood/create'); ?>"><i class="bi bi-file-earmark me-2"></i>Cadastrar</a></li>
+                <?php endif; ?>
+                <li><hr class="dropdown-divider" /></li>
+                <?php if (authCan('neighborhood.index')): ?>
+                  <li><a class="dropdown-item" href="<?= url('neighborhood'); ?>"><i class="bi bi-list me-2"></i>Listar</a></li>
+                <?php endif; ?>
+              </ul>
+            </li>
 
-                <li><a class="dropdown-item" href="#"><i class="bi bi-file-earmark me-2"></i>A — Item direto</a></li>
+            <li><hr class="dropdown-divider" /></li>
 
+            <li class="dropdown-submenu">
+              <a class="dropdown-item submenu-toggle" href="#"><i class="bi bi-globe-americas me-2"></i>Cidadaes</a>
+              <ul class="dropdown-menu">
+                <?php if (authCan('city.index')): ?>
+                <li><a class="dropdown-item" href="<?= url('city'); ?>"><i class="bi bi-list me-2"></i>Listar</a></li>
+                <?php endif; ?>
+              </ul>
+            </li>
+
+            <li><hr class="dropdown-divider" /></li>
+
+            <li class="dropdown-submenu">
+              <a class="dropdown-item submenu-toggle" href="#"><i class="bi bi-globe-americas me-2"></i>Estados</a>
+              <ul class="dropdown-menu">
+                <?php if (authCan('state.index')): ?>
+                  <li><a class="dropdown-item" href="<?= url('state'); ?>"><i class="bi bi-list me-2"></i>Listar</a></li>
+                <?php endif; ?>
+              </ul>
+            </li>
+
+            <li><hr class="dropdown-divider" /></li>
+
+            <li class="dropdown-submenu">
+              <a class="dropdown-item submenu-toggle" href="#"><i class="bi bi-globe-americas me-2"></i>Países</a>
+              <ul class="dropdown-menu">
+                <?php if (authCan('country.create')): ?>
+                  <li><a class="dropdown-item" href="<?= url('country/create'); ?>"><i class="bi bi-file-earmark me-2"></i>Cadastrar</a></li>
+                <?php endif; ?>
+                <li><hr class="dropdown-divider" /></li>
+                <?php if (authCan('country.index')): ?>
+                  <li><a class="dropdown-item" href="<?= url('country'); ?>"><i class="bi bi-list me-2"></i>Listar</a></li>
+                <?php endif; ?>
+              </ul>
+            </li>
+
+            <li><hr class="dropdown-divider" /></li>
+
+            <li class="dropdown-submenu">
+              <a class="dropdown-item submenu-toggle" href="#"><i class="bi bi-people-fill me-2"></i>Pessoas</a>
+              <ul class="dropdown-menu">
+                <?php if (authCan('person.create')): ?>
+                  <li><a class="dropdown-item" href="<?= url('person/create'); ?>"><i class="bi bi-person-fill-add me-2"></i>Cadastrar</a></li>
+                <?php endif; ?>
+                <li><hr class="dropdown-divider" /></li>
+                <?php if (authCan('person.index')): ?>
+                  <li><a class="dropdown-item" href="<?= url('person'); ?>"><i class="bi bi-person-lines-fill me-2"></i>Listar</a></li>
+                <?php endif; ?>  
                 <li><hr class="dropdown-divider" /></li>
 
                 <li class="dropdown-submenu">
-                  <a class="dropdown-item submenu-toggle" href="#"><i class="bi bi-folder2 me-2"></i>Sub-grupo A1</a>
+                  <a class="dropdown-item submenu-toggle" href="#"><i class="bi bi-asterisk me-2"></i>Associações</a>
                   <ul class="dropdown-menu">
-
-                    <li><a class="dropdown-item" href="#"><i class="bi bi-file-earmark-text me-2"></i>A1 — Item 1</a></li>
+                    <?php if (authCan('email.index')): ?>
+                    <li><a class="dropdown-item" href="<?= url('email'); ?>"><i class="bi bi-envelope-paper-fill me-2"></i>E-mails</a></li>
+                    <?php endif; ?>
                     <li><hr class="dropdown-divider" /></li>
-                    <li><a class="dropdown-item" href="#"><i class="bi bi-file-earmark-text me-2"></i>A1 — Item 2</a></li>
+                    <?php if (authCan('address.index')): ?>
+                      <li><a class="dropdown-item" href="<?= url('address'); ?>"><i class="bi bi-signpost-split-fill me-2"></i>Endereços</a></li>
+                    <?php endif; ?>
                     <li><hr class="dropdown-divider" /></li>
-                    <li><a class="dropdown-item" href="#"><i class="bi bi-file-earmark-text me-2"></i>A1 — Item 3</a></li>
-
+                    <?php if (authCan('phone_number.index')): ?>
+                      <li><a class="dropdown-item" href="<?= url('phone_number'); ?>"><i class="bi bi-telephone-fill me-2"></i>Telefones</a></li>
+                    <?php endif; ?>  
                   </ul>
                 </li>
 
                 <li><hr class="dropdown-divider" /></li>
 
                 <li class="dropdown-submenu">
-                  <a class="dropdown-item submenu-toggle" href="#"><i class="bi bi-folder2 me-2"></i>Sub-grupo A2</a>
+                  <a class="dropdown-item submenu-toggle" href="#"><i class="bi bi-stack me-2"></i>Relatórios</a>
                   <ul class="dropdown-menu">
 
                     <li><a class="dropdown-item" href="#"><i class="bi bi-file-earmark-text me-2"></i>A2 — Item 1</a></li>
@@ -179,21 +119,6 @@
 
               </ul>
             </li>
-
-            <li><hr class="dropdown-divider" /></li>
-
-            <li class="dropdown-submenu">
-              <a class="dropdown-item submenu-toggle" href="#"><i class="bi bi-folder me-2"></i>Grupo B</a>
-              <ul class="dropdown-menu">
-                <li><a class="dropdown-item" href="#"><i class="bi bi-file-earmark me-2"></i>B — Item 1</a></li>
-                <li><hr class="dropdown-divider" /></li>
-                <li><a class="dropdown-item" href="#"><i class="bi bi-file-earmark me-2"></i>B — Item 2</a></li>
-              </ul>
-            </li>
-
-            <li><hr class="dropdown-divider" /></li>
-
-            <li><a class="dropdown-item" href="#"><i class="bi bi-info-circle me-2"></i>Sobre</a></li>
 
           </ul>
         </li>

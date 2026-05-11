@@ -36,15 +36,18 @@
 
 /* Submenu caret */
 .submenu-toggle::after {
-  content: ">";
+  content: "";
   display: inline-block;
   margin-left: 0.5rem;
   color: var(--app-muted);
-  font-size: 0.85rem;
-  font-weight: 800;
+  vertical-align: 0.2em;
+  border-top: 0.3em solid currentColor;
+  border-right: 0.3em solid transparent;
+  border-left: 0.3em solid transparent;
+  transform: rotate(-90deg);
   transition: transform 0.18s ease;
 }
 
 .dropdown-submenu.show > .submenu-toggle::after {
-  transform: rotate(90deg);
+  transform: rotate(0deg);
 }
