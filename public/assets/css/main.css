@@ -293,6 +293,11 @@ a:hover {
   font-size: 1.35rem;
   font-weight: 800;
   letter-spacing: 0;
+  line-height: 1.25;
+}
+
+.app-content > h5 {
+  margin: 0 0 1.5rem;
 }
 
 .text-muted,
