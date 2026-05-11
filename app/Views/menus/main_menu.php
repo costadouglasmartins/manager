@@ -3,7 +3,7 @@
     <a class="navbar-brand app-brand d-flex align-items-center" href="<?= url('/'); ?>">
       <!--<i class="bi bi-boxes me-2"></i>-->
       <span class="app-brand-mark"><img src="<?= url('/assets/images/favicon-32x32.png'); ?>" alt=""></span>
-      <span class="app-brand-text">Manager</span>
+      <!--<span class="app-brand-text">Manager</span>-->
     </a>
 
     <!-- Botão toggle mobile -->
@@ -26,10 +26,6 @@
             <li class="dropdown-submenu">
               <a class="dropdown-item submenu-toggle" href="#"><i class="bi bi-signpost-split me-2"></i>Bairros</a>
               <ul class="dropdown-menu">
-                <?php if (authCan('neighborhood.create')): ?>
-                  <li><a class="dropdown-item" href="<?= url('neighborhood/create'); ?>"><i class="bi bi-file-earmark me-2"></i>Cadastrar</a></li>
-                <?php endif; ?>
-                <li><hr class="dropdown-divider" /></li>
                 <?php if (authCan('neighborhood.index')): ?>
                   <li><a class="dropdown-item" href="<?= url('neighborhood'); ?>"><i class="bi bi-list me-2"></i>Listar</a></li>
                 <?php endif; ?>

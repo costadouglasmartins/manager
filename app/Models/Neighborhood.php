@@ -57,7 +57,16 @@ class Neighborhood extends Model
 		{
 		$neighborhoodsTable = $this->managerTable('neighborhoods');
 		$citiesTable = $this->managerTable('cities');
-		$stmt = $this->db->prepare("SELECT n.*, c.name AS city_name FROM {$neighborhoodsTable} n LEFT JOIN {$citiesTable} c ON c.id = n.city_id WHERE n.id = :id");
+		$statesTable = $this->managerTable('states');
+		$stmt = $this->db->prepare("
+			SELECT n.*,
+			       c.name AS city_name,
+			       s.acronym AS state_acronym
+			FROM {$neighborhoodsTable} n
+			LEFT JOIN {$citiesTable} c ON c.id = n.city_id
+			LEFT JOIN {$statesTable} s ON s.id = c.state_id
+			WHERE n.id = :id
+		");
 		$stmt->execute(['id' => $id]);
 		return $stmt->fetch(PDO::FETCH_ASSOC);
 		}

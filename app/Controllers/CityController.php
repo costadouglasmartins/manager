@@ -95,14 +95,22 @@ class CityController extends Controller
 		$items = array_map(function ($r)
 			{
 			$label = trim($r['name'] ?? '');
+			$stateAcronym = trim((string) ($r['state_acronym'] ?? ''));
+
+			if ($label !== '' && $stateAcronym !== '')
+				{
+				$label .= ' - ' . $stateAcronym;
+				}
+
 			if ($label === '')
 				{
 				$label = (string) ($r['id'] ?? '');
 				}
 			return [
-				'id'    => isset($r['id']) ? (int) $r['id'] : null,
-				'label' => $label,
-				'name'  => $r['name'] ?? null,
+				'id'            => isset($r['id']) ? (int) $r['id'] : null,
+				'label'         => $label,
+				'name'          => $r['name'] ?? null,
+				'state_acronym' => $r['state_acronym'] ?? null,
 			];
 			}, $rows);
 

@@ -1,3 +1,12 @@
+<?php
+$cityLabel = trim((string) ($neighborhood['city_name'] ?? ''));
+$stateAcronym = trim((string) ($neighborhood['state_acronym'] ?? ''));
+
+if ($cityLabel !== '' && $stateAcronym !== '')
+  {
+  $cityLabel .= ' - ' . $stateAcronym;
+  }
+?>
 <!-- Bairro -->
 <h5>Editar bairro</h5>
 <form action="<?= url('neighborhood/update/' . $neighborhood['id']); ?>" method="POST">
@@ -12,7 +21,7 @@
       <label class="form-label" for="cityName">Cidade</label>
       <input type="hidden" id="city_id" name="city_id" value="<?= (int) $neighborhood['city_id']; ?>">
       <input id="cityName" type="text" class="form-control js-autocomplete" autocomplete="off"
-        value="<?= htmlspecialchars($neighborhood['city_name'] ?? '', ENT_QUOTES, 'UTF-8'); ?>"
+        value="<?= htmlspecialchars($cityLabel, ENT_QUOTES, 'UTF-8'); ?>"
         placeholder="Digite o nome da cidade..."
         data-endpoint="<?= url('city/autocomplete'); ?>"
         data-results="#cityResults"
