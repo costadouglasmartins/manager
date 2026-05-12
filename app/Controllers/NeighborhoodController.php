@@ -72,41 +72,6 @@ class NeighborhoodController extends Controller
 		}
 
 	/**
-	 * Store method
-	 */
-	public function store()
-		{
-		$this->requirePermission('neighborhood.store');
-		$neighborhood = new Neighborhood();
-		$neighborhood->create($_POST);
-		$this->redirect('neighborhood');
-		}
-
-	/**
-	 * Edit method
-	 * @param Integer $id Neighborhood id
-	 */
-	public function edit($id)
-		{
-		$this->requirePermission('neighborhood.edit');
-		$neighborhood = new Neighborhood();
-		$data = $neighborhood->find($id);
-		$this->view('neighborhoods/edit', ['title' => 'Editar bairro', 'neighborhood' => $data]);
-		}
-
-	/**
-	 * Update method
-	 * @param Integer $id Neighborhood id
-	 */
-	public function update($id)
-		{
-		$this->requirePermission('neighborhood.update');
-		$neighborhood = new Neighborhood();
-		$neighborhood->update($id, $_POST);
-		$this->redirect('neighborhood');
-		}
-
-	/**
 	 * Informations method
 	 * @param Integer $id Neighborhood id
 	 */

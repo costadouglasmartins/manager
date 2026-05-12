@@ -72,29 +72,6 @@ class Neighborhood extends Model
 		}
 
 	/**
-	 * Update method
-	 */
-	public function update($id, $data)
-		{
-		$neighborhoodsTable = $this->managerTable('neighborhoods');
-		$stmt = $this->db->prepare("
-			UPDATE {$neighborhoodsTable}
-			SET
-				`name`     = :name,
-				`city_id`  = :city_id,
-				`modified` = :modified
-			WHERE id = :id
-		");
-
-		$stmt->execute([
-			'name'     => $data['name'],
-			'city_id'  => (int) $data['city_id'],
-			'modified' => date('Y-m-d H:i:s'),
-			'id'       => $id,
-		]);
-		}
-
-	/**
 	 * Search method
 	 */
 	public function search(array $filters = [], int $limit = 10, int $offset = 0): array

@@ -119,6 +119,22 @@
           </ul>
         </li>
         <!-- /Menu cadastros essenciais -->
+        <!-- Menu financeiro -->
+        <li class="nav-item dropdown">
+          <a class="nav-link dropdown-toggle" href="#" id="financeMenu" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+            <i class="bi bi-bank me-1"></i> Financeiro
+          </a>
+          <ul class="dropdown-menu" aria-labelledby="financeMenu">
+            <?php if (authCan('bank.index')): ?>
+              <li><a class="dropdown-item" href="<?= url('bank'); ?>"><i class="bi bi-bank me-2"></i>Bancos</a></li>
+            <?php endif; ?>
+            <li><hr class="dropdown-divider" /></li>
+            <?php if (authCan('bank_account.index')): ?>
+              <li><a class="dropdown-item" href="<?= url('bank_account'); ?>"><i class="bi bi-wallet2 me-2"></i>Contas Bancárias</a></li>
+            <?php endif; ?>
+          </ul>
+        </li>
+        <!-- /Menu financeiro -->
         <?php endif; ?>
       </ul>
       <!-- Sistema -->
