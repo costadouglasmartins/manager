@@ -3,7 +3,12 @@
 <form action="<?= url('bank_account/store'); ?>" method="POST">
   <div class="row">
 
-    <div class="mb-2 col-md-6 col-lg-6">
+    <div class="mb-2 col-12">
+      <label class="form-label" for="name">Nome</label>
+      <input autocomplete="off" class="form-control" id="name" maxlength="50" name="name" required type="text">
+    </div>
+    
+    <div class="mb-2 col-12">
       <label class="form-label" for="bank_id">Banco</label>
       <select class="form-select" id="bank_id" name="bank_id" required>
         <?php foreach ($banks as $bank): ?>
@@ -14,22 +19,17 @@
       </select>
     </div>
 
-    <div class="mb-2 col-md-6 col-lg-6">
-      <label class="form-label" for="name">Nome</label>
-      <input autocomplete="off" class="form-control" id="name" maxlength="50" name="name" required type="text">
-    </div>
-
-    <div class="mb-2 col-md-6 col-lg-3">
+    <div class="mb-2 col-12">
       <label class="form-label" for="agency">Agência</label>
       <input autocomplete="off" class="form-control" id="agency" maxlength="6" name="agency" required type="text">
     </div>
 
-    <div class="mb-2 col-md-6 col-lg-6">
+    <div class="mb-2 col-12">
       <label class="form-label" for="account">Conta</label>
       <input autocomplete="off" class="form-control" id="account" maxlength="50" name="account" required type="text">
     </div>
 
-    <div class="mb-2 col-md-6 col-lg-3">
+    <div class="mb-2 col-12">
       <label class="form-label" for="active">Status</label>
       <select class="form-select" id="active" name="active">
         <option value="1" selected>Ativa</option>
