@@ -68,7 +68,7 @@ class PersonController extends TenantAwareController
       // Default HTML response.
       $this->view('people/index', [
         'people' => $people,
-        'title' => 'Lista de empresas',
+        'title' => 'Lista de pessoas',
         'filters' => $filters,
         'page' => $page,
         'totalPages' => $totalPages,

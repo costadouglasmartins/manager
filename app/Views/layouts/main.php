@@ -42,5 +42,6 @@ $userName = $isAuthenticated ? (string) ($managerUser['name'] ?? 'Usuário(a)') 
   <script src="<?= url('assets/js/bootstrap.bundle.min.js'); ?>"></script>
   <script src="<?= url('assets/js/menu.js?v=3'); ?>"></script>
   <script src="<?= url('assets/js/main.js?v=2'); ?>"></script>
+  
 </body>
 </html>
