@@ -132,6 +132,22 @@
             <?php if (authCan('bank_account.index')): ?>
               <li><a class="dropdown-item" href="<?= url('bank_account'); ?>"><i class="bi bi-wallet2 me-2"></i>Contas Bancárias</a></li>
             <?php endif; ?>
+            <li><hr class="dropdown-divider" /></li>
+            <?php if (authCan('financial_operation.index')): ?>
+              <li><a class="dropdown-item" href="<?= url('financial_operation'); ?>"><i class="bi bi-receipt me-2"></i>Operações Financeiras</a></li>
+            <?php endif; ?>
+            <li><hr class="dropdown-divider" /></li>
+            <?php if (authCan('financial_operation_category.index')): ?>
+              <li><a class="dropdown-item" href="<?= url('financial_operation_category'); ?>"><i class="bi bi-tags me-2"></i>Operações financeiras - Categoriass</a></li>
+            <?php endif; ?>
+            <li><hr class="dropdown-divider" /></li>
+            <?php if (authCan('financial_operation_subcategory.index')): ?>
+              <li><a class="dropdown-item" href="<?= url('financial_operation_subcategory'); ?>"><i class="bi bi-diagram-3 me-2"></i>Operações financeiras - Subcategorias</a></li>
+            <?php endif; ?>
+            <li><hr class="dropdown-divider" /></li>
+            <?php if (authCan('financial_operation_payment.index')): ?>
+              <li><a class="dropdown-item" href="<?= url('financial_operation_payment'); ?>"><i class="bi bi-cash-stack me-2"></i>Operações financeiras - Pagamentos</a></li>
+            <?php endif; ?>
           </ul>
         </li>
         <!-- /Menu financeiro -->
