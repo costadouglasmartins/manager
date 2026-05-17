@@ -17,7 +17,7 @@ $userName = $isAuthenticated ? (string) ($managerUser['name'] ?? 'Usuário(a)') 
   </script>
   <link rel="stylesheet" href="<?= url('assets/css/bootstrap.min.css'); ?>">
   <link rel="stylesheet" href="<?= url('assets/images/bootstrap-icons.min.css'); ?>">
-  <link rel="stylesheet" href="<?= url('assets/css/main.css?v=4'); ?>">
+  <link rel="stylesheet" href="<?= url('assets/css/main.css?v=5'); ?>">
   <link rel="stylesheet" href="<?= url('assets/css/menu.css?v=3'); ?>">
   <link rel="apple-touch-icon" sizes="180x180" href="<?= url('assets/images/apple-touch-icon.png'); ?>">
   <link rel="icon" type="image/png" sizes="32x32" href="<?= url('assets/images/favicon-32x32.png'); ?>">
@@ -41,7 +41,7 @@ $userName = $isAuthenticated ? (string) ($managerUser['name'] ?? 'Usuário(a)') 
   
   <script src="<?= url('assets/js/bootstrap.bundle.min.js'); ?>"></script>
   <script src="<?= url('assets/js/menu.js?v=3'); ?>"></script>
-  <script src="<?= url('assets/js/main.js?v=2'); ?>"></script>
+  <script src="<?= url('assets/js/main.js?v=3'); ?>"></script>
   
 </body>
 </html>

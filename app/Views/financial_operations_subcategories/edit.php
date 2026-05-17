@@ -6,7 +6,6 @@
       <span class="financial-page-kicker"><i class="bi bi-pencil-square"></i> Subcategorias</span>
       <h5>Editar subcategoria de operação financeira</h5>
     </div>
-    <a href="<?= url('financial_operation_subcategory'); ?>" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> Voltar</a>
   </div>
 
   <form action="<?= url('financial_operation_subcategory/update/' . $subcategory['id']); ?>" method="POST" class="needs-validation financial-form" novalidate>
@@ -35,7 +34,7 @@
       </div>
     </section>
 
-    <div class="financial-actions">
+    <div class="financial-actions view-actions">
       <a href="<?= url('financial_operation_subcategory'); ?>" class="btn btn-secondary">Cancelar</a>
       <button class="btn btn-primary" type="submit"><i class="bi bi-check-lg"></i> Salvar</button>
     </div>

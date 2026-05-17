@@ -1,8 +1,5 @@
 <div class="d-flex justify-content-between align-items-center mb-3">
   <h5 class="mb-0">Dados gerais da pessoa</h5>
-  <?php if (authCan('person.edit')): ?>
-    <a href="<?= url('person/edit/' . $person['id']); ?>" class="btn btn-sm btn-outline-primary">Editar</a>
-  <?php endif; ?>
 </div>
 
 <!-- Pessoa -->
@@ -189,3 +186,10 @@
   <?php endif; ?>
 </div>
 <!-- /E-mails -->
+
+<div class="view-actions">
+  <a href="<?= url('person'); ?>" class="btn btn-secondary"><i class="bi bi-arrow-left"></i> Voltar</a>
+  <?php if (authCan('person.edit')): ?>
+    <a href="<?= url('person/edit/' . $person['id']); ?>" class="btn btn-outline-primary"><i class="bi bi-pencil-square"></i> Editar</a>
+  <?php endif; ?>
+</div>

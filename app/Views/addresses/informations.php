@@ -29,3 +29,7 @@
     </tbody>
   </table>
 </div>
+
+<div class="view-actions">
+  <a href="<?= url('address'); ?>" class="btn btn-secondary"><i class="bi bi-arrow-left"></i> Voltar</a>
+</div>

@@ -51,7 +51,7 @@ if (isset($_GET['created']))
   </div>
 <?php endif; ?>
 
-<div class="d-flex flex-wrap gap-2 mb-3">
+<div class="d-flex flex-wrap gap-2 mb-3<?= ((int) ($selectedUserId ?? 0) <= 0 ? ' view-actions' : ''); ?>">
   <form method="POST" action="<?= url('permission/sync'); ?>" class="d-inline">
     <input type="hidden" name="selected_user_id" value="<?= (int) ($selectedUserId ?? 0); ?>">
     <button class="btn btn-primary" type="submit">
@@ -164,18 +164,16 @@ if (isset($_GET['created']))
       </div>
     <?php endforeach; ?>
 
-    <div class="d-flex flex-wrap gap-2 align-items-center">
+    <div class="d-flex flex-wrap gap-2 align-items-center view-actions">
       <button type="submit" class="btn btn-primary">
         <i class="bi bi-save me-1"></i> Salvar permissões
       </button>
       <a class="btn btn-secondary" href="<?= url('permission?user_id=' . (int) $selectedUserId); ?>">
         Recarregar
       </a>
-      <div class="ms-auto">
-        <button class="btn btn-dark" type="button" data-bs-toggle="collapse" data-bs-target="#effectivePerms" aria-expanded="false" aria-controls="effectivePerms">
-          Ver permissões ativas
-        </button>
-      </div>
+      <button class="btn btn-dark" type="button" data-bs-toggle="collapse" data-bs-target="#effectivePerms" aria-expanded="false" aria-controls="effectivePerms">
+        Ver permissões ativas
+      </button>
     </div>
 
     <div class="collapse mt-3" id="effectivePerms">

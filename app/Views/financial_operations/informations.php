@@ -35,7 +35,6 @@ $balance = (float) ($operation['total_amount'] ?? 0) - $paidTotal;
       <span class="financial-page-kicker"><i class="bi bi-search"></i> Operações</span>
       <h5>Dados da operação financeira</h5>
     </div>
-    <a href="<?= url('financial_operation'); ?>" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> Voltar</a>
   </div>
 
   <div class="table-responsive mb-3">
@@ -75,9 +74,6 @@ $balance = (float) ($operation['total_amount'] ?? 0) - $paidTotal;
 
   <div class="financial-subheader">
     <h6>Pagamentos vinculados</h6>
-    <?php if (authCan('financial_operation_payment.create')): ?>
-      <a href="<?= url('financial_operation_payment/create?financial_operation_id=' . (int) $operation['id']); ?>" class="btn btn-outline-primary btn-sm"><i class="bi bi-plus-lg"></i> Novo pagamento</a>
-    <?php endif; ?>
   </div>
 
   <div class="table-responsive">
@@ -114,6 +110,13 @@ $balance = (float) ($operation['total_amount'] ?? 0) - $paidTotal;
         <?php endif; ?>
       </tbody>
     </table>
+  </div>
+
+  <div class="view-actions">
+    <a href="<?= url('financial_operation'); ?>" class="btn btn-secondary"><i class="bi bi-arrow-left"></i> Voltar</a>
+    <?php if (authCan('financial_operation_payment.create')): ?>
+      <a href="<?= url('financial_operation_payment/create?financial_operation_id=' . (int) $operation['id']); ?>" class="btn btn-outline-primary"><i class="bi bi-plus-lg"></i> Novo pagamento</a>
+    <?php endif; ?>
   </div>
 </div>
 

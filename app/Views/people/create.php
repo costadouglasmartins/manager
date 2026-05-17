@@ -53,7 +53,6 @@ $jsonFlags = JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JS
       <span class="person-create-kicker"><i class="bi bi-person-fill-add"></i> Pessoas</span>
       <h5>Cadastrar pessoa</h5>
     </div>
-    <a href="<?= url('person'); ?>" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> Voltar</a>
   </div>
 
   <form autocomplete="off" action="<?= url('person/store'); ?>" method="POST" id="personCreateForm" class="needs-validation person-create-form" novalidate>
@@ -293,7 +292,7 @@ $jsonFlags = JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JS
       </template>
     </section>
 
-    <div class="person-create-actions">
+    <div class="person-create-actions view-actions">
       <a href="<?= url('person'); ?>" class="btn btn-secondary">Cancelar</a>
       <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg"></i> Salvar</button>
     </div>

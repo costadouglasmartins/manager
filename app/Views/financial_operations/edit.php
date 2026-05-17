@@ -9,7 +9,6 @@ $amountValue = number_format((float) ($operation['total_amount'] ?? 0), 2, ',', 
       <span class="financial-page-kicker"><i class="bi bi-pencil-square"></i> Operações</span>
       <h5>Editar operação financeira</h5>
     </div>
-    <a href="<?= url('financial_operation'); ?>" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> Voltar</a>
   </div>
 
   <form action="<?= url('financial_operation/update/' . $operation['id']); ?>" method="POST" class="needs-validation financial-form" novalidate>
@@ -38,7 +37,7 @@ $amountValue = number_format((float) ($operation['total_amount'] ?? 0), 2, ',', 
       </div>
     </section>
 
-    <div class="financial-actions">
+    <div class="financial-actions view-actions">
       <a href="<?= url('financial_operation'); ?>" class="btn btn-secondary">Cancelar</a>
       <button class="btn btn-primary" type="submit"><i class="bi bi-check-lg"></i> Salvar</button>
     </div>

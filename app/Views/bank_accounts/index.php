@@ -56,7 +56,7 @@ $activeLabel = static function ($value): string {
   </div>
 
   <div class="col-12 col-lg-3">
-    <div class="d-flex flex-column gap-2 align-items-center align-items-lg-end">
+    <div class="d-flex flex-column gap-2 align-items-center align-items-lg-end view-actions">
       <button type="submit" class="btn btn-primary w-100">Pesquisar</button>
       <a href="<?= url('bank_account'); ?>" class="btn btn-secondary w-100">Limpar</a>
       <?php if (authCan('bank_account.create')): ?>

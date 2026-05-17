@@ -17,7 +17,6 @@ $paymentValue = number_format((float) ($payment['value'] ?? 0), 2, ',', '.');
       <span class="financial-page-kicker"><i class="bi bi-pencil-square"></i> Pagamentos</span>
       <h5>Editar pagamento de operação financeira</h5>
     </div>
-    <a href="<?= url('financial_operation_payment'); ?>" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> Voltar</a>
   </div>
 
   <form action="<?= url('financial_operation_payment/update/' . $payment['id']); ?>" method="POST" class="needs-validation financial-form" novalidate>
@@ -46,7 +45,7 @@ $paymentValue = number_format((float) ($payment['value'] ?? 0), 2, ',', '.');
       </div>
     </section>
 
-    <div class="financial-actions">
+    <div class="financial-actions view-actions">
       <a href="<?= url('financial_operation_payment'); ?>" class="btn btn-secondary">Cancelar</a>
       <button class="btn btn-primary" type="submit"><i class="bi bi-check-lg"></i> Salvar</button>
     </div>

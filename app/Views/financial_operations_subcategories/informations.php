@@ -24,7 +24,6 @@ $formatDateTime = static function ($value): string {
       <span class="financial-page-kicker"><i class="bi bi-search"></i> Subcategorias</span>
       <h5>Dados da subcategoria da operação financeira</h5>
     </div>
-    <a href="<?= url('financial_operation_subcategory'); ?>" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> Voltar</a>
   </div>
 
   <div class="table-responsive mb-3">
@@ -52,6 +51,10 @@ $formatDateTime = static function ($value): string {
         </tr>
       </tbody>
     </table>
+  </div>
+
+  <div class="view-actions">
+    <a href="<?= url('financial_operation_subcategory'); ?>" class="btn btn-secondary"><i class="bi bi-arrow-left"></i> Voltar</a>
   </div>
 </div>
 

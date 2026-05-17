@@ -28,7 +28,6 @@ $formatMoney = static function ($value): string {
       <span class="financial-page-kicker"><i class="bi bi-search"></i> Pagamentos</span>
       <h5>Dados do pagamento da operação financeira</h5>
     </div>
-    <a href="<?= url('financial_operation_payment'); ?>" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> Voltar</a>
   </div>
 
   <div class="table-responsive mb-3">
@@ -60,6 +59,10 @@ $formatMoney = static function ($value): string {
         </tr>
       </tbody>
     </table>
+  </div>
+
+  <div class="view-actions">
+    <a href="<?= url('financial_operation_payment'); ?>" class="btn btn-secondary"><i class="bi bi-arrow-left"></i> Voltar</a>
   </div>
 </div>
 

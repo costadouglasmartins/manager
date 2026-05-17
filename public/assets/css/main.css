@@ -69,6 +69,7 @@ html {
 }
 
 body.app-shell {
+  --app-view-actions-height: 0px;
   min-height: 100vh;
   margin: 0;
   background:
@@ -239,6 +240,10 @@ a:hover {
   min-height: 100vh;
   padding-top: calc(var(--app-navbar-height) + 1.25rem);
   padding-bottom: 2.5rem;
+}
+
+body.has-view-actions .app-main {
+  padding-bottom: calc(2.5rem + var(--app-view-actions-height, 84px) + env(safe-area-inset-bottom));
 }
 
 .app-container {
@@ -465,6 +470,55 @@ a:hover {
 .btn-outline-danger {
   --bs-btn-color: var(--app-danger);
   --bs-btn-border-color: color-mix(in srgb, var(--app-danger) 62%, var(--app-border));
+}
+
+.view-actions {
+  position: fixed !important;
+  z-index: 1025;
+  right: 0 !important;
+  bottom: 0 !important;
+  left: 0 !important;
+  display: flex !important;
+  width: auto !important;
+  min-height: 72px;
+  align-items: center !important;
+  justify-content: flex-end !important;
+  flex-direction: row !important;
+  flex-wrap: wrap;
+  gap: 0.6rem !important;
+  margin: 0 !important;
+  padding: 0.85rem max(clamp(0.75rem, 2vw, 1.5rem), calc((100vw - 1480px) / 2 + 1.5rem)) calc(0.85rem + env(safe-area-inset-bottom)) !important;
+  border: 0 !important;
+  border-top: 1px solid var(--app-border) !important;
+  border-radius: 0 !important;
+  background: color-mix(in srgb, var(--app-surface-solid) 90%, transparent);
+  box-shadow: 0 -14px 34px rgba(15, 23, 42, 0.1);
+  backdrop-filter: blur(16px);
+}
+
+[data-bs-theme="dark"] .view-actions {
+  box-shadow: 0 -18px 38px rgba(0, 0, 0, 0.34);
+}
+
+.view-actions-host {
+  display: contents;
+}
+
+.has-view-actions-form > .col-12.col-lg-9 {
+  flex: 0 0 auto;
+  width: 100%;
+}
+
+.view-actions > form,
+.view-actions .d-inline {
+  display: inline-flex !important;
+  margin: 0;
+}
+
+.view-actions .btn {
+  width: auto !important;
+  min-width: 112px;
+  white-space: nowrap;
 }
 
 .card {
@@ -761,6 +815,20 @@ code {
   .app-content > form.row,
   .app-content > form:not(.row):not(.d-inline):not(.needs-validation) {
     padding: 0.85rem;
+  }
+
+  .view-actions {
+    align-items: stretch !important;
+    justify-content: flex-start !important;
+    flex-direction: column !important;
+    padding: 0.7rem 0.75rem calc(0.7rem + env(safe-area-inset-bottom)) !important;
+  }
+
+  .view-actions .btn,
+  .view-actions > form,
+  .view-actions > form .btn,
+  .view-actions .d-inline {
+    width: 100% !important;
   }
 
   .table > :not(caption) > * > * {

@@ -59,3 +59,7 @@ $activeLabel = static function ($value): string {
     </tbody>
   </table>
 </div>
+
+<div class="view-actions">
+  <a href="<?= url('bank_account'); ?>" class="btn btn-secondary"><i class="bi bi-arrow-left"></i> Voltar</a>
+</div>

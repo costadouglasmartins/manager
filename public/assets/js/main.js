@@ -11,6 +11,46 @@ document.querySelectorAll(".table-responsive").forEach((tableWrapper) => {
     }
 });
 
+(() => {
+  const actionBars = document.querySelectorAll(".view-actions");
+
+  const hasBootstrapColumn = (element) => {
+    return [...element.classList].some((className) => /^col(?:-\d+|-(?:sm|md|lg|xl|xxl)-\d+)?$/.test(className));
+  };
+
+  const syncViewActionsSpace = () => {
+    document.body.classList.toggle("has-view-actions", actionBars.length > 0);
+
+    let maxHeight = 0;
+    actionBars.forEach((actions) => {
+      const host = actions.parentElement;
+      if (host && hasBootstrapColumn(host))
+        {
+        host.classList.add("view-actions-host");
+        }
+
+      const formRow = actions.closest("form.row");
+      if (formRow)
+        {
+        formRow.classList.add("has-view-actions-form");
+        }
+
+      maxHeight = Math.max(maxHeight, Math.ceil(actions.getBoundingClientRect().height));
+    });
+
+    document.documentElement.style.setProperty("--app-view-actions-height", `${maxHeight}px`);
+  };
+
+  syncViewActionsSpace();
+  window.addEventListener("resize", syncViewActionsSpace);
+
+  if ("ResizeObserver" in window)
+    {
+    const viewActionsResizeObserver = new ResizeObserver(syncViewActionsSpace);
+    actionBars.forEach((actions) => viewActionsResizeObserver.observe(actions));
+    }
+})();
+
 /**
  * Applies a mask in CPF's and CNPJ's
  * @param {String} value 

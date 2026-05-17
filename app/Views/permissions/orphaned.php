@@ -21,7 +21,6 @@ if (isset($_GET['error']))
 ?>
 <div class="d-flex justify-content-between align-items-center mb-3">
   <h5>Permissões Órfãs</h5>
-  <a href="<?= url('permission'); ?>" class="btn btn-secondary btn-sm">Voltar</a>
 </div>
 
 <p class="text-muted">
@@ -102,6 +101,10 @@ if (isset($_GET['error']))
     </div>
   </div>
 <?php endif; ?>
+
+<div class="view-actions">
+  <a href="<?= url('permission'); ?>" class="btn btn-secondary"><i class="bi bi-arrow-left"></i> Voltar</a>
+</div>
 
 <div class="modal fade" id="deleteModal" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog">

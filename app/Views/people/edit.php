@@ -61,7 +61,6 @@ $jsonFlags = JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JS
       <span class="person-edit-kicker"><i class="bi bi-pencil-square"></i> Pessoas</span>
       <h5>Editar pessoa</h5>
     </div>
-    <a href="<?= url('person'); ?>" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> Voltar</a>
   </div>
 
   <form action="<?= url('person/update/' . (int) ($person['id'] ?? 0)); ?>" method="POST" id="personEditForm" class="needs-validation person-edit-form" novalidate>
@@ -279,7 +278,7 @@ $jsonFlags = JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JS
       </template>
     </section>
 
-    <div class="person-edit-actions">
+    <div class="person-edit-actions view-actions">
       <a href="<?= url('person'); ?>" class="btn btn-secondary">Cancelar</a>
       <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg"></i> Salvar</button>
     </div>

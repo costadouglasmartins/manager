@@ -9,6 +9,9 @@
       <?php endif; ?>
     </div>
 
-    <a class="btn btn-outline-secondary" href="<?= url('/'); ?>">Voltar ao início</a>
   </div>
+</div>
+
+<div class="view-actions">
+  <a class="btn btn-secondary" href="<?= url('/'); ?>"><i class="bi bi-arrow-left"></i> Voltar ao início</a>
 </div>
