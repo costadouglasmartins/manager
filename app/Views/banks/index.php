@@ -22,19 +22,15 @@ $activeLabel = static function ($value): string {
   <div class="col-12 col-lg-9">
     <div class="row g-3">
 
-      <div class="col-12 col-md-6 col-lg-3">
-        <input class="form-control" id="id" name="id" type="text" placeholder="Código" value="<?= htmlspecialchars($filters['id'], ENT_QUOTES, 'UTF-8'); ?>">
-      </div>
-
-      <div class="col-12 col-md-6 col-lg-3">
+      <div class="col-12 col-md-6 col-lg-4">
         <input class="form-control" id="number" maxlength="4" name="number" type="text" placeholder="Número" value="<?= htmlspecialchars($filters['number'], ENT_QUOTES, 'UTF-8'); ?>">
       </div>
 
-      <div class="col-12 col-md-6 col-lg-3">
+      <div class="col-12 col-md-6 col-lg-4">
         <input class="form-control" id="name" maxlength="50" name="name" type="text" placeholder="Nome" value="<?= htmlspecialchars($filters['name'], ENT_QUOTES, 'UTF-8'); ?>">
       </div>
 
-      <div class="col-12 col-md-6 col-lg-3">
+      <div class="col-12 col-md-6 col-lg-4">
         <select class="form-select" id="active" name="active">
           <option value="" <?= $filters['active'] === '' ? 'selected' : ''; ?>>Todos</option>
           <option value="1" <?= $filters['active'] === '1' ? 'selected' : ''; ?>>Ativos</option>

@@ -148,6 +148,10 @@
             <?php if (authCan('financial_operation_payment.index')): ?>
               <li><a class="dropdown-item" href="<?= url('financial_operation_payment'); ?>"><i class="bi bi-cash-stack me-2"></i>Operações financeiras - Pagamentos</a></li>
             <?php endif; ?>
+            <li><hr class="dropdown-divider" /></li>
+            <?php if (authCan('bank_slip.index')): ?>
+              <li><a class="dropdown-item" href="<?= url('bank_slip'); ?>"><i class="bi bi-upc-scan me-2"></i>Boletos e Remessas</a></li>
+            <?php endif; ?>
           </ul>
         </li>
         <!-- /Menu financeiro -->

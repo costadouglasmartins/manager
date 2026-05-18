@@ -1,0 +1,290 @@
+* {
+	box-sizing: border-box;
+}
+
+body {
+	margin: 0;
+	background: #f3f5f7;
+	color: #111827;
+	font-family: Arial, Helvetica, sans-serif;
+	font-size: 12px;
+	line-height: 1.25;
+}
+
+.boleto-toolbar {
+	display: flex;
+	gap: 10px;
+	justify-content: flex-end;
+	margin: 18px auto;
+	max-width: 820px;
+	padding: 0 10px;
+}
+
+.toolbar-button {
+	align-items: center;
+	background: #ffffff;
+	border: 1px solid #9ca3af;
+	border-radius: 6px;
+	color: #111827;
+	cursor: pointer;
+	display: inline-flex;
+	font: 600 14px Arial, Helvetica, sans-serif;
+	min-height: 38px;
+	padding: 8px 14px;
+	text-decoration: none;
+}
+
+.toolbar-button.primary {
+	background: #0f766e;
+	border-color: #0f766e;
+	color: #ffffff;
+}
+
+.boleto-page {
+	background: #ffffff;
+	box-shadow: 0 10px 35px rgba(17, 24, 39, 0.16);
+	margin: 0 auto 32px;
+	max-width: 820px;
+	min-height: 1120px;
+	padding: 30px;
+}
+
+.boleto-section {
+	border: 1px solid #111827;
+	margin-bottom: 18px;
+}
+
+.section-title {
+	background: #e5e7eb;
+	border-bottom: 1px solid #111827;
+	font-size: 11px;
+	font-weight: 700;
+	padding: 4px 8px;
+	text-transform: uppercase;
+}
+
+.boleto-header {
+	align-items: stretch;
+	border-bottom: 2px solid #111827;
+	display: grid;
+	grid-template-columns: 150px 74px 1fr;
+	min-height: 58px;
+}
+
+.bank-logo {
+	align-items: center;
+	display: flex;
+	font-weight: 800;
+	justify-content: center;
+	padding: 8px;
+}
+
+.itau-logo {
+	background: #0050a4;
+	color: #ffd100;
+	font-size: 30px;
+	letter-spacing: 0;
+}
+
+.generic-logo {
+	background: #ffffff;
+	color: #111827;
+	font-size: 16px;
+	overflow-wrap: anywhere;
+	text-align: center;
+}
+
+.bank-code {
+	align-items: center;
+	border-left: 2px solid #111827;
+	border-right: 2px solid #111827;
+	display: flex;
+	font-size: 19px;
+	font-weight: 800;
+	justify-content: center;
+}
+
+.digitable-line {
+	align-items: center;
+	display: flex;
+	font-size: 18px;
+	font-weight: 800;
+	justify-content: flex-end;
+	overflow-wrap: anywhere;
+	padding: 8px 10px;
+	text-align: right;
+}
+
+.field-grid {
+	display: grid;
+	grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.field {
+	border-bottom: 1px solid #111827;
+	border-right: 1px solid #111827;
+	min-height: 44px;
+	padding: 5px 7px;
+}
+
+.field:nth-child(4n),
+.field:last-child {
+	border-right: 0;
+}
+
+.field span {
+	color: #374151;
+	display: block;
+	font-size: 10px;
+	font-weight: 700;
+	margin-bottom: 3px;
+	text-transform: uppercase;
+}
+
+.field strong {
+	color: #111827;
+	display: block;
+	font-size: 12px;
+	font-weight: 700;
+	overflow-wrap: anywhere;
+}
+
+.field.wide {
+	grid-column: span 3;
+}
+
+.receipt-grid .field:nth-last-child(-n+2),
+.compensation-grid .payer-field,
+.compensation-grid .amount-stack {
+	border-bottom: 0;
+}
+
+.instructions {
+	min-height: 134px;
+}
+
+.instructions strong {
+	font-weight: 600;
+	margin-bottom: 4px;
+}
+
+.amount-stack {
+	display: grid;
+	grid-template-columns: 1fr;
+	grid-template-rows: repeat(8, minmax(18px, auto));
+	padding-bottom: 0;
+}
+
+.amount-stack span {
+	border-top: 1px solid #111827;
+	margin: 2px -7px 0;
+	padding: 4px 7px 0;
+}
+
+.amount-stack span:first-child {
+	border-top: 0;
+	margin-top: 0;
+	padding-top: 0;
+}
+
+.payer-field {
+	min-height: 82px;
+}
+
+.cut-line {
+	border-top: 1px dashed #6b7280;
+	color: #6b7280;
+	font-size: 10px;
+	margin: 22px 0;
+	padding-top: 5px;
+	text-align: center;
+	text-transform: uppercase;
+}
+
+.barcode-area {
+	padding: 16px 18px 4px;
+}
+
+.barcode-svg {
+	display: block;
+	fill: #111827;
+	height: 72px;
+	max-width: 620px;
+	width: 100%;
+}
+
+.barcode-number {
+	font-size: 11px;
+	letter-spacing: 0;
+	margin-top: 4px;
+}
+
+.mechanical-auth {
+	font-size: 10px;
+	font-weight: 700;
+	padding: 0 18px 12px;
+	text-align: right;
+	text-transform: uppercase;
+}
+
+@media (max-width: 720px) {
+	.boleto-page {
+		box-shadow: none;
+		min-height: 0;
+		padding: 12px;
+	}
+
+	.boleto-header {
+		grid-template-columns: 1fr;
+	}
+
+	.bank-code {
+		border-left: 0;
+		border-right: 0;
+		border-top: 2px solid #111827;
+		min-height: 42px;
+	}
+
+	.digitable-line {
+		border-top: 2px solid #111827;
+		font-size: 14px;
+		justify-content: flex-start;
+		text-align: left;
+	}
+
+	.field-grid {
+		grid-template-columns: 1fr;
+	}
+
+	.field,
+	.field:nth-child(4n) {
+		border-right: 0;
+	}
+
+	.field.wide {
+		grid-column: span 1;
+	}
+}
+
+@media print {
+	body {
+		background: #ffffff;
+	}
+
+	.no-print {
+		display: none;
+	}
+
+	.boleto-page {
+		box-shadow: none;
+		margin: 0;
+		max-width: none;
+		min-height: 0;
+		padding: 0;
+		width: 100%;
+	}
+
+	.boleto-section {
+		break-inside: avoid;
+	}
+}
