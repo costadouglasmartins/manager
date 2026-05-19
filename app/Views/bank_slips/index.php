@@ -7,25 +7,40 @@ $statuses = ['DRAFT', 'READY', 'REMITTANCE_GENERATED', 'SENT', 'REGISTERED', 'RE
 <h5>Boletos bancários</h5>
 
 <form action="<?= url('bank_slip'); ?>" method="get" class="row g-2 mb-3" id="bankSlipFilterForm">
-  <div class="col-12 col-md-2"><input type="text" name="id" class="form-control" placeholder="Código" value="<?= htmlspecialchars($filters['id'], ENT_QUOTES, 'UTF-8'); ?>"></div>
-  <div class="col-12 col-md-3"><input type="text" name="document_number" class="form-control" placeholder="Seu número" value="<?= htmlspecialchars($filters['document_number'], ENT_QUOTES, 'UTF-8'); ?>"></div>
-  <div class="col-12 col-md-3">
-    <select name="bank_account_id" class="form-select">
-      <option value="">Conta bancária</option>
-      <?php foreach ($bankAccounts as $account): ?>
-        <option value="<?= (int) $account['id']; ?>" <?= ((string) $filters['bank_account_id'] === (string) $account['id']) ? 'selected' : ''; ?>>
-          <?= htmlspecialchars(($account['bank_name'] ?? '') . ' - ' . ($account['name'] ?? ''), ENT_QUOTES, 'UTF-8'); ?>
-        </option>
-      <?php endforeach; ?>
-    </select>
+  <div class="col-12 col-lg-9">
+    <div class="row g-2">
+      <div class="col-12 col-md-2"><input type="text" name="id" class="form-control" placeholder="Código" value="<?= htmlspecialchars($filters['id'], ENT_QUOTES, 'UTF-8'); ?>"></div>
+      <div class="col-12 col-md-3"><input type="text" name="document_number" class="form-control" placeholder="Seu número" value="<?= htmlspecialchars($filters['document_number'], ENT_QUOTES, 'UTF-8'); ?>"></div>
+      <div class="col-12 col-md-4">
+        <select name="bank_account_id" class="form-select">
+          <option value="">Conta bancária</option>
+          <?php foreach ($bankAccounts as $account): ?>
+            <option value="<?= (int) $account['id']; ?>" <?= ((string) $filters['bank_account_id'] === (string) $account['id']) ? 'selected' : ''; ?>>
+              <?= htmlspecialchars(($account['bank_name'] ?? '') . ' - ' . ($account['name'] ?? ''), ENT_QUOTES, 'UTF-8'); ?>
+            </option>
+          <?php endforeach; ?>
+        </select>
+      </div>
+      <div class="col-12 col-md-3">
+        <select name="status" class="form-select">
+          <option value="">Status</option>
+          <?php foreach ($statuses as $status): ?>
+            <option value="<?= $status; ?>" <?= $filters['status'] === $status ? 'selected' : ''; ?>><?= $status; ?></option>
+          <?php endforeach; ?>
+        </select>
+      </div>
+    </div>
   </div>
-  <div class="col-12 col-md-2">
-    <select name="status" class="form-select">
-      <option value="">Status</option>
-      <?php foreach ($statuses as $status): ?>
-        <option value="<?= $status; ?>" <?= $filters['status'] === $status ? 'selected' : ''; ?>><?= $status; ?></option>
-      <?php endforeach; ?>
-    </select>
+  <div class="col-12 col-lg-3">
+    <div class="d-flex flex-column gap-2 align-items-stretch align-items-lg-end">
+      <button class="btn btn-primary w-100" type="submit"><i class="bi bi-search"></i> Pesquisar</button>
+      <?php if (authCan('bank_slip.create')): ?>
+        <a class="btn btn-success w-100" href="<?= url('bank_slip/create'); ?>"><i class="bi bi-plus-lg"></i> Novo boleto</a>
+      <?php endif; ?>
+      <?php if (authCan('bank_slip.generateRemittance')): ?>
+        <button type="submit" class="btn btn-primary w-100" form="bankSlipRemittanceForm"><i class="bi bi-file-earmark-arrow-up"></i> Gerar remessa Itaú CNAB400</button>
+      <?php endif; ?>
+    </div>
   </div>
 </form>
 
@@ -68,15 +83,5 @@ $statuses = ['DRAFT', 'READY', 'REMITTANCE_GENERATED', 'SENT', 'REGISTERED', 'RE
     </table>
   </div>
 </form>
-
-<div class="view-actions">
-  <button class="btn btn-primary" type="submit" form="bankSlipFilterForm"><i class="bi bi-search"></i> Pesquisar</button>
-  <?php if (authCan('bank_slip.create')): ?>
-    <a class="btn btn-success" href="<?= url('bank_slip/create'); ?>"><i class="bi bi-plus-lg"></i> Novo boleto</a>
-  <?php endif; ?>
-  <?php if (authCan('bank_slip.generateRemittance')): ?>
-    <button type="submit" class="btn btn-primary" form="bankSlipRemittanceForm"><i class="bi bi-file-earmark-arrow-up"></i> Gerar remessa Itaú CNAB400</button>
-  <?php endif; ?>
-</div>
 
 <script src="<?= url('assets/js/bank_slips/index.js?v=2'); ?>"></script>

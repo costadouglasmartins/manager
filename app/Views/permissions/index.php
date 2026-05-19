@@ -51,7 +51,7 @@ if (isset($_GET['created']))
   </div>
 <?php endif; ?>
 
-<div class="d-flex flex-wrap gap-2 mb-3<?= ((int) ($selectedUserId ?? 0) <= 0 ? ' view-actions' : ''); ?>">
+<div class="d-flex flex-wrap gap-2 mb-3">
   <form method="POST" action="<?= url('permission/sync'); ?>" class="d-inline">
     <input type="hidden" name="selected_user_id" value="<?= (int) ($selectedUserId ?? 0); ?>">
     <button class="btn btn-primary" type="submit">
@@ -164,7 +164,7 @@ if (isset($_GET['created']))
       </div>
     <?php endforeach; ?>
 
-    <div class="d-flex flex-wrap gap-2 align-items-center view-actions">
+    <div class="d-flex flex-wrap gap-2 align-items-center">
       <button type="submit" class="btn btn-primary">
         <i class="bi bi-save me-1"></i> Salvar permissões
       </button>

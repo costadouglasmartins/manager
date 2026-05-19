@@ -33,7 +33,7 @@ $queryFilters = http_build_query([
   </div>
 
   <div class="col-12 col-lg-3">
-    <div class="d-flex flex-column gap-2 align-items-center align-items-lg-end view-actions">
+    <div class="d-flex flex-column gap-2 align-items-center align-items-lg-end">
       <button type="submit" class="btn btn-primary w-100">Pesquisar</button>
       <a href="<?= url('phone_number'); ?>" class="btn btn-secondary w-100">Limpar</a>
       <?php if (authCan('phone_number.create')): ?>
