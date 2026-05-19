@@ -49,7 +49,7 @@ class Person extends Model
 				'name' => $personData['name'],
 				'fantasy' => $personData['fantasy'],
 				'type' => $personData['type'],
-				'document' => $personData['document'],
+				'document' => cleanCpfCnpj((string)$personData['document']),
 				'active' => $personData['active'],
 				'birthdate' => $personData['birthdate'],
 				'created' => $now,
@@ -853,7 +853,7 @@ class Person extends Model
 			'name' => trim((string) ($personData['name'] ?? '')),
 			'fantasy' => trim((string) ($personData['fantasy'] ?? '')),
 			'type' => trim((string) ($personData['type'] ?? '')),
-			'document' => onlyDigits((string) ($personData['document'] ?? '')),
+			'document' => cleanCpfCnpj((string) ($personData['document'] ?? '')),
 			'active' => (int) ($personData['active'] ?? 1),
 			'birthdate' => (!empty($personData['birthdate']) ? dateBrToUs($personData['birthdate']) : null),
 		];

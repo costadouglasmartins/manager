@@ -38,7 +38,7 @@ document.querySelectorAll(".table-responsive").forEach((tableWrapper) => {
       maxHeight = Math.max(maxHeight, Math.ceil(actions.getBoundingClientRect().height));
     });
 
-    document.documentElement.style.setProperty("--app-view-actions-height", `${maxHeight}px`);
+    document.body.style.setProperty("--app-view-actions-height", `${maxHeight}px`);
   };
 
   syncViewActionsSpace();
@@ -52,22 +52,26 @@ document.querySelectorAll(".table-responsive").forEach((tableWrapper) => {
 })();
 
 /**
- * Applies a mask in CPF's and CNPJ's
+ * Applies a mask to CPF and CNPJ values, including alphanumeric CNPJ.
  * @param {String} value 
  * @returns String formatted
  */
 function formatCpfCnpj(value) 
   {
-  const digits = String(value).replace(/\D/g, "").slice(0, 14);
-  const pattern = digits.length <= 11 ? "###.###.###-##" : "##.###.###/####-##";
+  const clean = String(value).toUpperCase().replace(/[^A-Z0-9]/g, "");
+  const isCnpj = /[A-Z]/.test(clean) || clean.length > 11;
+  const chars = isCnpj
+    ? clean.slice(0, 12) + clean.slice(12).replace(/\D/g, "").slice(0, 2)
+    : clean.replace(/\D/g, "").slice(0, 11);
+  const pattern = isCnpj ? "##.###.###/####-##" : "###.###.###-##";
   let out = "";
   let di = 0;
-  for (let i = 0; i < pattern.length && di < digits.length; i++) 
+  for (let i = 0; i < pattern.length && di < chars.length; i++)
     {
     const p = pattern[i];
     if (p === "#") 
       { 
-      out += digits[di++]; 
+      out += chars[di++];
       } 
     else 
       {
@@ -78,14 +82,14 @@ function formatCpfCnpj(value)
   }
 
 /**
- * Validates a CPF or a CNPJ
+ * Validates a CPF or CNPJ, including alphanumeric CNPJ.
  * @param {String} value 
  * @returns Boolean
  */
 function isValidCpfCnpj(value) 
   {
-  const digits = String(value).replace(/\D/g, "");
-  const isRepeated = (s) => /^(\d)\1+$/.test(s);
+  const clean = String(value).toUpperCase().replace(/[^A-Z0-9]/g, "");
+  const isRepeated = (s) => /^([A-Z0-9])\1+$/.test(s);
 
   const isValidCPF = (cpf) => {
     if (cpf.length !== 11) return false;
@@ -105,8 +109,10 @@ function isValidCpfCnpj(value)
   };
 
   const isValidCNPJ = (cnpj) => {
-    if (cnpj.length !== 14) return false;
+    if (!/^[A-Z0-9]{12}\d{2}$/.test(cnpj)) return false;
     if (isRepeated(cnpj)) return false;
+
+    const charValue = (char) => char.charCodeAt(0) - 48;
 
     const calcDv = (base) => {
       const weights = base.length === 12
@@ -114,7 +120,7 @@ function isValidCpfCnpj(value)
         : [6,5,4,3,2,9,8,7,6,5,4,3,2];
 
       let sum = 0;
-      for (let i = 0; i < weights.length; i++) sum += Number(base[i]) * weights[i];
+      for (let i = 0; i < weights.length; i++) sum += charValue(base[i]) * weights[i];
       const mod = sum % 11;
       return mod < 2 ? 0 : (11 - mod);
     };
@@ -128,8 +134,8 @@ function isValidCpfCnpj(value)
     return dv2 === Number(cnpj[13]);
   };
 
-  if (digits.length === 11) return isValidCPF(digits);
-  if (digits.length === 14) return isValidCNPJ(digits);
+  if (/^\d{11}$/.test(clean)) return isValidCPF(clean);
+  if (clean.length === 14) return isValidCNPJ(clean);
   return false;
   }
 function formatDatePtBr(value) {

@@ -95,6 +95,7 @@ $addressesStmt->execute(['id' => $id]);
 ## Validação e verificação
 
 - Após editar arquivos PHP, execute `php -l` nos arquivos PHP alterados.
+- Após editar ou criar arquivos `.js`, execute `node --check caminho/do/arquivo.js` em cada arquivo JavaScript alterado para validar a sintaxe pela linha de comando.
 - Para mudanças em JavaScript, valide o comportamento da tela afetada no navegador quando possível.
 - Atualize versões de cache (`?v={numero}`) ao alterar JS ou CSS específico de view.
 - Prefira verificações manuais focadas no fluxo alterado em vez de testes amplos sem relação com a mudança.

@@ -17,37 +17,55 @@ if (!function_exists('onlyDigits'))
 	}
 
 /**
- * Mask CPF and CPNJ
+ * Removes special characters from CPF and CNPJ values, preserving alphanumeric CNPJ.
  */
-if (!function_exists('  '))
+if (!function_exists('cleanCpfCnpj'))
+	{
+
+	function cleanCpfCnpj(?string $value): string
+		{
+		if ($value === null)
+			{
+			return '';
+			}
+
+		return preg_replace('/[^A-Z0-9]+/', '', strtoupper($value)) ?? '';
+		}
+
+	}
+
+/**
+ * Mask CPF and CNPJ
+ */
+if (!function_exists('maskCpfCnpj'))
 	{
 
 	function maskCpfCnpj(?string $value): string
 		{
-		$digits = onlyDigits($value);
-		if ($digits === '')
+		$clean = cleanCpfCnpj($value);
+		if ($clean === '')
 			{
 			return '';
 			}
 		// CPF: 000.000.000-00
-		if (strlen($digits) === 11)
+		if (preg_match('/^\d{11}$/', $clean))
 			{
 			return preg_replace(
 				'/(\d{3})(\d{3})(\d{3})(\d{2})/',
 				'$1.$2.$3-$4',
-				$digits
+				$clean
 			);
 			}
 		// CNPJ: 00.000.000/0000-00
-		if (strlen($digits) === 14)
+		if (preg_match('/^[A-Z0-9]{12}\d{2}$/', $clean))
 			{
 			return preg_replace(
-				'/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/',
+				'/^([A-Z0-9]{2})([A-Z0-9]{3})([A-Z0-9]{3})([A-Z0-9]{4})(\d{2})$/',
 				'$1.$2.$3/$4-$5',
-				$digits
+				$clean
 			);
 			}
-		// If there is not 11 or 14 digits, returns original value without mask
+		// If there is not a CPF or CNPJ length, returns original value without mask
 		return $value ?? '';
 		}
 
