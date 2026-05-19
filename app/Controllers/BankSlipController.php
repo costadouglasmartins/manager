@@ -5,7 +5,7 @@ namespace App\Controllers;
 use App\Core\TenantAwareController;
 use App\Models\BankFile;
 use App\Models\BankSlip;
-use App\Services\Banking\BankSlipBoletoService;
+use App\Services\Banking\BankSlipService;
 use App\Services\Banking\ItauCnab400RemittanceService;
 
 class BankSlipController extends TenantAwareController
@@ -77,7 +77,7 @@ class BankSlipController extends TenantAwareController
 		]);
 		}
 
-	public function generateBoleto($id): void
+	public function generateBankSlip($id): void
 		{
 		$this->requirePermission('bank_slip.informations');
 
@@ -88,7 +88,7 @@ class BankSlipController extends TenantAwareController
 			$this->redirect('bank_slip');
 			}
 
-		$service = new BankSlipBoletoService();
+		$service = new BankSlipService();
 		$bank_slip = $service->build($bankSlip);
 
 		$this->view('bank_slips/bank_slip', [

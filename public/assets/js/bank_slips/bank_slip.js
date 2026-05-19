@@ -1,4 +1,4 @@
-const printButton = document.getElementById('printBoleto');
+const printButton = document.getElementById('printBankSlip');
 
 if (printButton)
 	{

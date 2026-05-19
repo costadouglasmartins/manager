@@ -36,18 +36,18 @@ $interestAmount = (float) ($bankSlip['interest_amount_per_day'] ?? 0);
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Boleto #<?= (int) ($bankSlip['id'] ?? 0); ?></title>
-  <link rel="stylesheet" href="<?= url('assets/css/bank_slips/boleto.css?v=2'); ?>">
+  <link rel="stylesheet" href="<?= url('assets/css/bank_slips/bank_slip.css?v=2'); ?>">
 </head>
 <body>
-  <div class="boleto-toolbar view-actions no-print">
+  <div class="bank-slip-toolbar view-actions no-print">
     <a href="<?= url('bank_slip'); ?>" class="toolbar-button">Voltar</a>
-    <button type="button" id="printBoleto" class="toolbar-button primary">Imprimir</button>
+    <button type="button" id="printBankSlip" class="toolbar-button primary">Imprimir</button>
   </div>
 
-  <main class="boleto-page">
-    <section class="boleto-section">
+  <main class="bank-slip-page">
+    <section class="bank-slip-section">
       <div class="section-title">Recibo do pagador</div>
-      <header class="boleto-header">
+      <header class="bank-slip-header">
         <div class="bank-logo <?= $bankNumber === '341' ? 'itau-logo' : 'generic-logo'; ?>">
           <?= $bankNumber === '341' ? 'Itaú' : $esc($bankName); ?>
         </div>
@@ -101,9 +101,9 @@ $interestAmount = (float) ($bankSlip['interest_amount_per_day'] ?? 0);
 
     <div class="cut-line">Corte na linha pontilhada</div>
 
-    <section class="boleto-section compensation-section">
+    <section class="bank-slip-section compensation-section">
       <div class="section-title">Ficha de compensação</div>
-      <header class="boleto-header">
+      <header class="bank-slip-header">
         <div class="bank-logo <?= $bankNumber === '341' ? 'itau-logo' : 'generic-logo'; ?>">
           <?= $bankNumber === '341' ? 'Itaú' : $esc($bankName); ?>
         </div>
@@ -188,6 +188,6 @@ $interestAmount = (float) ($bankSlip['interest_amount_per_day'] ?? 0);
     </section>
   </main>
 
-  <script src="<?= url('assets/js/bank_slips/boleto.js?v=1'); ?>"></script>
+  <script src="<?= url('assets/js/bank_slips/bank_slip.js?v=1'); ?>"></script>
 </body>
 </html>

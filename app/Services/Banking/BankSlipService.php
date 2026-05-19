@@ -4,10 +4,10 @@ namespace App\Services\Banking;
 
 use DateTimeImmutable;
 
-class BankSlipBoletoService
+class BankSlipService
 	{
 	/**
-	 * Builds printable boleto data from a bank slip row.
+	 * Builds printable bank slip data from a bank slip row.
 	 */
 	public function build(array $bankSlip): array
 		{
@@ -18,7 +18,7 @@ class BankSlipBoletoService
 		$freeField = $this->buildFreeField($bankSlip, $bankNumber);
 
 		$withoutGeneralDigit = $bankNumber . $currencyCode . $dueDateFactor . $amount . $freeField;
-		$generalDigit = (string) $this->modulo11BoletoDigit($withoutGeneralDigit);
+		$generalDigit = (string) $this->modulo11BankSlipDigit($withoutGeneralDigit);
 		$barcode = substr($withoutGeneralDigit, 0, 4) . $generalDigit . substr($withoutGeneralDigit, 4);
 
 		return [
@@ -100,7 +100,7 @@ class BankSlipBoletoService
 		}
 
 	/**
-	 * Converts the barcode into a boleto digitable line.
+	 * Converts the barcode into a bank slip digitable line.
 	 */
 	private function digitableLine(string $barcode): string
 		{
@@ -123,7 +123,7 @@ class BankSlipBoletoService
 		}
 
 	/**
-	 * Calculates the boleto due date factor, including the 2025 rollover rule.
+	 * Calculates the bank slip due date factor, including the 2025 rollover rule.
 	 */
 	private function dueDateFactor(string $date): string
 		{
@@ -164,9 +164,9 @@ class BankSlipBoletoService
 		}
 
 	/**
-	 * Calculates the boleto general barcode check digit.
+	 * Calculates the bank slip general barcode check digit.
 	 */
-	private function modulo11BoletoDigit(string $number): int
+	private function modulo11BankSlipDigit(string $number): int
 		{
 		$sum = 0;
 		$multiplier = 2;

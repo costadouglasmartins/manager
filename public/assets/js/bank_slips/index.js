@@ -14,7 +14,7 @@ if (remittanceForm)
 		if (selectedSlips.length === 0)
 			{
 			event.preventDefault();
-			window.alert('Selecione ao menos um boleto para gerar a remessa.');
+			window.alert('Selecione ao menos um bankSlip para gerar a remessa.');
 			}
 	});
 	}
