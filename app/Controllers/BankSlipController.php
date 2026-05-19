@@ -89,12 +89,12 @@ class BankSlipController extends TenantAwareController
 			}
 
 		$service = new BankSlipBoletoService();
-		$boleto = $service->build($bankSlip);
+		$bank_slip = $service->build($bankSlip);
 
-		$this->view('bank_slips/boleto', [
+		$this->view('bank_slips/bank_slip', [
 			'title' => 'Boleto #' . (int) $id,
 			'bankSlip' => $bankSlip,
-			'boleto' => $boleto,
+			'bank_slip' => $bank_slip,
 		], false);
 		}
 

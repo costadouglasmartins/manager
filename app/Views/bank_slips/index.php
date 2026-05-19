@@ -6,7 +6,7 @@ $statuses = ['DRAFT', 'READY', 'REMITTANCE_GENERATED', 'SENT', 'REGISTERED', 'RE
 
 <h5>Boletos bancários</h5>
 
-<form action="<?= url('bank_slip'); ?>" method="get" class="row g-2 mb-3">
+<form action="<?= url('bank_slip'); ?>" method="get" class="row g-2 mb-3" id="bankSlipFilterForm">
   <div class="col-12 col-md-2"><input type="text" name="id" class="form-control" placeholder="Código" value="<?= htmlspecialchars($filters['id'], ENT_QUOTES, 'UTF-8'); ?>"></div>
   <div class="col-12 col-md-3"><input type="text" name="document_number" class="form-control" placeholder="Seu número" value="<?= htmlspecialchars($filters['document_number'], ENT_QUOTES, 'UTF-8'); ?>"></div>
   <div class="col-12 col-md-3">
@@ -27,12 +27,7 @@ $statuses = ['DRAFT', 'READY', 'REMITTANCE_GENERATED', 'SENT', 'REGISTERED', 'RE
       <?php endforeach; ?>
     </select>
   </div>
-  <div class="col-12 col-md-2 d-grid"><button class="btn btn-primary">Pesquisar</button></div>
 </form>
-
-<div class="d-flex gap-2 mb-3">
-  <?php if (authCan('bank_slip.create')): ?><a class="btn btn-success" href="<?= url('bank_slip/create'); ?>">Novo boleto</a><?php endif; ?>
-</div>
 
 <form action="<?= url('bank_slip/generateRemittance'); ?>" method="post" id="bankSlipRemittanceForm">
   <div class="table-responsive">
@@ -72,7 +67,16 @@ $statuses = ['DRAFT', 'READY', 'REMITTANCE_GENERATED', 'SENT', 'REGISTERED', 'RE
       </tbody>
     </table>
   </div>
-  <?php if (authCan('bank_slip.generateRemittance')): ?><button type="submit" class="btn btn-primary">Gerar remessa Itaú CNAB400</button><?php endif; ?>
 </form>
+
+<div class="view-actions">
+  <button class="btn btn-primary" type="submit" form="bankSlipFilterForm"><i class="bi bi-search"></i> Pesquisar</button>
+  <?php if (authCan('bank_slip.create')): ?>
+    <a class="btn btn-success" href="<?= url('bank_slip/create'); ?>"><i class="bi bi-plus-lg"></i> Novo boleto</a>
+  <?php endif; ?>
+  <?php if (authCan('bank_slip.generateRemittance')): ?>
+    <button type="submit" class="btn btn-primary" form="bankSlipRemittanceForm"><i class="bi bi-file-earmark-arrow-up"></i> Gerar remessa Itaú CNAB400</button>
+  <?php endif; ?>
+</div>
 
 <script src="<?= url('assets/js/bank_slips/index.js?v=2'); ?>"></script>

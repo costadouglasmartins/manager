@@ -1,6 +1,6 @@
 <?php
 $bankSlip = $bankSlip ?? [];
-$boleto = $boleto ?? [];
+$bank_slip = $bank_slip ?? [];
 
 $esc = static fn ($value): string => htmlspecialchars((string) $value, ENT_QUOTES, 'UTF-8');
 $money = static fn ($value): string => 'R$ ' . number_format((float) $value, 2, ',', '.');
@@ -22,11 +22,11 @@ $payerLocation = trim($payerNeighborhood . ' - ' . $payerCity . '/' . $payerStat
 $placeOfPayment = $bankNumber === '341'
 	? 'Até o vencimento, pague preferencialmente no Itaú. Após o vencimento, pague somente no Itaú.'
 	: 'Pagável em qualquer banco até o vencimento.';
-$ourNumberDisplay = (string) ($boleto['our_number_display'] ?? ($bankSlip['our_number'] ?? ''));
-$agencyAccountDisplay = (string) ($boleto['agency_account_display'] ?? '');
-$digitableLine = (string) ($boleto['digitable_line'] ?? '');
-$barcode = (string) ($boleto['barcode'] ?? '');
-$barcodeSvg = (string) ($boleto['barcode_svg'] ?? '');
+$ourNumberDisplay = (string) ($bank_slip['our_number_display'] ?? ($bankSlip['our_number'] ?? ''));
+$agencyAccountDisplay = (string) ($bank_slip['agency_account_display'] ?? '');
+$digitableLine = (string) ($bank_slip['digitable_line'] ?? '');
+$barcode = (string) ($bank_slip['barcode'] ?? '');
+$barcodeSvg = (string) ($bank_slip['barcode_svg'] ?? '');
 $fineAmount = (float) ($bankSlip['fine_amount'] ?? 0);
 $interestAmount = (float) ($bankSlip['interest_amount_per_day'] ?? 0);
 ?>
@@ -36,10 +36,10 @@ $interestAmount = (float) ($bankSlip['interest_amount_per_day'] ?? 0);
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Boleto #<?= (int) ($bankSlip['id'] ?? 0); ?></title>
-  <link rel="stylesheet" href="<?= url('assets/css/bank_slips/boleto.css?v=1'); ?>">
+  <link rel="stylesheet" href="<?= url('assets/css/bank_slips/boleto.css?v=2'); ?>">
 </head>
 <body>
-  <div class="boleto-toolbar no-print">
+  <div class="boleto-toolbar view-actions no-print">
     <a href="<?= url('bank_slip'); ?>" class="toolbar-button">Voltar</a>
     <button type="button" id="printBoleto" class="toolbar-button primary">Imprimir</button>
   </div>
