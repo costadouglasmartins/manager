@@ -2,11 +2,20 @@
 
 namespace App\Models;
 
+use App\Core\Database;
 use App\Core\TenantModel;
 use PDO;
 
 class BankAccount extends TenantModel
 	{
+	/**
+	 * Returns the manager bank table.
+	 */
+	private function bankTable(): string
+		{
+		return sprintf('`%s`.`banks`', Database::getManagerDatabaseName());
+		}
+
 	/**
 	 * Returns the base bank account select query with bank data.
 	 */
@@ -23,7 +32,8 @@ class BankAccount extends TenantModel
 		              Bank.name AS bank_name,
 		              Bank.number AS bank_number
 		       FROM bank_accounts AS BankAccount
-		       INNER JOIN banks AS Bank ON Bank.id = BankAccount.bank_id";
+		       INNER JOIN " . $this->bankTable() . " AS Bank ON Bank.id = BankAccount.bank_id
+		                                                  AND Bank.active = 1";
 		}
 
 	/**
@@ -184,6 +194,8 @@ class BankAccount extends TenantModel
 		{
 		$sql = "SELECT COUNT(*) AS total
 		        FROM bank_accounts AS BankAccount
+		        INNER JOIN " . $this->bankTable() . " AS Bank ON Bank.id = BankAccount.bank_id
+		                                                   AND Bank.active = 1
 		        WHERE 1 = 1";
 		$params = [];
 

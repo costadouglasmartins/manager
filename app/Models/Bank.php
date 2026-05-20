@@ -2,11 +2,19 @@
 
 namespace App\Models;
 
-use App\Core\TenantModel;
+use App\Core\Model;
 use PDO;
 
-class Bank extends TenantModel
+class Bank extends Model
 	{
+	/**
+	 * Returns the manager bank table.
+	 */
+	private function bankTable(): string
+		{
+		return $this->managerTable('banks');
+		}
+
 	/**
 	 * Returns the base bank select query.
 	 */
@@ -18,7 +26,7 @@ class Bank extends TenantModel
 		              Bank.active,
 		              Bank.created,
 		              Bank.modified
-		       FROM banks AS Bank";
+		       FROM " . $this->bankTable() . " AS Bank";
 		}
 
 	/**
@@ -34,7 +42,7 @@ class Bank extends TenantModel
 			{
 			$this->db->beginTransaction();
 
-			$sql = "INSERT INTO banks
+			$sql = "INSERT INTO " . $this->bankTable() . "
 			            (`name`, `number`, `active`, `created`, `modified`)
 			        VALUES
 			            (:name, :number, :active, :created, :modified)";
@@ -42,7 +50,7 @@ class Bank extends TenantModel
 			$stmt->execute([
 				'name'     => trim((string) ($data['name'] ?? '')),
 				'number'   => trim((string) ($data['number'] ?? '')),
-				'active'   => ((string) ($data['active'] ?? '1') === '1') ? 1 : 0,
+				'active'   => 1,
 				'created'  => date('Y-m-d H:i:s'),
 				'modified' => date('Y-m-d H:i:s'),
 			]);
@@ -65,6 +73,7 @@ class Bank extends TenantModel
 	public function getOptions(): array
 		{
 		$stmt = $this->db->query($this->baseSelectSql() . "
+			WHERE Bank.active = 1
 			ORDER BY Bank.name ASC,
 			         Bank.number ASC
 		");
@@ -81,6 +90,7 @@ class Bank extends TenantModel
 		{
 		$stmt = $this->db->prepare($this->baseSelectSql() . "
 			WHERE Bank.id = :id
+			  AND Bank.active = 1
 		");
 		$stmt->execute(['id' => (int) $id]);
 
@@ -96,18 +106,19 @@ class Bank extends TenantModel
 	public function update($id, array $data): void
 		{
 		$stmt = $this->db->prepare("
-			UPDATE banks
+			UPDATE " . $this->bankTable() . "
 			SET `name` = :name,
 			    `number` = :number,
 			    `active` = :active,
 			    `modified` = :modified
 			WHERE id = :id
+			  AND active = 1
 		");
 
 		$stmt->execute([
 			'name'     => trim((string) ($data['name'] ?? '')),
 			'number'   => trim((string) ($data['number'] ?? '')),
-			'active'   => ((string) ($data['active'] ?? '0') === '1') ? 1 : 0,
+			'active'   => 1,
 			'modified' => date('Y-m-d H:i:s'),
 			'id'       => (int) $id,
 		]);
@@ -119,7 +130,7 @@ class Bank extends TenantModel
 	public function search(array $filters = [], int $limit = 10, int $offset = 0): array
 		{
 		$sql = $this->baseSelectSql() . "
-			WHERE 1 = 1
+			WHERE Bank.active = 1
 		";
 		$params = [];
 
@@ -139,12 +150,6 @@ class Bank extends TenantModel
 			{
 			$sql .= " AND Bank.`number` LIKE :number";
 			$params['number'] = '%' . $filters['number'] . '%';
-			}
-
-		if (isset($filters['active']) && in_array((string) $filters['active'], ['0', '1'], true))
-			{
-			$sql .= " AND Bank.`active` = :active";
-			$params['active'] = (int) $filters['active'];
 			}
 
 		$sql .= "
@@ -173,8 +178,8 @@ class Bank extends TenantModel
 	public function count(array $filters = []): int
 		{
 		$sql = "SELECT COUNT(*) AS total
-		        FROM banks AS Bank
-		        WHERE 1 = 1";
+		        FROM " . $this->bankTable() . " AS Bank
+		        WHERE Bank.active = 1";
 		$params = [];
 
 		if (isset($filters['id']) && $filters['id'] !== '')
@@ -193,12 +198,6 @@ class Bank extends TenantModel
 			{
 			$sql .= " AND Bank.`number` LIKE :number";
 			$params['number'] = '%' . $filters['number'] . '%';
-			}
-
-		if (isset($filters['active']) && in_array((string) $filters['active'], ['0', '1'], true))
-			{
-			$sql .= " AND Bank.`active` = :active";
-			$params['active'] = (int) $filters['active'];
 			}
 
 		$stmt = $this->db->prepare($sql);

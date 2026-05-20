@@ -2,10 +2,10 @@
 
 namespace App\Controllers;
 
-use App\Core\TenantAwareController;
+use App\Core\Controller;
 use App\Models\Bank;
 
-class BankController extends TenantAwareController
+class BankController extends Controller
 	{
 	/**
 	 * Lists banks with filters and pagination.
@@ -19,7 +19,6 @@ class BankController extends TenantAwareController
 			'id'     => isset($_GET['id']) ? trim($_GET['id']) : '',
 			'name'   => isset($_GET['name']) ? trim($_GET['name']) : '',
 			'number' => isset($_GET['number']) ? trim($_GET['number']) : '',
-			'active' => isset($_GET['active']) ? trim($_GET['active']) : '',
 		];
 
 		$page = isset($_GET['page']) ? (int) $_GET['page'] : 1;
@@ -58,60 +57,6 @@ class BankController extends TenantAwareController
 			'totalPages' => $totalPages,
 			'total'      => $total,
 		]);
-		}
-
-	/**
-	 * Renders the bank creation form.
-	 */
-	public function create(): void
-		{
-		$this->requirePermission('bank.create');
-		$this->view('banks/create', ['title' => 'Novo banco']);
-		}
-
-	/**
-	 * Persists a new bank and redirects back to the listing.
-	 */
-	public function store(): void
-		{
-		$this->requirePermission('bank.store');
-
-		$bank = new Bank();
-		$bank->create($_POST);
-		$this->redirect('bank');
-		}
-
-	/**
-	 * Renders the bank edit form.
-	 *
-	 * @param mixed $id Bank identifier.
-	 */
-	public function edit($id): void
-		{
-		$this->requirePermission('bank.edit');
-
-		$bank = new Bank();
-		$data = $bank->find($id);
-		if (!$data)
-			{
-			$this->redirect('bank');
-			}
-
-		$this->view('banks/edit', ['title' => 'Editar banco', 'bank' => $data]);
-		}
-
-	/**
-	 * Updates an existing bank.
-	 *
-	 * @param mixed $id Bank identifier.
-	 */
-	public function update($id): void
-		{
-		$this->requirePermission('bank.update');
-
-		$bank = new Bank();
-		$bank->update($id, $_POST);
-		$this->redirect('bank');
 		}
 
 	/**

@@ -2,11 +2,20 @@
 
 namespace App\Models;
 
+use App\Core\Database;
 use App\Core\TenantModel;
 use PDO;
 
 class BankSlip extends TenantModel
 	{
+	/**
+	 * Returns the manager bank table.
+	 */
+	private function bankTable(): string
+		{
+		return sprintf('`%s`.`banks`', Database::getManagerDatabaseName());
+		}
+
 	/**
 	 * Base select for bank slips.
 	 */
@@ -24,7 +33,8 @@ class BankSlip extends TenantModel
 		              FinancialOperationPayment.value AS payment_value
 		       FROM bank_slips AS BankSlip
 		       INNER JOIN bank_accounts AS BankAccount ON BankAccount.id = BankSlip.bank_account_id
-		       INNER JOIN banks AS Bank ON Bank.id = BankAccount.bank_id
+		       INNER JOIN " . $this->bankTable() . " AS Bank ON Bank.id = BankAccount.bank_id
+		                                                  AND Bank.active = 1
 		       LEFT JOIN bank_files AS BankFile ON BankFile.id = BankSlip.bank_file_id
 		       LEFT JOIN financial_operations_payments AS FinancialOperationPayment ON FinancialOperationPayment.id = BankSlip.financial_operation_payment_id";
 		}
@@ -39,7 +49,8 @@ class BankSlip extends TenantModel
 			       Bank.name AS bank_name,
 			       Bank.number AS bank_number
 			FROM bank_accounts AS BankAccount
-			INNER JOIN banks AS Bank ON Bank.id = BankAccount.bank_id
+			INNER JOIN " . $this->bankTable() . " AS Bank ON Bank.id = BankAccount.bank_id
+			                                      AND Bank.active = 1
 			WHERE BankAccount.active = 1
 			ORDER BY Bank.name ASC, BankAccount.name ASC
 		");
@@ -131,7 +142,12 @@ class BankSlip extends TenantModel
 
 	public function count(array $filters = []): int
 		{
-		$sql = "SELECT COUNT(*) FROM bank_slips AS BankSlip WHERE 1 = 1";
+		$sql = "SELECT COUNT(*)
+		        FROM bank_slips AS BankSlip
+		        INNER JOIN bank_accounts AS BankAccount ON BankAccount.id = BankSlip.bank_account_id
+		        INNER JOIN " . $this->bankTable() . " AS Bank ON Bank.id = BankAccount.bank_id
+		                                                   AND Bank.active = 1
+		        WHERE 1 = 1";
 		$params = [];
 
 		if (($filters['id'] ?? '') !== '')

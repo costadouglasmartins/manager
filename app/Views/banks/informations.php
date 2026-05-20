@@ -16,9 +16,6 @@ $formatDateTime = static function ($value): string {
 		}
 };
 
-$activeLabel = static function ($value): string {
-	return ((int) $value === 1) ? 'Ativo' : 'Inativo';
-};
 ?>
 <h5>Dados do banco</h5>
 <div class="table-responsive mb-3">
@@ -35,10 +32,6 @@ $activeLabel = static function ($value): string {
       <tr>
         <th class="text-muted">Nome</th>
         <td><?= htmlspecialchars($bank['name'], ENT_QUOTES, 'UTF-8'); ?></td>
-      </tr>
-      <tr>
-        <th class="text-muted">Status</th>
-        <td><?= $activeLabel($bank['active']); ?></td>
       </tr>
       <tr>
         <th class="text-muted">Criado em</th>

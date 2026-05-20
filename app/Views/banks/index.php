@@ -1,5 +1,5 @@
 <?php
-$filters = $filters ?? ['id' => '', 'name' => '', 'number' => '', 'active' => ''];
+$filters = $filters ?? ['id' => '', 'name' => '', 'number' => ''];
 $page = $page ?? 1;
 $totalPages = $totalPages ?? 1;
 $total = $total ?? (is_array($banks) ? count($banks) : 0);
@@ -8,12 +8,7 @@ $queryFilters = http_build_query([
 	'id'     => $filters['id'],
 	'name'   => $filters['name'],
 	'number' => $filters['number'],
-	'active' => $filters['active'],
 ]);
-
-$activeLabel = static function ($value): string {
-	return ((int) $value === 1) ? 'Ativo' : 'Inativo';
-};
 ?>
 <h5>Lista de Bancos</h5>
 
@@ -22,20 +17,12 @@ $activeLabel = static function ($value): string {
   <div class="col-12 col-lg-9">
     <div class="row g-3">
 
-      <div class="col-12 col-md-6 col-lg-4">
+      <div class="col-12 col-md-6">
         <input class="form-control" id="number" maxlength="4" name="number" type="text" placeholder="Número" value="<?= htmlspecialchars($filters['number'], ENT_QUOTES, 'UTF-8'); ?>">
       </div>
 
-      <div class="col-12 col-md-6 col-lg-4">
+      <div class="col-12 col-md-6">
         <input class="form-control" id="name" maxlength="50" name="name" type="text" placeholder="Nome" value="<?= htmlspecialchars($filters['name'], ENT_QUOTES, 'UTF-8'); ?>">
-      </div>
-
-      <div class="col-12 col-md-6 col-lg-4">
-        <select class="form-select" id="active" name="active">
-          <option value="" <?= $filters['active'] === '' ? 'selected' : ''; ?>>Todos</option>
-          <option value="1" <?= $filters['active'] === '1' ? 'selected' : ''; ?>>Ativos</option>
-          <option value="0" <?= $filters['active'] === '0' ? 'selected' : ''; ?>>Inativos</option>
-        </select>
       </div>
 
     </div>
@@ -62,7 +49,6 @@ $activeLabel = static function ($value): string {
         <th>#</th>
         <th>Número</th>
         <th>Nome</th>
-        <th>Status</th>
         <th class="text-end">Ações</th>
       </tr>
     </thead>
@@ -73,11 +59,6 @@ $activeLabel = static function ($value): string {
             <td style="width:1%;"><?= (int) $row['id']; ?></td>
             <td><?= htmlspecialchars($row['number'], ENT_QUOTES, 'UTF-8'); ?></td>
             <td><?= htmlspecialchars($row['name'], ENT_QUOTES, 'UTF-8'); ?></td>
-            <td>
-              <span class="badge <?= ((int) $row['active'] === 1) ? 'text-bg-success' : 'text-bg-secondary'; ?>">
-                <?= $activeLabel($row['active']); ?>
-              </span>
-            </td>
             <td style="width:1%;" class="text-nowrap text-end">
               <?php if (authCan('bank.edit')): ?>
                 <a href="<?= url('bank/edit/' . $row['id']); ?>" data-bs-toggle="popover" data-bs-trigger="hover focus" data-bs-content="Editar"><i class="bi bi-pencil-square"></i></a>
@@ -90,7 +71,7 @@ $activeLabel = static function ($value): string {
         <?php endforeach; ?>
       <?php else: ?>
         <tr>
-          <td colspan="5" class="text-center">Nenhum registro encontrado.</td>
+          <td colspan="4" class="text-center">Nenhum registro encontrado.</td>
         </tr>
       <?php endif; ?>
     </tbody>
