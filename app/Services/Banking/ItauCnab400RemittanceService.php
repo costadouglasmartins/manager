@@ -2,8 +2,26 @@
 
 namespace App\Services\Banking;
 
-class ItauCnab400RemittanceService
+class ItauCnab400RemittanceService implements RemittanceGeneratorInterface
 	{
+	/**
+	 * Checks whether this generator can handle Itaú CNAB 400.
+	 */
+	public function supports(array $bankAccount, string $layout): bool
+		{
+		$bankNumber = preg_replace('/\D+/', '', (string) ($bankAccount['bank_number'] ?? '')) ?? '';
+		return str_pad($bankNumber, 3, '0', STR_PAD_LEFT) === '341' && strtoupper($layout) === 'CNAB400';
+		}
+
+	/**
+	 * Returns a safe file name for the generated remittance.
+	 */
+	public function fileName(array $bankAccount, int $sequence = 1): string
+		{
+		$accountId = preg_replace('/\D+/', '', (string) ($bankAccount['bank_account_id'] ?? $bankAccount['id'] ?? $sequence)) ?? '';
+		return 'itau_cnab400_' . str_pad($accountId, 4, '0', STR_PAD_LEFT) . '_' . date('Ymd_His') . '.rem';
+		}
+
 	/**
 	 * Generates a CNAB400 remittance payload.
 	 *

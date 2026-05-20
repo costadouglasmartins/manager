@@ -111,7 +111,19 @@ class BankSlip extends TenantModel
 			$sql .= " AND BankSlip.id = :id";
 			$params['id'] = (int) $filters['id'];
 			}
-		if (($filters['bank_account_id'] ?? '') !== '')
+		$bankAccountIds = $this->bankAccountFilterIds($filters);
+		if ($bankAccountIds !== [])
+			{
+			$placeholders = [];
+			foreach ($bankAccountIds as $index => $bankAccountId)
+				{
+				$key = 'bank_account_id_' . $index;
+				$placeholders[] = ':' . $key;
+				$params[$key] = $bankAccountId;
+				}
+			$sql .= " AND BankSlip.bank_account_id IN (" . implode(',', $placeholders) . ")";
+			}
+		elseif (($filters['bank_account_id'] ?? '') !== '')
 			{
 			$sql .= " AND BankSlip.bank_account_id = :bank_account_id";
 			$params['bank_account_id'] = (int) $filters['bank_account_id'];
@@ -127,7 +139,7 @@ class BankSlip extends TenantModel
 			$params['document_number'] = '%' . trim((string) $filters['document_number']) . '%';
 			}
 
-		$sql .= " ORDER BY BankSlip.id DESC LIMIT :limit OFFSET :offset";
+		$sql .= " ORDER BY Bank.name ASC, BankAccount.name ASC, BankSlip.id DESC LIMIT :limit OFFSET :offset";
 		$stmt = $this->db->prepare($sql);
 		foreach ($params as $key => $value)
 			{
@@ -155,7 +167,19 @@ class BankSlip extends TenantModel
 			$sql .= " AND BankSlip.id = :id";
 			$params['id'] = (int) $filters['id'];
 			}
-		if (($filters['bank_account_id'] ?? '') !== '')
+		$bankAccountIds = $this->bankAccountFilterIds($filters);
+		if ($bankAccountIds !== [])
+			{
+			$placeholders = [];
+			foreach ($bankAccountIds as $index => $bankAccountId)
+				{
+				$key = 'bank_account_id_' . $index;
+				$placeholders[] = ':' . $key;
+				$params[$key] = $bankAccountId;
+				}
+			$sql .= " AND BankSlip.bank_account_id IN (" . implode(',', $placeholders) . ")";
+			}
+		elseif (($filters['bank_account_id'] ?? '') !== '')
 			{
 			$sql .= " AND BankSlip.bank_account_id = :bank_account_id";
 			$params['bank_account_id'] = (int) $filters['bank_account_id'];
@@ -197,7 +221,7 @@ class BankSlip extends TenantModel
 			}
 
 		$placeholders = implode(',', array_fill(0, count($ids), '?'));
-		$sql = $this->baseSelectSql() . " WHERE BankSlip.id IN ({$placeholders}) AND BankSlip.status IN ('READY','REJECTED') ORDER BY BankSlip.id ASC";
+		$sql = $this->baseSelectSql() . " WHERE BankSlip.id IN ({$placeholders}) AND BankSlip.status IN ('READY','REJECTED') ORDER BY BankSlip.bank_account_id ASC, BankSlip.id ASC";
 		$stmt = $this->db->prepare($sql);
 		$stmt->execute($ids);
 		return $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -218,6 +242,21 @@ class BankSlip extends TenantModel
 		$params = array_merge([$bankFileId, date('Y-m-d H:i:s')], $ids);
 		$stmt = $this->db->prepare($sql);
 		$stmt->execute($params);
+		}
+
+	/**
+	 * Normalizes the multi-account filter ids.
+	 */
+	private function bankAccountFilterIds(array $filters): array
+		{
+		$ids = $filters['bank_account_ids'] ?? [];
+		if (!is_array($ids))
+			{
+			$ids = [$ids];
+			}
+
+		$ids = array_values(array_unique(array_filter(array_map('intval', $ids), static fn ($id) => $id > 0)));
+		return $ids;
 		}
 
 	private function normalizeDecimal($value): string

@@ -30,44 +30,6 @@ class Bank extends Model
 		}
 
 	/**
-	 * Creates a bank and returns the inserted identifier.
-	 *
-	 * @param array $data Data to save.
-	 * @return array
-	 * @throws \Exception
-	 */
-	public function create($data): array
-		{
-		try
-			{
-			$this->db->beginTransaction();
-
-			$sql = "INSERT INTO " . $this->bankTable() . "
-			            (`name`, `number`, `active`, `created`, `modified`)
-			        VALUES
-			            (:name, :number, :active, :created, :modified)";
-			$stmt = $this->db->prepare($sql);
-			$stmt->execute([
-				'name'     => trim((string) ($data['name'] ?? '')),
-				'number'   => trim((string) ($data['number'] ?? '')),
-				'active'   => 1,
-				'created'  => date('Y-m-d H:i:s'),
-				'modified' => date('Y-m-d H:i:s'),
-			]);
-
-			$bankId = (int) $this->db->lastInsertId();
-			$this->db->commit();
-
-			return ['bank_id' => $bankId];
-			}
-		catch (\Exception $e)
-			{
-			$this->db->rollBack();
-			throw $e;
-			}
-		}
-
-	/**
 	 * Returns all banks ordered by name.
 	 */
 	public function getOptions(): array
@@ -95,33 +57,6 @@ class Bank extends Model
 		$stmt->execute(['id' => (int) $id]);
 
 		return $stmt->fetch(PDO::FETCH_ASSOC);
-		}
-
-	/**
-	 * Updates an existing bank.
-	 *
-	 * @param mixed $id Bank identifier.
-	 * @param array $data Updated bank data.
-	 */
-	public function update($id, array $data): void
-		{
-		$stmt = $this->db->prepare("
-			UPDATE " . $this->bankTable() . "
-			SET `name` = :name,
-			    `number` = :number,
-			    `active` = :active,
-			    `modified` = :modified
-			WHERE id = :id
-			  AND active = 1
-		");
-
-		$stmt->execute([
-			'name'     => trim((string) ($data['name'] ?? '')),
-			'number'   => trim((string) ($data['number'] ?? '')),
-			'active'   => 1,
-			'modified' => date('Y-m-d H:i:s'),
-			'id'       => (int) $id,
-		]);
 		}
 
 	/**
