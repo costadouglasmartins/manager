@@ -4,13 +4,29 @@ namespace App\Services\Banking;
 
 class ItauCnab400RemittanceService implements RemittanceGeneratorInterface
 	{
+	private const BANK_NUMBER = '341';
+	private const LAYOUT = 'CNAB400';
+
+	/**
+	 * Returns the available Itaú CNAB 400 remittance option.
+	 */
+	public function options(): array
+		{
+		return [[
+			'bank_number' => self::BANK_NUMBER,
+			'bank_name' => 'Itaú',
+			'layout' => self::LAYOUT,
+			'label' => 'Itaú CNAB400',
+		]];
+		}
+
 	/**
 	 * Checks whether this generator can handle Itaú CNAB 400.
 	 */
 	public function supports(array $bankAccount, string $layout): bool
 		{
 		$bankNumber = preg_replace('/\D+/', '', (string) ($bankAccount['bank_number'] ?? '')) ?? '';
-		return str_pad($bankNumber, 3, '0', STR_PAD_LEFT) === '341' && strtoupper($layout) === 'CNAB400';
+		return substr(str_pad($bankNumber, 3, '0', STR_PAD_LEFT), -3) === self::BANK_NUMBER && strtoupper($layout) === self::LAYOUT;
 		}
 
 	/**

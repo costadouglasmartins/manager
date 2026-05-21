@@ -58,7 +58,7 @@ $queryFilters = http_build_query([
           <tr>
             <td style="width:1%;"><?= (int) $row['id']; ?></td>
             <td><?= htmlspecialchars($row['number'], ENT_QUOTES, 'UTF-8'); ?></td>
-            <td><?= htmlspecialchars($row['name'], ENT_QUOTES, 'UTF-8'); ?></td>
+            <td><?= htmlspecialchars($row['name'], ENT_QUOTES, 'UTF-8'); ?> - CNAB <?= htmlspecialchars($row['cnab'], ENT_QUOTES, 'UTF-8'); ?></td>
             <td style="width:1%;" class="text-nowrap text-end">
               <?php if (authCan('bank.edit')): ?>
                 <a href="<?= url('bank/edit/' . $row['id']); ?>" data-bs-toggle="popover" data-bs-trigger="hover focus" data-bs-content="Editar"><i class="bi bi-pencil-square"></i></a>

@@ -5,6 +5,11 @@ namespace App\Services\Banking;
 interface RemittanceGeneratorInterface
 	{
 	/**
+	 * Returns the remittance options exposed by this generator.
+	 */
+	public function options(): array;
+
+	/**
 	 * Checks whether this generator can handle the bank account and layout.
 	 */
 	public function supports(array $bankAccount, string $layout): bool;

@@ -11,7 +11,7 @@
 }
 
 .bank-slip-actions a {
-	color: #0d6efd;
+	color: var(--app-accent);
 	font-size: 1.05rem;
 	line-height: 1;
 	text-decoration: none;
@@ -19,5 +19,107 @@
 
 .bank-slip-actions a:hover,
 .bank-slip-actions a:focus {
-	color: #0a58ca;
+	color: var(--app-accent-hover);
+}
+
+.bank-slip-account-block + .bank-slip-account-block {
+	border-top: 1px solid var(--app-border);
+	margin-top: 20px;
+	padding-top: 20px;
+}
+
+.bank-slip-account-heading {
+	align-items: flex-end;
+	display: flex;
+	gap: 8px 16px;
+	justify-content: space-between;
+	margin-bottom: 10px;
+}
+
+.bank-slip-account-heading h6 {
+	color: var(--app-text);
+	font-size: 1rem;
+	font-weight: 800;
+	margin: 0;
+	overflow-wrap: anywhere;
+}
+
+.bank-slip-account-heading span {
+	color: var(--app-muted);
+	font-size: 0.875rem;
+	font-weight: 650;
+	white-space: nowrap;
+}
+
+.bank-slip-account-table {
+	border: 1px solid var(--app-border);
+	border-radius: 8px;
+	overflow: hidden;
+}
+
+.bank-slip-empty-state {
+	color: var(--app-muted);
+	padding: 1rem;
+	text-align: center;
+}
+
+.bank-slip-remittance-panel {
+	border-top: 1px solid var(--app-border);
+	align-items: center;
+	display: flex;
+	gap: 12px;
+	justify-content: space-between;
+	margin-top: 12px;
+	padding-top: 12px;
+}
+
+.bank-slip-remittance-summary {
+	display: grid;
+	gap: 2px;
+	min-width: 0;
+}
+
+.bank-slip-remittance-summary strong {
+	color: var(--app-text);
+	overflow-wrap: anywhere;
+}
+
+.bank-slip-remittance-summary span {
+	color: var(--app-muted);
+	font-size: 0.875rem;
+}
+
+.bank-slip-remittance-buttons {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 8px;
+	justify-content: flex-end;
+}
+
+.bank-slip-remittance-button {
+	align-items: center;
+	display: inline-flex;
+	gap: 6px;
+	justify-content: center;
+	white-space: normal;
+}
+
+@media (max-width: 767.98px) {
+	.bank-slip-account-heading,
+	.bank-slip-remittance-panel {
+		align-items: stretch;
+		flex-direction: column;
+	}
+
+	.bank-slip-account-heading span {
+		white-space: normal;
+	}
+
+	.bank-slip-remittance-buttons {
+		justify-content: stretch;
+	}
+
+	.bank-slip-remittance-button {
+		width: 100%;
+	}
 }

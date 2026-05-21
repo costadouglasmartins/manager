@@ -23,6 +23,7 @@ class Bank extends Model
 		return "SELECT Bank.id,
 		              Bank.name,
 		              Bank.number,
+		              Bank.cnab,
 		              Bank.active,
 		              Bank.created,
 		              Bank.modified

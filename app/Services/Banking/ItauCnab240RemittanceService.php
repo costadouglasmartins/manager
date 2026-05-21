@@ -8,6 +8,19 @@ class ItauCnab240RemittanceService extends AbstractCnabRemittanceService
 	private const LAYOUT = 'CNAB240';
 
 	/**
+	 * Returns the available Itaú CNAB 240 remittance option.
+	 */
+	public function options(): array
+		{
+		return [[
+			'bank_number' => self::BANK_NUMBER,
+			'bank_name' => 'Itaú',
+			'layout' => self::LAYOUT,
+			'label' => 'Itaú CNAB240',
+		]];
+		}
+
+	/**
 	 * Checks whether this generator can handle Itaú CNAB 240.
 	 */
 	public function supports(array $bankAccount, string $layout): bool

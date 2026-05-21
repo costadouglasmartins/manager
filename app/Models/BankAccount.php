@@ -30,7 +30,8 @@ class BankAccount extends TenantModel
 		              BankAccount.created,
 		              BankAccount.modified,
 		              Bank.name AS bank_name,
-		              Bank.number AS bank_number
+		              Bank.number AS bank_number,
+		              Bank.cnab AS bank_cnab
 		       FROM bank_accounts AS BankAccount
 		       INNER JOIN " . $this->bankTable() . " AS Bank ON Bank.id = BankAccount.bank_id
 		                                                  AND Bank.active = 1";

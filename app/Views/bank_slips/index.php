@@ -1,8 +1,28 @@
 <?php
-$filters = $filters ?? ['id' => '', 'bank_account_id' => '', 'status' => '', 'document_number' => ''];
+$filters = $filters ?? ['id' => '', 'bank_account_id' => '', 'bank_account_ids' => [], 'status' => '', 'document_number' => ''];
 $statuses = ['DRAFT', 'READY', 'REMITTANCE_GENERATED', 'SENT', 'REGISTERED', 'REJECTED', 'PAID', 'CANCELED', 'WRITTEN_OFF'];
+$selectedBankAccountIds = $filters['bank_account_ids'] ?? [];
+if (!is_array($selectedBankAccountIds))
+  {
+  $selectedBankAccountIds = [$selectedBankAccountIds];
+  }
+$selectedBankAccountIds = array_values(array_unique(array_filter(array_map('intval', $selectedBankAccountIds), static fn ($id) => $id > 0)));
+$bankSlipGroups = $bankSlipGroups ?? [];
+$accountLabel = static function (array $account): string {
+  $label = trim(($account['bank_name'] ?? '') . ' - ' . ($account['name'] ?? $account['bank_account_name'] ?? ''), ' -');
+  $cnab = preg_replace('/\D+/', '', (string) ($account['bank_cnab'] ?? '')) ?? '';
+  if ($cnab !== '')
+    {
+    $label .= ' (CNAB' . $cnab . ')';
+    }
+
+  return $label;
+};
+$canGenerateRemittance = static function (array $bankSlip): bool {
+  return in_array((string) ($bankSlip['status'] ?? ''), ['READY', 'REJECTED'], true);
+};
 ?>
-<link rel="stylesheet" href="<?= url('assets/css/bank_slips/index.css?v=2'); ?>">
+<link rel="stylesheet" href="<?= url('assets/css/bank_slips/index.css?v=6'); ?>">
 
 <h5>Boletos bancários</h5>
 
@@ -15,8 +35,8 @@ $statuses = ['DRAFT', 'READY', 'REMITTANCE_GENERATED', 'SENT', 'REGISTERED', 'RE
         <select name="bank_account_id" class="form-select">
           <option value="">Conta bancária</option>
           <?php foreach ($bankAccounts as $account): ?>
-            <option value="<?= (int) $account['id']; ?>" <?= ((string) $filters['bank_account_id'] === (string) $account['id']) ? 'selected' : ''; ?>>
-              <?= htmlspecialchars(($account['bank_name'] ?? '') . ' - ' . ($account['name'] ?? ''), ENT_QUOTES, 'UTF-8'); ?>
+            <option value="<?= (int) $account['id']; ?>" <?= in_array((int) $account['id'], $selectedBankAccountIds, true) ? 'selected' : ''; ?>>
+              <?= htmlspecialchars($accountLabel($account), ENT_QUOTES, 'UTF-8'); ?>
             </option>
           <?php endforeach; ?>
         </select>
@@ -37,51 +57,109 @@ $statuses = ['DRAFT', 'READY', 'REMITTANCE_GENERATED', 'SENT', 'REGISTERED', 'RE
       <?php if (authCan('bank_slip.create')): ?>
         <a class="btn btn-success w-100" href="<?= url('bank_slip/create'); ?>"><i class="bi bi-plus-lg"></i> Novo boleto</a>
       <?php endif; ?>
-      <?php if (authCan('bank_slip.generateRemittance')): ?>
-        <button type="submit" class="btn btn-primary w-100" form="bankSlipRemittanceForm"><i class="bi bi-file-earmark-arrow-up"></i> Gerar remessa Itaú CNAB400</button>
-      <?php endif; ?>
     </div>
   </div>
 </form>
 
 <form action="<?= url('bank_slip/generateRemittance'); ?>" method="post" id="bankSlipRemittanceForm">
-  <div class="table-responsive">
-    <table class="table table-striped align-middle">
-      <thead><tr><th></th><th>#</th><th>Conta</th><th>Documento</th><th>Sacado</th><th>Vencimento</th><th>Valor</th><th>Status</th><th>Ações</th></tr></thead>
-      <tbody>
-      <?php if (!empty($bankSlips)): foreach ($bankSlips as $row): ?>
-        <?php $canGenerateRemittanceForRow = in_array((string) ($row['status'] ?? ''), ['READY', 'REJECTED'], true); ?>
-        <tr>
-          <td>
-            <?php if ($canGenerateRemittanceForRow): ?>
-              <input type="checkbox" name="bank_slip_ids[]" value="<?= (int) $row['id']; ?>">
-            <?php endif; ?>
-          </td>
-          <td><?= (int) $row['id']; ?></td>
-          <td><?= htmlspecialchars(($row['bank_name'] ?? '') . ' / ' . ($row['bank_account_name'] ?? ''), ENT_QUOTES, 'UTF-8'); ?></td>
-          <td><?= htmlspecialchars((string) $row['document_number'], ENT_QUOTES, 'UTF-8'); ?></td>
-          <td><?= htmlspecialchars((string) $row['payer_name'], ENT_QUOTES, 'UTF-8'); ?></td>
-          <td><?= htmlspecialchars((string) $row['due_date'], ENT_QUOTES, 'UTF-8'); ?></td>
-          <td>R$ <?= number_format((float) $row['amount'], 2, ',', '.'); ?></td>
-          <td><?= htmlspecialchars((string) $row['status'], ENT_QUOTES, 'UTF-8'); ?></td>
-          <td>
-            <div class="bank-slip-actions">
-              <a href="<?= url('bank_slip/informations/' . (int) $row['id']); ?>" title="Informações"><i class="bi bi-search"></i></a>
-              <?php if (authCan('bank_slip.informations')): ?>
-                <a href="<?= url('bank_slip/generateBankSlip/' . (int) $row['id']); ?>" title="Gerar boleto" target="_blank" rel="noopener"><i class="bi bi-upc-scan"></i></a>
-              <?php endif; ?>
-              <?php if (authCan('bank_slip.generateRemittance') && !empty($row['bank_file_path'])): ?>
-                <a href="<?= url((string) $row['bank_file_path']); ?>" title="Baixar remessa" download><i class="bi bi-file-arrow-down"></i></a>
-              <?php endif; ?>
+  <?php if (!empty($bankSlipGroups)): ?>
+    <?php foreach ($bankSlipGroups as $group): ?>
+      <?php
+      $bankAccount = $group['bank_account'] ?? [];
+      $bankAccountId = (int) ($bankAccount['bank_account_id'] ?? $bankAccount['id'] ?? 0);
+      $remittanceCount = (int) ($group['remittance_count'] ?? 0);
+      $remittanceOptions = $group['remittance_options'] ?? [];
+      ?>
+      <section class="bank-slip-account-block">
+        <div class="bank-slip-account-heading">
+          <h6><?= htmlspecialchars($accountLabel($bankAccount), ENT_QUOTES, 'UTF-8'); ?></h6>
+          <span><?= count($group['slips'] ?? []); ?> boleto(s) · <?= $remittanceCount; ?> apto(s) para remessa</span>
+        </div>
+
+        <div class="table-responsive bank-slip-account-table">
+          <table class="table table-striped align-middle">
+            <thead>
+              <tr>
+                <th>
+                  <input
+                    class="form-check-input bank-slip-select-account"
+                    type="checkbox"
+                    data-bank-account-id="<?= $bankAccountId; ?>"
+                    title="Selecionar boletos desta conta"
+                    <?= $remittanceCount > 0 ? '' : 'disabled'; ?>>
+                </th>
+                <th>#</th>
+                <th>Documento</th>
+                <th>Sacado</th>
+                <th>Vencimento</th>
+                <th>Valor</th>
+                <th>Status</th>
+                <th>Ações</th>
+              </tr>
+            </thead>
+            <tbody>
+              <?php foreach (($group['slips'] ?? []) as $row): ?>
+                <?php $canGenerateRemittanceForRow = $canGenerateRemittance($row); ?>
+                <tr>
+                  <td>
+                    <?php if ($canGenerateRemittanceForRow): ?>
+                      <input class="form-check-input bank-slip-remittance-checkbox" type="checkbox" name="bank_slip_ids[]" value="<?= (int) $row['id']; ?>" data-bank-account-id="<?= (int) $row['bank_account_id']; ?>">
+                    <?php endif; ?>
+                  </td>
+                  <td><?= (int) $row['id']; ?></td>
+                  <td><?= htmlspecialchars((string) $row['document_number'], ENT_QUOTES, 'UTF-8'); ?></td>
+                  <td><?= htmlspecialchars((string) $row['payer_name'], ENT_QUOTES, 'UTF-8'); ?></td>
+                  <td><?= htmlspecialchars((string) $row['due_date'], ENT_QUOTES, 'UTF-8'); ?></td>
+                  <td>R$ <?= number_format((float) $row['amount'], 2, ',', '.'); ?></td>
+                  <td><?= htmlspecialchars((string) $row['status'], ENT_QUOTES, 'UTF-8'); ?></td>
+                  <td>
+                    <div class="bank-slip-actions">
+                      <a href="<?= url('bank_slip/informations/' . (int) $row['id']); ?>" title="Informações"><i class="bi bi-search"></i></a>
+                      <?php if (authCan('bank_slip.informations')): ?>
+                        <a href="<?= url('bank_slip/generateBankSlip/' . (int) $row['id']); ?>" title="Gerar boleto" target="_blank" rel="noopener"><i class="bi bi-upc-scan"></i></a>
+                      <?php endif; ?>
+                      <?php if (authCan('bank_slip.generateRemittance') && !empty($row['bank_file_path'])): ?>
+                        <a href="<?= url((string) $row['bank_file_path']); ?>" title="Baixar remessa" download><i class="bi bi-file-arrow-down"></i></a>
+                      <?php endif; ?>
+                    </div>
+                  </td>
+                </tr>
+              <?php endforeach; ?>
+            </tbody>
+          </table>
+        </div>
+
+        <?php if (authCan('bank_slip.generateRemittance') && !empty($remittanceOptions)): ?>
+          <div class="bank-slip-remittance-panel">
+            <div class="bank-slip-remittance-summary">
+              <strong>Ações de remessa</strong>
+              <span><?= $remittanceCount; ?> boleto(s) apto(s) · R$ <?= number_format((float) ($group['remittance_total_amount'] ?? 0), 2, ',', '.'); ?></span>
             </div>
-          </td>
-        </tr>
-      <?php endforeach; else: ?>
-        <tr><td colspan="9" class="text-center">Nenhum boleto encontrado.</td></tr>
-      <?php endif; ?>
-      </tbody>
-    </table>
-  </div>
+            <div class="bank-slip-remittance-buttons">
+              <?php foreach ($remittanceOptions as $option): ?>
+                <?php
+                $layout = (string) ($option['layout'] ?? '');
+                $actionValue = $bankAccountId . ':' . $layout;
+                ?>
+                <button
+                  type="submit"
+                  class="btn btn-outline-primary bank-slip-remittance-button"
+                  name="remittance_action"
+                  value="<?= htmlspecialchars($actionValue, ENT_QUOTES, 'UTF-8'); ?>"
+                  data-bank-account-id="<?= $bankAccountId; ?>"
+                  <?= $remittanceCount > 0 ? '' : 'disabled'; ?>>
+                  <i class="bi bi-file-earmark-arrow-up"></i>
+                  Gerar remessa <?= htmlspecialchars((string) ($option['label'] ?? $layout), ENT_QUOTES, 'UTF-8'); ?>
+                </button>
+              <?php endforeach; ?>
+            </div>
+          </div>
+        <?php endif; ?>
+      </section>
+    <?php endforeach; ?>
+  <?php else: ?>
+    <div class="bank-slip-empty-state">Nenhum boleto encontrado.</div>
+  <?php endif; ?>
 </form>
 
-<script src="<?= url('assets/js/bank_slips/index.js?v=2'); ?>"></script>
+<script src="<?= url('assets/js/bank_slips/index.js?v=4'); ?>"></script>
