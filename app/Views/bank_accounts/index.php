@@ -97,6 +97,9 @@ $activeLabel = static function ($value): string {
               </span>
             </td>
             <td style="width:1%;" class="text-nowrap text-end">
+              <?php if (authCan('bank_account.edit')): ?>
+                <a href="<?= url('bank_account/edit/' . $row['id']); ?>" data-bs-toggle="popover" data-bs-trigger="hover focus" data-bs-content="Editar"><i class="bi bi-pencil-square"></i></a>
+              <?php endif; ?>
               <?php if (authCan('bank_account.informations')): ?>
                 <a href="<?= url('bank_account/informations/' . $row['id']); ?>" data-bs-toggle="popover" data-bs-trigger="hover focus" data-bs-content="Saiba mais"><i class="bi bi-search"></i></a>
               <?php endif; ?>

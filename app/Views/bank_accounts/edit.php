@@ -48,8 +48,12 @@ $decimalValue = static function (array $data, string $field): string {
             {
             $bankLabelParts[] = 'CNAB ' . $bankCnab;
             }
+          else
+            {
+            $bankCnab = '000'; 
+            }
           ?>
-          <option value="<?= (int) $bank['id']; ?>" <?= ((int) $bankAccount['bank_id'] === (int) $bank['id']) ? 'selected' : ''; ?>>
+          <option value="<?= (int) $bank['id']; ?>" <?= ((int) $bankAccount['bank_id'] === (int) $bank['id']) ? 'selected' : ''; ?> data-bank-cnab="<?= htmlspecialchars($bankCnab, ENT_QUOTES, 'UTF-8'); ?>">
             <?= htmlspecialchars(implode(' - ', array_filter($bankLabelParts, static fn ($part): bool => $part !== '')), ENT_QUOTES, 'UTF-8'); ?>
           </option>
         <?php endforeach; ?>
