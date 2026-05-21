@@ -8,6 +8,28 @@ use App\Models\BankAccount;
 
 class BankAccountController extends TenantAwareController
 	{
+	private const BANK_ACCOUNT_FIELDS = [
+		'bank_id',
+		'name',
+		'agency',
+		'account',
+		'pix_key_type',
+		'pix_key',
+		'bank_slip_instructions_line_1',
+		'bank_slip_instructions_line_2',
+		'bank_slip_instructions_line_3',
+		'bank_slip_instructions_line_4',
+		'bank_slip_protest',
+		'bank_slip_protest_number_of_days',
+		'bank_slip_wallet',
+		'bank_slip_species_title',
+		'bank_slip_interest_type',
+		'bank_slip_interest_amount_type',
+		'bank_slip_interest',
+		'bank_slip_late_fee_amount',
+		'active',
+	];
+
 	/**
 	 * Lists bank accounts with filters and pagination.
 	 */
@@ -85,7 +107,7 @@ class BankAccountController extends TenantAwareController
 		$this->requirePermission('bank_account.store');
 
 		$bankAccount = new BankAccount();
-		$bankAccount->create($_POST);
+		$bankAccount->create($this->bankAccountPayload($_POST));
 		$this->redirect('bank_account');
 		}
 
@@ -123,7 +145,7 @@ class BankAccountController extends TenantAwareController
 		$this->requirePermission('bank_account.update');
 
 		$bankAccount = new BankAccount();
-		$bankAccount->update($id, $_POST);
+		$bankAccount->update($id, $this->bankAccountPayload($_POST));
 		$this->redirect('bank_account');
 		}
 
@@ -147,6 +169,25 @@ class BankAccountController extends TenantAwareController
 			'title'       => 'Informações sobre a conta bancária',
 			'bankAccount' => $data['bank_account'],
 		]);
+		}
+
+	/**
+	 * Returns only bank account fields handled by the form.
+	 *
+	 * @param array $input Raw request data.
+	 */
+	private function bankAccountPayload(array $input): array
+		{
+		$payload = [];
+		foreach (self::BANK_ACCOUNT_FIELDS as $field)
+			{
+			if (array_key_exists($field, $input))
+				{
+				$payload[$field] = $input[$field];
+				}
+			}
+
+		return $payload;
 		}
 	}
 ?>
