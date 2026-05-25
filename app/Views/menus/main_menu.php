@@ -155,6 +155,26 @@
           </ul>
         </li>
         <!-- /Menu financeiro -->
+        <!-- Menu loja -->
+        <li class="nav-item dropdown">
+          <a class="nav-link dropdown-toggle" href="#" id="storeMenu" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+            <i class="bi bi-shop me-1"></i> Loja
+          </a>
+          <ul class="dropdown-menu" aria-labelledby="storeMenu">
+            <?php if (authCan('product_category.index')): ?>
+              <li><a class="dropdown-item" href="<?= url('product_category'); ?>"><i class="bi bi-tags me-2"></i>Categorias de produtos</a></li>
+            <?php endif; ?>
+            <li><hr class="dropdown-divider" /></li>
+            <?php if (authCan('product.index')): ?>
+              <li><a class="dropdown-item" href="<?= url('product'); ?>"><i class="bi bi-box-seam me-2"></i>Produtos</a></li>
+            <?php endif; ?>
+            <li><hr class="dropdown-divider" /></li>
+            <?php if (authCan('product_stock_movement.index')): ?>
+              <li><a class="dropdown-item" href="<?= url('product_stock_movement'); ?>"><i class="bi bi-arrow-left-right me-2"></i>Movimentações de estoque</a></li>
+            <?php endif; ?>
+          </ul>
+        </li>
+        <!-- /Menu loja -->
         <?php endif; ?>
       </ul>
       <!-- Sistema -->

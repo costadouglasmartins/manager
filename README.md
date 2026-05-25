@@ -42,6 +42,7 @@ Este documento registra as convenções de desenvolvimento que devem ser seguida
 
 ## Regras para SQL
 
+- Use nomes de tabelas em inglês e no plural; quando o nome for composto, todas as palavras que formam o nome da tabela devem estar no plural, como `products_categories`, `products_images` e `products_stocks_movements`.
 - Sempre use prepared statements e placeholders nomeados para valores dinâmicos.
 - Não concatene entradas do usuário diretamente em strings SQL.
 - Use listas explícitas de colunas; evite `SELECT *` em queries usadas por telas ou APIs.
