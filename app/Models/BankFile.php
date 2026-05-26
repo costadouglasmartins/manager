@@ -33,6 +33,26 @@ class BankFile extends TenantModel
 		}
 
 	/**
+	 * Updates file storage metadata after generating a final file name.
+	 */
+	public function updateStorage(int $id, string $fileName, string $filePath): void
+		{
+		$stmt = $this->db->prepare("
+			UPDATE bank_files
+			SET file_name = :file_name,
+			    file_path = :file_path,
+			    modified = :modified
+			WHERE id = :id
+		");
+		$stmt->execute([
+			'file_name' => $fileName,
+			'file_path' => $filePath,
+			'modified'  => date('Y-m-d H:i:s'),
+			'id'        => $id,
+		]);
+		}
+
+	/**
 	 * Finds a bank file by id.
 	 */
 	public function find(int $id): array

@@ -21,10 +21,17 @@ $accountLabel = static function (array $account): string {
 $canGenerateRemittance = static function (array $bankSlip): bool {
   return in_array((string) ($bankSlip['status'] ?? ''), ['READY', 'REJECTED'], true);
 };
+$canEditBankSlip = static function (array $bankSlip): bool {
+  return (string) ($bankSlip['status'] ?? '') === 'DRAFT';
+};
 ?>
-<link rel="stylesheet" href="<?= url('assets/css/bank_slips/index.css?v=6'); ?>">
+<link rel="stylesheet" href="<?= url('assets/css/bank_slips/index.css?v=7'); ?>">
 
 <h5>Boletos bancários</h5>
+
+<?php if (!empty($formError)): ?>
+  <div class="alert alert-danger"><?= htmlspecialchars((string) $formError, ENT_QUOTES, 'UTF-8'); ?></div>
+<?php endif; ?>
 
 <form action="<?= url('bank_slip'); ?>" method="get" class="row g-2 mb-3" id="bankSlipFilterForm">
   <div class="col-12 col-lg-9">
@@ -94,12 +101,13 @@ $canGenerateRemittance = static function (array $bankSlip): bool {
                 <th>Vencimento</th>
                 <th>Valor</th>
                 <th>Status</th>
-                <th>Ações</th>
+                <th class="text-end">Ações</th>
               </tr>
             </thead>
             <tbody>
               <?php foreach (($group['slips'] ?? []) as $row): ?>
                 <?php $canGenerateRemittanceForRow = $canGenerateRemittance($row); ?>
+                <?php $canEditBankSlipForRow = $canEditBankSlip($row); ?>
                 <tr>
                   <td>
                     <?php if ($canGenerateRemittanceForRow): ?>
@@ -112,8 +120,25 @@ $canGenerateRemittance = static function (array $bankSlip): bool {
                   <td><?= htmlspecialchars((string) $row['due_date'], ENT_QUOTES, 'UTF-8'); ?></td>
                   <td>R$ <?= number_format((float) $row['amount'], 2, ',', '.'); ?></td>
                   <td><?= htmlspecialchars((string) $row['status'], ENT_QUOTES, 'UTF-8'); ?></td>
-                  <td>
+                  <td class="text-end">
                     <div class="bank-slip-actions">
+                      <?php if (authCan('bank_slip.delete')): ?>
+                        <a href="#"
+                           class="js-bank-slip-delete-link text-danger"
+                           data-bs-toggle="modal"
+                           data-bs-target="#bankSlipDeleteModal"
+                           data-bank-slip-id="<?= (int) $row['id']; ?>"
+                           data-bank-slip-delete-label="#<?= (int) $row['id']; ?><?= trim((string) ($row['document_number'] ?? '')) !== '' ? ' - Documento ' . htmlspecialchars((string) $row['document_number'], ENT_QUOTES, 'UTF-8') : ''; ?>"
+                           data-bank-slip-delete-url="<?= url('bank_slip/delete/' . (int) $row['id']); ?>"
+                           role="button"
+                           aria-label="Excluir boleto"
+                           title="Excluir">
+                          <i class="bi bi-trash"></i>
+                        </a>
+                      <?php endif; ?>
+                      <?php if (authCan('bank_slip.edit') && $canEditBankSlipForRow): ?>
+                        <a href="<?= url('bank_slip/edit/' . (int) $row['id']); ?>" title="Editar"><i class="bi bi-pencil-square"></i></a>
+                      <?php endif; ?>
                       <a href="<?= url('bank_slip/informations/' . (int) $row['id']); ?>" title="Informações"><i class="bi bi-search"></i></a>
                       <?php if (authCan('bank_slip.informations')): ?>
                         <a href="<?= url('bank_slip/generateBankSlip/' . (int) $row['id']); ?>" title="Gerar boleto" target="_blank" rel="noopener"><i class="bi bi-upc-scan"></i></a>
@@ -162,4 +187,26 @@ $canGenerateRemittance = static function (array $bankSlip): bool {
   <?php endif; ?>
 </form>
 
-<script src="<?= url('assets/js/bank_slips/index.js?v=4'); ?>"></script>
+<?php if (authCan('bank_slip.delete')): ?>
+  <div class="modal fade" id="bankSlipDeleteModal" tabindex="-1" aria-labelledby="bankSlipDeleteModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <form id="bankSlipDeleteForm" method="POST" action="">
+          <div class="modal-header">
+            <h5 class="modal-title" id="bankSlipDeleteModalLabel">Confirmar exclusão</h5>
+            <a href="#" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></a>
+          </div>
+          <div class="modal-body">
+            <p class="mb-0">Deseja realmente excluir o boleto <strong id="bankSlipDeleteName">#</strong>?</p>
+          </div>
+          <div class="modal-footer">
+            <a href="#" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</a>
+            <button type="submit" class="btn btn-danger">Excluir</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+<?php endif; ?>
+
+<script src="<?= url('assets/js/bank_slips/index.js?v=7'); ?>"></script>

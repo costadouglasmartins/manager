@@ -131,6 +131,191 @@ class ProductStockMovement extends TenantModel
 		}
 
 	/**
+	 * Updates a stock movement and reconciles product stock balances.
+	 *
+	 * @param mixed $id Movement identifier.
+	 * @param array $data Data to save.
+	 */
+	public function update($id, array $data): void
+		{
+		$movementId = (int) $id;
+		$productId = (int) ($data['product_id'] ?? 0);
+		$movementType = $this->normalizeMovementType($data['movement_type'] ?? 'IN');
+		$quantity = $this->normalizeQuantity($data['quantity'] ?? '0');
+		$unitCost = $this->normalizeNullableDecimal($data['unit_cost'] ?? null);
+		$unitPrice = $this->normalizeNullableDecimal($data['unit_price'] ?? null);
+		$reference = $this->nullableTrim($data['reference'] ?? null);
+		$observations = $this->nullableTrim($data['observations'] ?? null);
+		$movementDate = $this->normalizeDateTime($data['movement_date'] ?? null);
+
+		if ($movementId <= 0)
+			{
+			throw new \InvalidArgumentException('Movimentação inválida.');
+			}
+
+		if ($productId <= 0)
+			{
+			throw new \InvalidArgumentException('Selecione um produto para movimentar o estoque.');
+			}
+
+		if ((float) $quantity <= 0 && $movementType !== 'ADJUSTMENT')
+			{
+			throw new \InvalidArgumentException('Informe uma quantidade maior que zero.');
+			}
+
+		try
+			{
+			$this->db->beginTransaction();
+
+			$existing = $this->findForUpdate($movementId);
+			if (!$existing)
+				{
+				throw new \InvalidArgumentException('Movimentação não encontrada.');
+				}
+
+			$oldProductId = (int) ($existing['product_id'] ?? 0);
+			$oldProduct = $this->lockProduct($oldProductId);
+			if (!$oldProduct)
+				{
+				throw new \InvalidArgumentException('Produto atual da movimentação não encontrado.');
+				}
+
+			$oldProductCurrentStock = $this->normalizeQuantity($oldProduct['stock_quantity'] ?? '0');
+			$oldProductPreviousQuantity = $this->normalizeQuantity($existing['previous_quantity'] ?? '0');
+			$oldProductStockBeforeMovement = $this->calculateStockBeforeMovement(
+				(string) ($existing['movement_type'] ?? 'IN'),
+				$this->normalizeQuantity($existing['quantity'] ?? '0'),
+				$oldProductPreviousQuantity,
+				$oldProductCurrentStock
+			);
+
+			$newProduct = null;
+			if ($productId === $oldProductId)
+				{
+				$newProduct = $oldProduct;
+				}
+			else
+				{
+				$newProduct = $this->lockProduct($productId);
+				if (!$newProduct)
+					{
+					throw new \InvalidArgumentException('Produto não encontrado.');
+					}
+				}
+
+			$newProductCurrentStock = $this->normalizeQuantity($newProduct['stock_quantity'] ?? '0');
+			$newProductBaseStock = $productId === $oldProductId ? $oldProductStockBeforeMovement : $newProductCurrentStock;
+			$newProductResultingStock = $this->calculateNewQuantity($movementType, $newProductBaseStock, $quantity);
+
+			$stmt = $this->db->prepare("
+				UPDATE products_stocks_movements
+				SET product_id = :product_id,
+				    movement_type = :movement_type,
+				    quantity = :quantity,
+				    previous_quantity = :previous_quantity,
+				    new_quantity = :new_quantity,
+				    unit_cost = :unit_cost,
+				    unit_price = :unit_price,
+				    reference = :reference,
+				    observations = :observations,
+				    movement_date = :movement_date,
+				    modified = :modified
+				WHERE id = :id
+			");
+			$stmt->execute([
+				'product_id'        => $productId,
+				'movement_type'     => $movementType,
+				'quantity'          => $quantity,
+				'previous_quantity' => $newProductBaseStock,
+				'new_quantity'      => $newProductResultingStock,
+				'unit_cost'         => $unitCost,
+				'unit_price'        => $unitPrice,
+				'reference'         => $reference,
+				'observations'      => $observations,
+				'movement_date'     => $movementDate,
+				'modified'          => date('Y-m-d H:i:s'),
+				'id'                => $movementId,
+			]);
+
+			$this->updateProductStock($productId, $newProductResultingStock);
+
+			if ($productId !== $oldProductId)
+				{
+				$this->updateProductStock($oldProductId, $oldProductStockBeforeMovement);
+				}
+
+			$this->db->commit();
+			}
+		catch (\Exception $e)
+			{
+			if ($this->db->inTransaction())
+				{
+				$this->db->rollBack();
+				}
+
+			throw $e;
+			}
+		}
+
+	/**
+	 * Deletes a stock movement and restores the product stock balance.
+	 *
+	 * @param mixed $id Movement identifier.
+	 */
+	public function delete($id): void
+		{
+		$movementId = (int) $id;
+		if ($movementId <= 0)
+			{
+			throw new \InvalidArgumentException('Movimentação inválida.');
+			}
+
+		try
+			{
+			$this->db->beginTransaction();
+
+			$existing = $this->findForUpdate($movementId);
+			if (!$existing)
+				{
+				throw new \InvalidArgumentException('Movimentação não encontrada.');
+				}
+
+			$productId = (int) ($existing['product_id'] ?? 0);
+			$product = $this->lockProduct($productId);
+			if (!$product)
+				{
+				throw new \InvalidArgumentException('Produto da movimentação não encontrado.');
+				}
+
+			$currentStock = $this->normalizeQuantity($product['stock_quantity'] ?? '0');
+			$restoredStock = $this->calculateStockBeforeMovement(
+				(string) ($existing['movement_type'] ?? 'IN'),
+				$this->normalizeQuantity($existing['quantity'] ?? '0'),
+				$this->normalizeQuantity($existing['previous_quantity'] ?? '0'),
+				$currentStock
+			);
+
+			$stmt = $this->db->prepare("
+				DELETE FROM products_stocks_movements
+				WHERE id = :id
+			");
+			$stmt->execute(['id' => $movementId]);
+
+			$this->updateProductStock($productId, $restoredStock);
+			$this->db->commit();
+			}
+		catch (\Exception $e)
+			{
+			if ($this->db->inTransaction())
+				{
+				$this->db->rollBack();
+				}
+
+			throw $e;
+			}
+		}
+
+	/**
 	 * Searches stock movements using filters and pagination.
 	 */
 	public function search(array $filters = [], int $limit = 10, int $offset = 0): array
@@ -248,6 +433,26 @@ class ProductStockMovement extends TenantModel
 		}
 
 	/**
+	 * Returns a movement row for update using row lock.
+	 */
+	private function findForUpdate(int $movementId)
+		{
+		$stmt = $this->db->prepare("
+			SELECT id,
+			       product_id,
+			       movement_type,
+			       quantity,
+			       previous_quantity
+			FROM products_stocks_movements
+			WHERE id = :id
+			FOR UPDATE
+		");
+		$stmt->execute(['id' => $movementId]);
+
+		return $stmt->fetch(PDO::FETCH_ASSOC);
+		}
+
+	/**
 	 * Calculates the new stock quantity for a movement.
 	 */
 	private function calculateNewQuantity(string $movementType, string $previousQuantity, string $quantity): string
@@ -269,6 +474,34 @@ class ProductStockMovement extends TenantModel
 				}
 
 			return number_format($newQuantity, 3, '.', '');
+			}
+
+		return number_format(max(0, $current), 3, '.', '');
+		}
+
+	/**
+	 * Reverts the effect of a stored movement from current stock to find prior stock.
+	 */
+	private function calculateStockBeforeMovement(string $movementType, string $movementQuantity, string $movementPreviousQuantity, string $currentStock): string
+		{
+		$type = $this->normalizeMovementType($movementType);
+		$quantity = (float) $movementQuantity;
+		$before = (float) $movementPreviousQuantity;
+		$current = (float) $currentStock;
+
+		if ($type === 'IN')
+			{
+			return number_format(max(0, $current - $quantity), 3, '.', '');
+			}
+
+		if ($type === 'OUT')
+			{
+			return number_format(max(0, $current + $quantity), 3, '.', '');
+			}
+
+		if ($type === 'ADJUSTMENT')
+			{
+			return number_format(max(0, $before), 3, '.', '');
 			}
 
 		return number_format(max(0, $current), 3, '.', '');

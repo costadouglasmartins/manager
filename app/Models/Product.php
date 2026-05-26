@@ -3,7 +3,7 @@
 namespace App\Models;
 
 use App\Core\TenantModel;
-use App\Services\ProductImageService;
+use App\Services\ImageUploadService;
 use PDO;
 
 class Product extends TenantModel
@@ -46,7 +46,7 @@ class Product extends TenantModel
 		{
 		$payload = $this->normalizePayload($data, '1');
 		$initialStock = $this->normalizeQuantity($data['initial_stock'] ?? '0');
-		$imageService = new ProductImageService();
+		$imageService = new ImageUploadService();
 		$storedImages = [];
 
 		try
@@ -99,7 +99,7 @@ class Product extends TenantModel
 
 			if ($imageService->hasUploads($files))
 				{
-				$storedImages = $imageService->storeUploadedImages($productId, $files);
+				$storedImages = $imageService->storeUploadedImages('products', $files, $this->productImageUploadOptions($productId));
 				$this->insertImageRows($productId, $storedImages);
 				$this->ensureMainImage($productId);
 				}
@@ -146,7 +146,7 @@ class Product extends TenantModel
 		{
 		$productId = (int) $id;
 		$payload = $this->normalizePayload($data, '0');
-		$imageService = new ProductImageService();
+		$imageService = new ImageUploadService();
 		$storedImages = [];
 		$deletedImages = [];
 
@@ -193,7 +193,7 @@ class Product extends TenantModel
 
 			if ($imageService->hasUploads($files))
 				{
-				$storedImages = $imageService->storeUploadedImages($productId, $files);
+				$storedImages = $imageService->storeUploadedImages('products', $files, $this->productImageUploadOptions($productId));
 				$this->insertImageRows($productId, $storedImages);
 				}
 
@@ -218,6 +218,57 @@ class Product extends TenantModel
 			}
 
 		$imageService->deleteStoredImages($deletedImages);
+		}
+
+	/**
+	 * Deletes an existing product and its image files when possible.
+	 *
+	 * @param mixed $id Product identifier.
+	 */
+	public function delete($id): void
+		{
+		$productId = (int) $id;
+		if ($productId <= 0)
+			{
+			throw new \InvalidArgumentException('Produto inválido.');
+			}
+
+		$imageService = new ImageUploadService();
+		$images = [];
+
+		try
+			{
+			$this->db->beginTransaction();
+
+			$product = $this->find($productId);
+			if (!$product)
+				{
+				throw new \InvalidArgumentException('Produto não encontrado.');
+				}
+
+			if ($this->hasStockMovements($productId))
+				{
+				throw new \RuntimeException('Não é possível excluir o produto porque existem movimentações de estoque vinculadas.');
+				}
+
+			$images = $this->getImages($productId);
+
+			$stmt = $this->db->prepare("DELETE FROM products WHERE id = :id");
+			$stmt->execute(['id' => $productId]);
+
+			$this->db->commit();
+			}
+		catch (\Exception $e)
+			{
+			if ($this->db->inTransaction())
+				{
+				$this->db->rollBack();
+				}
+
+			throw $e;
+			}
+
+		$imageService->deleteStoredImages($images);
 		}
 
 	/**
@@ -430,6 +481,33 @@ class Product extends TenantModel
 			$paramType = is_int($value) ? PDO::PARAM_INT : PDO::PARAM_STR;
 			$stmt->bindValue(':' . $key, $value, $paramType);
 			}
+		}
+
+	/**
+	 * Indicates whether the product has stock movements.
+	 */
+	private function hasStockMovements(int $productId): bool
+		{
+		$stmt = $this->db->prepare("
+			SELECT 1
+			FROM products_stocks_movements AS ProductStockMovement
+			WHERE ProductStockMovement.product_id = :product_id
+			LIMIT 1
+		");
+		$stmt->execute(['product_id' => $productId]);
+
+		return $stmt->fetchColumn() !== false;
+		}
+
+	/**
+	 * Returns upload options for product images.
+	 */
+	private function productImageUploadOptions(int $productId): array
+		{
+		return [
+			'directory_parts' => [$productId],
+			'file_prefix'     => 'product_' . $productId,
+		];
 		}
 
 	/**

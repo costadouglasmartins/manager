@@ -47,6 +47,10 @@ $stockClass = static function (array $row): string {
     </div>
   </div>
 
+  <?php if (!empty($formError)): ?>
+    <div class="alert alert-danger"><?= htmlspecialchars((string) $formError, ENT_QUOTES, 'UTF-8'); ?></div>
+  <?php endif; ?>
+
   <form action="<?= url('product'); ?>" class="row g-3 mb-3" method="get">
     <div class="col-12 col-lg-9">
       <div class="row g-3">
@@ -147,6 +151,21 @@ $stockClass = static function (array $row): string {
               </td>
               <td><?= ((int) $row['active'] === 1) ? 'Ativo' : 'Inativo'; ?></td>
               <td style="width:1%;" class="text-nowrap text-end">
+                <?php if (authCan('product.delete')): ?>
+                  <a href="#"
+                     class="js-product-delete-link text-danger"
+                     data-bs-toggle="modal"
+                     data-bs-target="#productDeleteModal"
+                     data-product-id="<?= (int) $row['id']; ?>"
+                     data-product-name="<?= htmlspecialchars((string) $row['name'], ENT_QUOTES, 'UTF-8'); ?>"
+                     data-product-delete-url="<?= url('product/delete/' . $row['id']); ?>"
+                     data-bs-content="Excluir"
+                     data-bs-trigger="hover focus"
+                     role="button"
+                     aria-label="Excluir produto">
+                    <i class="bi bi-trash"></i>
+                  </a>
+                <?php endif; ?>
                 <?php if (authCan('product.edit')): ?>
                   <a href="<?= url('product/edit/' . $row['id']); ?>" data-bs-toggle="popover" data-bs-trigger="hover focus" data-bs-content="Editar"><i class="bi bi-pencil-square"></i></a>
                 <?php endif; ?>
@@ -171,5 +190,27 @@ $stockClass = static function (array $row): string {
     <?= paginationLinks('product', $page, $totalPages, $queryFilters, 2, 'Anterior', 'Próxima'); ?>
   <?php endif; ?>
 </div>
+
+<?php if (authCan('product.delete')): ?>
+  <div class="modal fade" id="productDeleteModal" tabindex="-1" aria-labelledby="productDeleteModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <form id="productDeleteForm" method="POST" action="">
+          <div class="modal-header">
+            <h5 class="modal-title" id="productDeleteModalLabel">Confirmar exclusão</h5>
+            <a href="#" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></a>
+          </div>
+          <div class="modal-body">
+            <p class="mb-0">Deseja realmente excluir o produto <strong id="productDeleteName">#</strong>?</p>
+          </div>
+          <div class="modal-footer">
+            <a href="#" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</a>
+            <button type="submit" class="btn btn-danger">Excluir</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+<?php endif; ?>
 
 <script src="<?= url('assets/js/products/index.js?v=1'); ?>"></script>

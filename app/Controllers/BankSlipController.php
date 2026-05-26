@@ -2,6 +2,7 @@
 
 namespace App\Controllers;
 
+use App\Core\TenantContext;
 use App\Core\TenantAwareController;
 use App\Models\BankFile;
 use App\Models\BankSlip;
@@ -73,6 +74,68 @@ class BankSlipController extends TenantAwareController
 		$this->redirect('bank_slip');
 		}
 
+	/**
+	 * Renders the bank slip edit form when the slip is still a draft.
+	 *
+	 * @param mixed $id Bank slip identifier.
+	 */
+	public function edit($id): void
+		{
+		$this->requirePermission('bank_slip.edit');
+
+		$model = new BankSlip();
+		$bankSlip = $model->find((int) $id);
+		if ($bankSlip === [] || (string) ($bankSlip['status'] ?? '') !== 'DRAFT')
+			{
+			$this->redirect('bank_slip');
+			}
+
+		$this->view('bank_slips/edit', [
+			'title' => 'Editar boleto',
+			'bankSlip' => $bankSlip,
+			'bankAccounts' => $model->getBankAccountOptions(),
+		]);
+		}
+
+	/**
+	 * Updates an existing draft bank slip.
+	 *
+	 * @param mixed $id Bank slip identifier.
+	 */
+	public function update($id): void
+		{
+		$this->requirePermission('bank_slip.update');
+
+		$model = new BankSlip();
+
+		try
+			{
+			$model->update($id, $_POST);
+			$this->redirect('bank_slip');
+			}
+		catch (\Throwable $e)
+			{
+			if ($this->wantsJson())
+				{
+				$this->json(['error' => $e->getMessage()], 422);
+				}
+
+			$bankSlip = $model->find((int) $id);
+			if ($bankSlip === [] || (string) ($bankSlip['status'] ?? '') !== 'DRAFT')
+				{
+				$this->redirect('bank_slip');
+				}
+
+			http_response_code(422);
+			$this->view('bank_slips/edit', [
+				'title' => 'Editar boleto',
+				'bankSlip' => array_merge($bankSlip, $_POST),
+				'bankAccounts' => $model->getBankAccountOptions(),
+				'formError' => $e->getMessage(),
+			]);
+			}
+		}
+
 	public function informations($id): void
 		{
 		$this->requirePermission('bank_slip.informations');
@@ -111,6 +174,69 @@ class BankSlipController extends TenantAwareController
 		], false);
 		}
 
+	/**
+	 * Deletes an existing bank slip.
+	 *
+	 * @param mixed $id Bank slip identifier.
+	 */
+	public function delete($id): void
+		{
+		$this->requirePermission('bank_slip.delete');
+
+		$model = new BankSlip();
+
+		try
+			{
+			$model->delete($id);
+			$this->redirect('bank_slip');
+			}
+		catch (\Throwable $e)
+			{
+			if ($this->wantsJson())
+				{
+				$this->json(['error' => $e->getMessage()], 422);
+				}
+
+			$bankAccountIds = isset($_GET['bank_account_ids']) && is_array($_GET['bank_account_ids']) ? $_GET['bank_account_ids'] : [];
+			if ($bankAccountIds === [] && isset($_GET['bank_account_id']))
+				{
+				$bankAccountIds = [$_GET['bank_account_id']];
+				}
+			$bankAccountIds = array_values(array_unique(array_filter(array_map('intval', $bankAccountIds), static fn ($bankAccountId) => $bankAccountId > 0)));
+
+			$filters = [
+				'id' => isset($_GET['id']) ? trim($_GET['id']) : '',
+				'bank_account_id' => $bankAccountIds[0] ?? '',
+				'bank_account_ids' => $bankAccountIds,
+				'status' => isset($_GET['status']) ? trim($_GET['status']) : '',
+				'document_number' => isset($_GET['document_number']) ? trim($_GET['document_number']) : '',
+			];
+			$page = max(1, (int) ($_GET['page'] ?? 1));
+			$perPage = 10;
+			$offset = ($page - 1) * $perPage;
+
+			$bankSlips = $model->search($filters, $perPage, $offset);
+			$total = $model->count($filters);
+			$totalPages = max(1, (int) ceil($total / $perPage));
+			$bankSlipGroups = $this->groupBankSlipsByBankAccount($bankSlips);
+			$remittanceFactory = new RemittanceGeneratorFactory();
+			$bankSlipGroups = $this->addRemittanceOptionsToGroups($bankSlipGroups, $remittanceFactory);
+
+			http_response_code(422);
+			$this->view('bank_slips/index', [
+				'title' => 'Boletos bancários',
+				'bankSlips' => $bankSlips,
+				'bankSlipGroups' => $bankSlipGroups,
+				'filters' => $filters,
+				'page' => $page,
+				'totalPages' => $totalPages,
+				'total' => $total,
+				'bankAccounts' => $model->getBankAccountOptions(),
+				'formError' => $e->getMessage(),
+			]);
+			}
+		}
+
 	public function generateRemittance(): void
 		{
 		$this->requirePermission('bank_slip.generateRemittance');
@@ -127,10 +253,12 @@ class BankSlipController extends TenantAwareController
 				$remittanceBankAccountId = (int) $actionParts[0];
 				$layout = trim($actionParts[1]);
 				}
-			}
+		}
 
 		$model = new BankSlip();
-		$slips = $model->findReadyForRemittance($ids);
+		$slips = $ids !== []
+			? $model->findReadyForRemittance($ids)
+			: $model->findReadyForRemittanceByBankAccount($remittanceBankAccountId);
 		if ($remittanceBankAccountId > 0)
 			{
 			$slips = array_values(array_filter($slips, static function (array $slip) use ($remittanceBankAccountId): bool {
@@ -177,30 +305,52 @@ class BankSlipController extends TenantAwareController
 			exit;
 			}
 
-		$directory = __DIR__ . '/../../public/uploads/bank_files/remittance';
-		if (!is_dir($directory))
+		$relativeDirectory = $this->remittanceRelativeDirectory();
+		$directory = $this->publicPath($relativeDirectory);
+		if (!is_dir($directory) && !mkdir($directory, 0775, true) && !is_dir($directory))
 			{
-			mkdir($directory, 0775, true);
+			http_response_code(500);
+			echo 'Não foi possível preparar a pasta de remessas.';
+			exit;
 			}
 
 		$bankFileModel = new BankFile();
 		foreach ($jobs as $index => $job)
 			{
-			$fileName = $job['file_name'];
-			$fullPath = $directory . '/' . $fileName;
-			file_put_contents($fullPath, $job['content']);
-			$jobs[$index]['full_path'] = $fullPath;
-
-			$relativePath = 'uploads/bank_files/remittance/' . $fileName;
+			$temporaryFileName = 'pending_' . bin2hex(random_bytes(8)) . '.' . $this->fileExtension((string) $job['file_name']);
+			$temporaryRelativePath = $relativeDirectory . '/' . $temporaryFileName;
 			$file = $bankFileModel->create([
 				'bank_account_id' => $job['bank_account']['bank_account_id'] ?? null,
 				'file_type' => 'REMITTANCE',
-				'file_name' => $fileName,
-				'file_path' => $relativePath,
+				'file_name' => $temporaryFileName,
+				'file_path' => $temporaryRelativePath,
 				'file_hash' => hash('sha256', $job['content']),
 			]);
+			$bankFileId = (int) ($file['bank_file_id'] ?? 0);
+			if ($bankFileId <= 0)
+				{
+				http_response_code(500);
+				echo 'Não foi possível registrar a remessa.';
+				exit;
+				}
 
-			$model->attachRemittanceFile(array_column($job['slips'], 'id'), (int) ($file['bank_file_id'] ?? 0));
+			$fileName = $this->remittanceFileName($bankFileId, (string) $job['file_name']);
+			$relativePath = $relativeDirectory . '/' . $fileName;
+			$fullPath = $directory . '/' . $fileName;
+
+			if (file_put_contents($fullPath, $job['content']) === false)
+				{
+				http_response_code(500);
+				echo 'Não foi possível salvar a remessa.';
+				exit;
+				}
+
+			$bankFileModel->updateStorage($bankFileId, $fileName, $relativePath);
+
+			$jobs[$index]['file_name'] = $fileName;
+			$jobs[$index]['full_path'] = $fullPath;
+
+			$model->attachRemittanceFile(array_column($job['slips'], 'id'), $bankFileId);
 			}
 
 		if (count($jobs) === 1)
@@ -286,6 +436,48 @@ class BankSlipController extends TenantAwareController
 		header('Pragma: no-cache');
 		echo $content;
 		exit;
+		}
+
+	/**
+	 * Returns the tenant-aware remittance upload directory.
+	 */
+	private function remittanceRelativeDirectory(): string
+		{
+		$databaseName = TenantContext::databaseName();
+		if (!$databaseName)
+			{
+			throw new \RuntimeException('Tenant context is required to store remittance files.');
+			}
+
+		return 'tenant_files/' . $databaseName . '/remittance';
+		}
+
+	/**
+	 * Builds the final remittance file name using the bank file id.
+	 */
+	private function remittanceFileName(int $bankFileId, string $sourceFileName): string
+		{
+		$extension = $this->fileExtension($sourceFileName);
+		return $bankFileId . '.' . $extension;
+		}
+
+	/**
+	 * Returns a safe file extension.
+	 */
+	private function fileExtension(string $fileName): string
+		{
+		$extension = strtolower((string) pathinfo($fileName, PATHINFO_EXTENSION));
+		$extension = preg_replace('/[^a-z0-9]+/', '', $extension) ?? '';
+		return $extension !== '' ? $extension : 'rem';
+		}
+
+	/**
+	 * Resolves a public relative path to an absolute filesystem path.
+	 */
+	private function publicPath(string $relativePath): string
+		{
+		$publicPath = defined('PUBLIC_PATH') ? PUBLIC_PATH : dirname(__DIR__, 2) . '/public';
+		return rtrim($publicPath, '/\\') . '/' . ltrim($relativePath, '/\\');
 		}
 	}
 ?>

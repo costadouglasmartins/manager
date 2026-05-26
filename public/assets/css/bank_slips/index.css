@@ -7,6 +7,7 @@
 	align-items: center;
 	display: flex;
 	gap: 12px;
+	justify-content: flex-end;
 	white-space: nowrap;
 }
 
@@ -20,6 +21,15 @@
 .bank-slip-actions a:hover,
 .bank-slip-actions a:focus {
 	color: var(--app-accent-hover);
+}
+
+.bank-slip-actions a.text-danger {
+	color: var(--bs-danger);
+}
+
+.bank-slip-actions a.text-danger:hover,
+.bank-slip-actions a.text-danger:focus {
+	color: var(--bs-danger-text-emphasis);
 }
 
 .bank-slip-account-block + .bank-slip-account-block {

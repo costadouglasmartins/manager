@@ -56,6 +56,10 @@ $productLabel = static function (array $product): string {
     </div>
   </div>
 
+  <?php if (!empty($formError)): ?>
+    <div class="alert alert-danger"><?= htmlspecialchars((string) $formError, ENT_QUOTES, 'UTF-8'); ?></div>
+  <?php endif; ?>
+
   <form action="<?= url('product_stock_movement'); ?>" class="row g-3 mb-3" method="get">
     <div class="col-12 col-lg-9">
       <div class="row g-3">
@@ -131,6 +135,23 @@ $productLabel = static function (array $product): string {
               <td><?= htmlspecialchars($formatQuantity($row['new_quantity'] ?? 0), ENT_QUOTES, 'UTF-8'); ?></td>
               <td><?= htmlspecialchars($formatDateTime($row['movement_date'] ?? ''), ENT_QUOTES, 'UTF-8'); ?></td>
               <td style="width:1%;" class="text-nowrap text-end">
+                <?php if (authCan('product_stock_movement.delete')): ?>
+                  <a href="#"
+                     class="js-stock-movement-delete-link text-danger"
+                     data-bs-toggle="modal"
+                     data-bs-target="#productStockMovementDeleteModal"
+                     data-movement-id="<?= (int) $row['id']; ?>"
+                     data-movement-delete-url="<?= url('product_stock_movement/delete/' . $row['id']); ?>"
+                     data-bs-content="Excluir"
+                     data-bs-trigger="hover focus"
+                     role="button"
+                     aria-label="Excluir movimentação">
+                    <i class="bi bi-trash"></i>
+                  </a>
+                <?php endif; ?>
+                <?php if (authCan('product_stock_movement.edit')): ?>
+                  <a href="<?= url('product_stock_movement/edit/' . $row['id']); ?>" data-bs-toggle="popover" data-bs-trigger="hover focus" data-bs-content="Editar"><i class="bi bi-pencil-square"></i></a>
+                <?php endif; ?>
                 <?php if (authCan('product_stock_movement.informations')): ?>
                   <a href="<?= url('product_stock_movement/informations/' . $row['id']); ?>" data-bs-toggle="popover" data-bs-trigger="hover focus" data-bs-content="Saiba mais"><i class="bi bi-search"></i></a>
                 <?php endif; ?>
@@ -153,4 +174,26 @@ $productLabel = static function (array $product): string {
   <?php endif; ?>
 </div>
 
-<script src="<?= url('assets/js/products_stocks_movements/index.js?v=1'); ?>"></script>
+<?php if (authCan('product_stock_movement.delete')): ?>
+  <div class="modal fade" id="productStockMovementDeleteModal" tabindex="-1" aria-labelledby="productStockMovementDeleteModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <form id="productStockMovementDeleteForm" method="POST" action="">
+          <div class="modal-header">
+            <h5 class="modal-title" id="productStockMovementDeleteModalLabel">Confirmar exclusão</h5>
+            <a href="#" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></a>
+          </div>
+          <div class="modal-body">
+            <p class="mb-0">Deseja realmente excluir a movimentação <strong id="productStockMovementDeleteName">#</strong>?</p>
+          </div>
+          <div class="modal-footer">
+            <a href="#" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</a>
+            <button type="submit" class="btn btn-danger">Excluir</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+<?php endif; ?>
+
+<script src="<?= url('assets/js/products_stocks_movements/index.js?v=2'); ?>"></script>

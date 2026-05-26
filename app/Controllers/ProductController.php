@@ -197,5 +197,68 @@ class ProductController extends TenantAwareController
 			'stockMovements' => $data['stock_movements'],
 		]);
 		}
+
+	/**
+	 * Deletes an existing product.
+	 *
+	 * @param mixed $id Product identifier.
+	 */
+	public function delete($id): void
+		{
+		$this->requirePermission('product.delete');
+
+		$product = new Product();
+		$category = new ProductCategory();
+
+		try
+			{
+			$product->delete($id);
+			$this->redirect('product');
+			}
+		catch (\Throwable $e)
+			{
+			if ($this->wantsJson())
+				{
+				$this->json(['error' => $e->getMessage()], 422);
+				}
+
+			$filters = [
+				'id'                  => isset($_GET['id']) ? trim($_GET['id']) : '',
+				'product_category_id' => isset($_GET['product_category_id']) ? trim($_GET['product_category_id']) : '',
+				'sku'                 => isset($_GET['sku']) ? trim($_GET['sku']) : '',
+				'name'                => isset($_GET['name']) ? trim($_GET['name']) : '',
+				'active'              => isset($_GET['active']) ? trim($_GET['active']) : '',
+				'stock_status'        => isset($_GET['stock_status']) ? trim($_GET['stock_status']) : '',
+			];
+
+			$page = isset($_GET['page']) ? (int) $_GET['page'] : 1;
+			if ($page < 1)
+				{
+				$page = 1;
+				}
+
+			$perPage = 10;
+			$offset = ($page - 1) * $perPage;
+			$products = $product->search($filters, $perPage, $offset);
+			$total = $product->count($filters);
+			$totalPages = (int) ceil($total / $perPage);
+			if ($totalPages < 1)
+				{
+				$totalPages = 1;
+				}
+
+			http_response_code(422);
+			$this->view('products/index', [
+				'products'    => $products,
+				'categories'  => $category->getOptions(false),
+				'title'       => 'Produtos',
+				'filters'     => $filters,
+				'page'        => $page,
+				'totalPages'  => $totalPages,
+				'total'       => $total,
+				'formError'   => $e->getMessage(),
+			]);
+			}
+		}
 	}
 ?>

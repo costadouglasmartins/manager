@@ -62,6 +62,8 @@ class BankSlip extends TenantModel
 
 	public function create(array $data): array
 		{
+		$payload = $this->normalizePayload($data);
+
 		$stmt = $this->db->prepare("
 			INSERT INTO bank_slips
 			    (`financial_operation_payment_id`, `bank_account_id`, `status`, `document_number`, `our_number`, `portfolio`,
@@ -76,31 +78,103 @@ class BankSlip extends TenantModel
 		");
 
 		$stmt->execute([
-			'financial_operation_payment_id' => ($data['financial_operation_payment_id'] ?? '') !== '' ? (int) $data['financial_operation_payment_id'] : null,
-			'bank_account_id'                => (int) ($data['bank_account_id'] ?? 0),
-			'status'                         => trim((string) ($data['status'] ?? 'READY')),
-			'document_number'                => trim((string) ($data['document_number'] ?? '')),
-			'our_number'                     => trim((string) ($data['our_number'] ?? '')) ?: null,
-			'portfolio'                      => trim((string) ($data['portfolio'] ?? '109')),
-			'payer_document_type'            => trim((string) ($data['payer_document_type'] ?? 'CPF')),
-			'payer_document'                 => preg_replace('/\D+/', '', (string) ($data['payer_document'] ?? '')) ?? '',
-			'payer_name'                     => trim((string) ($data['payer_name'] ?? '')),
-			'payer_street'                   => trim((string) ($data['payer_street'] ?? '')),
-			'payer_neighborhood'             => trim((string) ($data['payer_neighborhood'] ?? '')) ?: null,
-			'payer_city'                     => trim((string) ($data['payer_city'] ?? '')),
-			'payer_state'                    => strtoupper(trim((string) ($data['payer_state'] ?? ''))),
-			'payer_zip_code'                 => preg_replace('/\D+/', '', (string) ($data['payer_zip_code'] ?? '')) ?? '',
-			'amount'                         => $this->normalizeDecimal($data['amount'] ?? '0'),
-			'due_date'                       => trim((string) ($data['due_date'] ?? date('Y-m-d'))),
-			'issue_date'                     => trim((string) ($data['issue_date'] ?? date('Y-m-d'))),
-			'interest_amount_per_day'        => $this->normalizeDecimal($data['interest_amount_per_day'] ?? '0'),
-			'discount_amount'                => $this->normalizeDecimal($data['discount_amount'] ?? '0'),
-			'fine_amount'                    => $this->normalizeDecimal($data['fine_amount'] ?? '0'),
+			'financial_operation_payment_id' => $payload['financial_operation_payment_id'],
+			'bank_account_id'                => $payload['bank_account_id'],
+			'status'                         => $payload['status'],
+			'document_number'                => $payload['document_number'],
+			'our_number'                     => $payload['our_number'],
+			'portfolio'                      => $payload['portfolio'],
+			'payer_document_type'            => $payload['payer_document_type'],
+			'payer_document'                 => $payload['payer_document'],
+			'payer_name'                     => $payload['payer_name'],
+			'payer_street'                   => $payload['payer_street'],
+			'payer_neighborhood'             => $payload['payer_neighborhood'],
+			'payer_city'                     => $payload['payer_city'],
+			'payer_state'                    => $payload['payer_state'],
+			'payer_zip_code'                 => $payload['payer_zip_code'],
+			'amount'                         => $payload['amount'],
+			'due_date'                       => $payload['due_date'],
+			'issue_date'                     => $payload['issue_date'],
+			'interest_amount_per_day'        => $payload['interest_amount_per_day'],
+			'discount_amount'                => $payload['discount_amount'],
+			'fine_amount'                    => $payload['fine_amount'],
 			'created'                        => date('Y-m-d H:i:s'),
 			'modified'                       => date('Y-m-d H:i:s'),
 		]);
 
 		return ['bank_slip_id' => (int) $this->db->lastInsertId()];
+		}
+
+	/**
+	 * Updates an existing draft bank slip.
+	 *
+	 * @param mixed $id Bank slip identifier.
+	 */
+	public function update($id, array $data): void
+		{
+		$bankSlipId = (int) $id;
+		if ($bankSlipId <= 0)
+			{
+			throw new \InvalidArgumentException('Boleto inválido.');
+			}
+
+		$payload = $this->normalizePayload($data);
+
+		try
+			{
+			$this->db->beginTransaction();
+
+			$bankSlip = $this->find($bankSlipId);
+			if (!$bankSlip)
+				{
+				throw new \InvalidArgumentException('Boleto não encontrado.');
+				}
+
+			if ((string) ($bankSlip['status'] ?? '') !== 'DRAFT')
+				{
+				throw new \RuntimeException('Apenas boletos com status DRAFT podem ser editados.');
+				}
+
+			$stmt = $this->db->prepare("
+				UPDATE bank_slips
+				SET `financial_operation_payment_id` = :financial_operation_payment_id,
+				    `bank_account_id` = :bank_account_id,
+				    `status` = :status,
+				    `document_number` = :document_number,
+				    `our_number` = :our_number,
+				    `portfolio` = :portfolio,
+				    `payer_document_type` = :payer_document_type,
+				    `payer_document` = :payer_document,
+				    `payer_name` = :payer_name,
+				    `payer_street` = :payer_street,
+				    `payer_neighborhood` = :payer_neighborhood,
+				    `payer_city` = :payer_city,
+				    `payer_state` = :payer_state,
+				    `payer_zip_code` = :payer_zip_code,
+				    `amount` = :amount,
+				    `due_date` = :due_date,
+				    `issue_date` = :issue_date,
+				    `interest_amount_per_day` = :interest_amount_per_day,
+				    `discount_amount` = :discount_amount,
+				    `fine_amount` = :fine_amount,
+				    `modified` = :modified
+				WHERE id = :id
+			");
+			$payload['modified'] = date('Y-m-d H:i:s');
+			$payload['id'] = $bankSlipId;
+			$stmt->execute($payload);
+
+			$this->db->commit();
+			}
+		catch (\Exception $e)
+			{
+			if ($this->db->inTransaction())
+				{
+				$this->db->rollBack();
+				}
+
+			throw $e;
+			}
 		}
 
 	public function search(array $filters = [], int $limit = 10, int $offset = 0): array
@@ -229,6 +303,27 @@ class BankSlip extends TenantModel
 		return $stmt->fetchAll(PDO::FETCH_ASSOC);
 		}
 
+	/**
+	 * Returns all bank slips ready for remittance in a bank account.
+	 */
+	public function findReadyForRemittanceByBankAccount(int $bankAccountId): array
+		{
+		if ($bankAccountId <= 0)
+			{
+			return [];
+			}
+
+		$sql = $this->baseSelectSql() . "
+			WHERE BankSlip.bank_account_id = :bank_account_id
+			  AND BankSlip.status IN ('READY','REJECTED')
+			ORDER BY BankSlip.id ASC
+		";
+		$stmt = $this->db->prepare($sql);
+		$stmt->execute(['bank_account_id' => $bankAccountId]);
+
+		return $stmt->fetchAll(PDO::FETCH_ASSOC);
+		}
+
 	public function attachRemittanceFile(array $ids, int $bankFileId): void
 		{
 		$ids = array_values(array_filter(array_map('intval', $ids), static fn ($id) => $id > 0));
@@ -247,6 +342,45 @@ class BankSlip extends TenantModel
 		}
 
 	/**
+	 * Deletes an existing bank slip.
+	 *
+	 * @param mixed $id Bank slip identifier.
+	 */
+	public function delete($id): void
+		{
+		$bankSlipId = (int) $id;
+		if ($bankSlipId <= 0)
+			{
+			throw new \InvalidArgumentException('Boleto inválido.');
+			}
+
+		try
+			{
+			$this->db->beginTransaction();
+
+			$bankSlip = $this->find($bankSlipId);
+			if (!$bankSlip)
+				{
+				throw new \InvalidArgumentException('Boleto não encontrado.');
+				}
+
+			$stmt = $this->db->prepare("DELETE FROM bank_slips WHERE id = :id");
+			$stmt->execute(['id' => $bankSlipId]);
+
+			$this->db->commit();
+			}
+		catch (\Exception $e)
+			{
+			if ($this->db->inTransaction())
+				{
+				$this->db->rollBack();
+				}
+
+			throw $e;
+			}
+		}
+
+	/**
 	 * Normalizes the multi-account filter ids.
 	 */
 	private function bankAccountFilterIds(array $filters): array
@@ -259,6 +393,41 @@ class BankSlip extends TenantModel
 
 		$ids = array_values(array_unique(array_filter(array_map('intval', $ids), static fn ($id) => $id > 0)));
 		return $ids;
+		}
+
+	/**
+	 * Normalizes bank slip form data for create and update operations.
+	 */
+	private function normalizePayload(array $data): array
+		{
+		$status = strtoupper(trim((string) ($data['status'] ?? 'READY')));
+		if (!in_array($status, ['DRAFT', 'READY'], true))
+			{
+			throw new \InvalidArgumentException('Status inválido para o boleto.');
+			}
+
+		return [
+			'financial_operation_payment_id' => ($data['financial_operation_payment_id'] ?? '') !== '' ? (int) $data['financial_operation_payment_id'] : null,
+			'bank_account_id'                => (int) ($data['bank_account_id'] ?? 0),
+			'status'                         => $status,
+			'document_number'                => trim((string) ($data['document_number'] ?? '')),
+			'our_number'                     => trim((string) ($data['our_number'] ?? '')) ?: null,
+			'portfolio'                      => trim((string) ($data['portfolio'] ?? '109')),
+			'payer_document_type'            => strtoupper(trim((string) ($data['payer_document_type'] ?? 'CPF'))),
+			'payer_document'                 => preg_replace('/\D+/', '', (string) ($data['payer_document'] ?? '')) ?? '',
+			'payer_name'                     => trim((string) ($data['payer_name'] ?? '')),
+			'payer_street'                   => trim((string) ($data['payer_street'] ?? '')),
+			'payer_neighborhood'             => trim((string) ($data['payer_neighborhood'] ?? '')) ?: null,
+			'payer_city'                     => trim((string) ($data['payer_city'] ?? '')),
+			'payer_state'                    => strtoupper(trim((string) ($data['payer_state'] ?? ''))),
+			'payer_zip_code'                 => preg_replace('/\D+/', '', (string) ($data['payer_zip_code'] ?? '')) ?? '',
+			'amount'                         => $this->normalizeDecimal($data['amount'] ?? '0'),
+			'due_date'                       => trim((string) ($data['due_date'] ?? date('Y-m-d'))),
+			'issue_date'                     => trim((string) ($data['issue_date'] ?? date('Y-m-d'))),
+			'interest_amount_per_day'        => $this->normalizeDecimal($data['interest_amount_per_day'] ?? '0'),
+			'discount_amount'                => $this->normalizeDecimal($data['discount_amount'] ?? '0'),
+			'fine_amount'                    => $this->normalizeDecimal($data['fine_amount'] ?? '0'),
+		];
 		}
 
 	private function normalizeDecimal($value): string

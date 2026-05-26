@@ -17,6 +17,9 @@
 
 <div class="view-actions">
   <a href="<?= url('bank_slip'); ?>" class="btn btn-secondary"><i class="bi bi-arrow-left"></i> Voltar</a>
+  <?php if (authCan('bank_slip.edit') && (string) ($bankSlip['status'] ?? '') === 'DRAFT'): ?>
+    <a href="<?= url('bank_slip/edit/' . (int) ($bankSlip['id'] ?? 0)); ?>" class="btn btn-primary"><i class="bi bi-pencil-square"></i> Editar</a>
+  <?php endif; ?>
   <?php if (authCan('bank_slip.informations')): ?>
     <a href="<?= url('bank_slip/generateBankSlip/' . (int) ($bankSlip['id'] ?? 0)); ?>" class="btn btn-primary" target="_blank" rel="noopener"><i class="bi bi-upc-scan"></i> Gerar boleto</a>
   <?php endif; ?>

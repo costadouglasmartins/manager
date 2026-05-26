@@ -4,7 +4,7 @@ namespace App\Services;
 
 use App\Core\TenantContext;
 
-class ProductImageService
+class ImageUploadService
 	{
 	private const MAX_FILE_SIZE = 8388608;
 	private const MAX_IMAGE_WIDTH = 1600;
@@ -43,11 +43,15 @@ class ProductImageService
 		}
 
 	/**
-	 * Stores uploaded product images with a resized image and thumbnail.
+	 * Stores uploaded images with a resized image and thumbnail.
+	 *
+	 * Supported options:
+	 * - directory_parts: extra path segments after tenant_files/{tenant}/{module}
+	 * - file_prefix: generated file name prefix
 	 *
 	 * @return array<int, array<string, mixed>>
 	 */
-	public function storeUploadedImages(int $productId, array $files): array
+	public function storeUploadedImages(string $moduleName, array $files, array $options = []): array
 		{
 		$storedImages = [];
 
@@ -61,23 +65,23 @@ class ProductImageService
 
 			if ($error !== UPLOAD_ERR_OK)
 				{
-				throw new \RuntimeException('Não foi possível enviar uma das imagens do produto.');
+				throw new \RuntimeException('Não foi possível enviar uma das imagens.');
 				}
 
-			$storedImages[] = $this->storeSingleImage($productId, $file);
+			$storedImages[] = $this->storeSingleImage($moduleName, $file, $options);
 			}
 
 		return $storedImages;
 		}
 
 	/**
-	 * Deletes image files associated with product image rows or stored payloads.
+	 * Deletes image files associated with stored payloads.
 	 */
-	public function deleteStoredImages(array $images): void
+	public function deleteStoredImages(array $images, array $pathKeys = ['file_path', 'thumb_path']): void
 		{
 		foreach ($images as $image)
 			{
-			foreach (['file_path', 'thumb_path'] as $key)
+			foreach ($pathKeys as $key)
 				{
 				$relativePath = trim((string) ($image[$key] ?? ''));
 				if ($relativePath === '')
@@ -100,7 +104,7 @@ class ProductImageService
 	 * @param array<string, mixed> $file Normalized $_FILES item.
 	 * @return array<string, mixed>
 	 */
-	private function storeSingleImage(int $productId, array $file): array
+	private function storeSingleImage(string $moduleName, array $file, array $options): array
 		{
 		$tmpName = (string) ($file['tmp_name'] ?? '');
 		$originalName = (string) ($file['name'] ?? 'imagem');
@@ -133,14 +137,15 @@ class ProductImageService
 			throw new \RuntimeException('Envie somente imagens JPG, PNG ou WebP.');
 			}
 
-		$relativeDirectory = $this->productUploadRelativeDirectory($productId);
+		$relativeDirectory = $this->uploadRelativeDirectory($moduleName, $options);
 		$directory = $this->publicPath($relativeDirectory);
 		if (!is_dir($directory) && !mkdir($directory, 0775, true) && !is_dir($directory))
 			{
-			throw new \RuntimeException('Não foi possível preparar a pasta de imagens do produto.');
+			throw new \RuntimeException('Não foi possível preparar a pasta de imagens.');
 			}
 
-		$fileBase = 'product_' . $productId . '_' . bin2hex(random_bytes(8));
+		$filePrefix = $this->sanitizeFilePrefix((string) ($options['file_prefix'] ?? $moduleName));
+		$fileBase = $filePrefix . '_' . bin2hex(random_bytes(8));
 		$extension = function_exists('imagewebp') ? 'webp' : 'jpg';
 		$outputMimeType = $extension === 'webp' ? 'image/webp' : 'image/jpeg';
 		$imageRelativePath = $relativeDirectory . '/' . $fileBase . '.' . $extension;
@@ -398,17 +403,63 @@ class ProductImageService
 		}
 
 	/**
-	 * Returns the product upload relative directory for the active tenant.
+	 * Returns the upload relative directory for the active tenant and module.
 	 */
-	private function productUploadRelativeDirectory(int $productId): string
+	private function uploadRelativeDirectory(string $moduleName, array $options = []): string
 		{
 		$databaseName = TenantContext::databaseName();
 		if (!$databaseName)
 			{
-			throw new \RuntimeException('Tenant context is required to store product images.');
+			throw new \RuntimeException('Tenant context is required to store uploaded images.');
 			}
 
-		return 'uploads/products/' . $databaseName . '/products/' . $productId;
+		$moduleSegment = $this->sanitizePathSegment($moduleName);
+		if ($moduleSegment === '')
+			{
+			throw new \InvalidArgumentException('Informe o módulo para armazenar as imagens.');
+			}
+
+		$segments = [
+			'tenant_files',
+			$this->sanitizePathSegment($databaseName),
+			$moduleSegment,
+		];
+
+		$directoryParts = $options['directory_parts'] ?? [];
+		if (!is_array($directoryParts))
+			{
+			$directoryParts = [$directoryParts];
+			}
+
+		foreach ($directoryParts as $part)
+			{
+			$part = $this->sanitizePathSegment((string) $part);
+			if ($part !== '')
+				{
+				$segments[] = $part;
+				}
+			}
+
+		return implode('/', $segments);
+		}
+
+	/**
+	 * Sanitizes a directory segment for safe storage paths.
+	 */
+	private function sanitizePathSegment(string $value): string
+		{
+		$value = trim($value);
+		$value = preg_replace('/[^a-zA-Z0-9_-]+/', '_', $value) ?? '';
+		return trim($value, '_');
+		}
+
+	/**
+	 * Sanitizes the generated file name prefix.
+	 */
+	private function sanitizeFilePrefix(string $value): string
+		{
+		$value = $this->sanitizePathSegment($value);
+		return $value !== '' ? $value : 'image';
 		}
 
 	/**
