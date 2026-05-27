@@ -1,0 +1,4 @@
+.table td.text-end.text-nowrap a + a
+  {
+  margin-left: 0.5rem;
+  }

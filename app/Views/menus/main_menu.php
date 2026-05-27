@@ -150,7 +150,11 @@
             <?php endif; ?>
             <li><hr class="dropdown-divider" /></li>
             <?php if (authCan('bank_slip.index')): ?>
-              <li><a class="dropdown-item" href="<?= url('bank_slip'); ?>"><i class="bi bi-upc-scan me-2"></i>Boletos e Remessas</a></li>
+              <li><a class="dropdown-item" href="<?= url('bank_slip'); ?>"><i class="bi bi-upc-scan me-2"></i>Boletos</a></li>
+            <?php endif; ?>
+            <li><hr class="dropdown-divider" /></li>
+            <?php if (authCan('bank_file.index')): ?>
+              <li><a class="dropdown-item" href="<?= url('bank_file'); ?>"><i class="bi bi-file-earmark-text me-2"></i>Remessas</a></li>
             <?php endif; ?>
           </ul>
         </li>

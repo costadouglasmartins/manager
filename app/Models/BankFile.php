@@ -2,11 +2,39 @@
 
 namespace App\Models;
 
+use App\Core\Database;
 use App\Core\TenantModel;
 use PDO;
 
 class BankFile extends TenantModel
 	{
+	/**
+	 * Returns the manager bank table.
+	 */
+	private function bankTable(): string
+		{
+		return sprintf('`%s`.`banks`', Database::getManagerDatabaseName());
+		}
+
+	/**
+	 * Returns the base bank file select query with account details.
+	 */
+	private function baseSelectSql(): string
+		{
+		return "SELECT BankFile.*,
+		              BankAccount.name AS bank_account_name,
+		              Bank.name AS bank_name,
+		              Bank.number AS bank_number,
+		              (
+		                SELECT COUNT(*)
+		                FROM bank_slips AS BankSlip
+		                WHERE BankSlip.bank_file_id = BankFile.id
+		              ) AS bank_slips_count
+		        FROM bank_files AS BankFile
+		        LEFT JOIN bank_accounts AS BankAccount ON BankAccount.id = BankFile.bank_account_id
+		        LEFT JOIN " . $this->bankTable() . " AS Bank ON Bank.id = BankAccount.bank_id";
+		}
+
 	/**
 	 * Creates a bank file metadata record and returns its identifier.
 	 */
@@ -103,9 +131,7 @@ class BankFile extends TenantModel
 	 */
 	public function find(int $id): array
 		{
-		$stmt = $this->db->prepare("
-			SELECT BankFile.*
-			FROM bank_files AS BankFile
+		$stmt = $this->db->prepare($this->baseSelectSql() . "
 			WHERE BankFile.id = :id
 			LIMIT 1
 		");
@@ -113,6 +139,132 @@ class BankFile extends TenantModel
 		$row = $stmt->fetch(PDO::FETCH_ASSOC);
 
 		return $row ?: [];
+		}
+
+	/**
+	 * Searches remittance files with filters and pagination.
+	 */
+	public function search(array $filters = [], int $limit = 10, int $offset = 0): array
+		{
+		$sql = $this->baseSelectSql() . " WHERE 1 = 1";
+		$params = [];
+
+		if (($filters['id'] ?? '') !== '')
+			{
+			$sql .= " AND BankFile.id = :id";
+			$params['id'] = (int) $filters['id'];
+			}
+		if (($filters['file_type'] ?? '') !== '')
+			{
+			$sql .= " AND BankFile.file_type = :file_type";
+			$params['file_type'] = trim((string) $filters['file_type']);
+			}
+		if (($filters['file_name'] ?? '') !== '')
+			{
+			$sql .= " AND BankFile.file_name LIKE :file_name";
+			$params['file_name'] = '%' . trim((string) $filters['file_name']) . '%';
+			}
+		if (($filters['bank_account_id'] ?? '') !== '')
+			{
+			$sql .= " AND BankFile.bank_account_id = :bank_account_id";
+			$params['bank_account_id'] = (int) $filters['bank_account_id'];
+			}
+
+		$sql .= " ORDER BY BankFile.id DESC LIMIT :limit OFFSET :offset";
+		$stmt = $this->db->prepare($sql);
+		foreach ($params as $key => $value)
+			{
+			$stmt->bindValue(':' . $key, $value, is_int($value) ? PDO::PARAM_INT : PDO::PARAM_STR);
+			}
+		$stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
+		$stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
+		$stmt->execute();
+
+		return $stmt->fetchAll(PDO::FETCH_ASSOC);
+		}
+
+	/**
+	 * Counts remittance files matching filters.
+	 */
+	public function count(array $filters = []): int
+		{
+		$sql = "SELECT COUNT(*)
+		        FROM bank_files AS BankFile
+		        WHERE 1 = 1";
+		$params = [];
+
+		if (($filters['id'] ?? '') !== '')
+			{
+			$sql .= " AND BankFile.id = :id";
+			$params['id'] = (int) $filters['id'];
+			}
+		if (($filters['file_type'] ?? '') !== '')
+			{
+			$sql .= " AND BankFile.file_type = :file_type";
+			$params['file_type'] = trim((string) $filters['file_type']);
+			}
+		if (($filters['file_name'] ?? '') !== '')
+			{
+			$sql .= " AND BankFile.file_name LIKE :file_name";
+			$params['file_name'] = '%' . trim((string) $filters['file_name']) . '%';
+			}
+		if (($filters['bank_account_id'] ?? '') !== '')
+			{
+			$sql .= " AND BankFile.bank_account_id = :bank_account_id";
+			$params['bank_account_id'] = (int) $filters['bank_account_id'];
+			}
+
+		$stmt = $this->db->prepare($sql);
+		foreach ($params as $key => $value)
+			{
+			$stmt->bindValue(':' . $key, $value, is_int($value) ? PDO::PARAM_INT : PDO::PARAM_STR);
+			}
+		$stmt->execute();
+
+		return (int) $stmt->fetchColumn();
+		}
+
+	/**
+	 * Deletes a remittance file and all linked bank slips.
+	 */
+	public function deleteRemittanceWithBankSlips(int $id): void
+		{
+		if ($id <= 0)
+			{
+			throw new \InvalidArgumentException('Remessa inválida.');
+			}
+
+		try
+			{
+			$this->db->beginTransaction();
+
+			$bankFile = $this->find($id);
+			if ($bankFile === [])
+				{
+				throw new \InvalidArgumentException('Remessa não encontrada.');
+				}
+			if (strtoupper((string) ($bankFile['file_type'] ?? '')) !== 'REMITTANCE')
+				{
+				throw new \RuntimeException('A exclusão em lote é permitida apenas para arquivos de remessa.');
+				}
+
+			$deleteSlips = $this->db->prepare("DELETE FROM bank_slips WHERE bank_file_id = :bank_file_id");
+			$deleteSlips->execute(['bank_file_id' => $id]);
+
+			$deleteFile = $this->db->prepare("DELETE FROM bank_files WHERE id = :id");
+			$deleteFile->execute(['id' => $id]);
+
+			$this->db->commit();
+			}
+		catch (\Exception $e)
+			{
+			if ($this->db->inTransaction())
+				{
+				$this->db->rollBack();
+				}
+
+			throw $e;
+			}
 		}
 
 	/**

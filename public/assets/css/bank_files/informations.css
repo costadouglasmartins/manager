@@ -1,0 +1,16 @@
+.table th
+  {
+  width: 220px;
+  }
+
+.bank-file-content
+  {
+  background: #0f172a;
+  border-radius: 8px;
+  color: #e2e8f0;
+  font-size: 0.85rem;
+  max-height: 420px;
+  overflow: auto;
+  padding: 12px;
+  white-space: pre;
+  }
