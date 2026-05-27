@@ -33,8 +33,20 @@ class ItauCnab240RemittanceService extends AbstractCnabRemittanceService
 	 */
 	public function fileName(array $bankAccount, int $sequence = 1): string
 		{
-		$accountId = $this->padNumeric((string) ($bankAccount['bank_account_id'] ?? $bankAccount['id'] ?? $sequence), 4);
-		return 'itau_cnab240_' . $accountId . '_' . date('Ymd_His') . '.rem';
+		return 'C' . date('ymd') . $this->sequenceLetter($sequence) . '.TXT';
+		}
+
+	/**
+	 * Returns the Itaú daily sequence letter used in the remittance file name.
+	 */
+	private function sequenceLetter(int $sequence): string
+		{
+		if ($sequence < 1 || $sequence > 26)
+			{
+			throw new \InvalidArgumentException('Itaú remittance file sequence must be between 1 and 26.');
+			}
+
+		return chr(64 + $sequence);
 		}
 
 	/**

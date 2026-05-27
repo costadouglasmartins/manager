@@ -144,7 +144,7 @@ $canEditBankSlip = static function (array $bankSlip): bool {
                         <a href="<?= url('bank_slip/generateBankSlip/' . (int) $row['id']); ?>" title="Gerar boleto" target="_blank" rel="noopener"><i class="bi bi-upc-scan"></i></a>
                       <?php endif; ?>
                       <?php if (authCan('bank_slip.generateRemittance') && !empty($row['bank_file_path'])): ?>
-                        <a href="<?= url((string) $row['bank_file_path']); ?>" title="Baixar remessa" download><i class="bi bi-file-arrow-down"></i></a>
+                        <a href="<?= url((string) $row['bank_file_path']); ?>" title="Baixar remessa" download="<?= htmlspecialchars((string) ($row['bank_file_name'] ?? ''), ENT_QUOTES, 'UTF-8'); ?>"><i class="bi bi-file-arrow-down"></i></a>
                       <?php endif; ?>
                     </div>
                   </td>

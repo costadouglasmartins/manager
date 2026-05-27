@@ -278,7 +278,8 @@ class BankSlipController extends TenantAwareController
 			}
 		$groups = $this->groupBankSlipsByBankAccount($slips);
 		$jobs = [];
-		$sequence = 1;
+		$bankFileModel = new BankFile();
+		$sequence = $bankFileModel->nextRemittanceSequence('C', date('Y-m-d'));
 
 		try
 			{
@@ -314,7 +315,6 @@ class BankSlipController extends TenantAwareController
 			exit;
 			}
 
-		$bankFileModel = new BankFile();
 		foreach ($jobs as $index => $job)
 			{
 			$temporaryFileName = 'pending_' . bin2hex(random_bytes(8)) . '.' . $this->fileExtension((string) $job['file_name']);
@@ -334,9 +334,10 @@ class BankSlipController extends TenantAwareController
 				exit;
 				}
 
-			$fileName = $this->remittanceFileName($bankFileId, (string) $job['file_name']);
-			$relativePath = $relativeDirectory . '/' . $fileName;
-			$fullPath = $directory . '/' . $fileName;
+			$downloadFileName = (string) $job['file_name'];
+			$storageFileName = $this->remittanceStorageFileName($bankFileId, $downloadFileName);
+			$relativePath = $relativeDirectory . '/' . $storageFileName;
+			$fullPath = $directory . '/' . $storageFileName;
 
 			if (file_put_contents($fullPath, $job['content']) === false)
 				{
@@ -345,9 +346,9 @@ class BankSlipController extends TenantAwareController
 				exit;
 				}
 
-			$bankFileModel->updateStorage($bankFileId, $fileName, $relativePath);
+			$bankFileModel->updateStorage($bankFileId, $downloadFileName, $relativePath);
 
-			$jobs[$index]['file_name'] = $fileName;
+			$jobs[$index]['file_name'] = $downloadFileName;
 			$jobs[$index]['full_path'] = $fullPath;
 
 			$model->attachRemittanceFile(array_column($job['slips'], 'id'), $bankFileId);
@@ -453,9 +454,9 @@ class BankSlipController extends TenantAwareController
 		}
 
 	/**
-	 * Builds the final remittance file name using the bank file id.
+	 * Builds the internal remittance storage file name using the bank file id.
 	 */
-	private function remittanceFileName(int $bankFileId, string $sourceFileName): string
+	private function remittanceStorageFileName(int $bankFileId, string $sourceFileName): string
 		{
 		$extension = $this->fileExtension($sourceFileName);
 		return $bankFileId . '.' . $extension;

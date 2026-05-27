@@ -34,8 +34,20 @@ class ItauCnab400RemittanceService implements RemittanceGeneratorInterface
 	 */
 	public function fileName(array $bankAccount, int $sequence = 1): string
 		{
-		$accountId = preg_replace('/\D+/', '', (string) ($bankAccount['bank_account_id'] ?? $bankAccount['id'] ?? $sequence)) ?? '';
-		return 'itau_cnab400_' . str_pad($accountId, 4, '0', STR_PAD_LEFT) . '_' . date('Ymd_His') . '.rem';
+		return 'C' . date('ymd') . $this->sequenceLetter($sequence) . '.TXT';
+		}
+
+	/**
+	 * Returns the Itaú daily sequence letter used in the remittance file name.
+	 */
+	private function sequenceLetter(int $sequence): string
+		{
+		if ($sequence < 1 || $sequence > 26)
+			{
+			throw new \InvalidArgumentException('Itaú remittance file sequence must be between 1 and 26.');
+			}
+
+		return chr(64 + $sequence);
 		}
 
 	/**
