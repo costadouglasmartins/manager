@@ -353,13 +353,22 @@ class BankSlipController extends TenantAwareController
 
 		foreach ($jobs as $index => $job)
 			{
-			$temporaryFileName = 'pending_' . bin2hex(random_bytes(8)) . '.' . $this->fileExtension((string) $job['file_name']);
-			$temporaryRelativePath = $relativeDirectory . '/' . $temporaryFileName;
+			$downloadFileName = (string) $job['file_name'];
+			$relativePath = $relativeDirectory . '/' . $downloadFileName;
+			$fullPath = $directory . '/' . $downloadFileName;
+
+			if (is_file($fullPath))
+				{
+				http_response_code(500);
+				echo 'Já existe uma remessa com o mesmo nome no servidor.';
+				exit;
+				}
+
 			$file = $bankFileModel->create([
 				'bank_account_id' => $job['bank_account']['bank_account_id'] ?? null,
 				'file_type' => 'REMITTANCE',
-				'file_name' => $temporaryFileName,
-				'file_path' => $temporaryRelativePath,
+				'file_name' => $downloadFileName,
+				'file_path' => $relativePath,
 				'file_hash' => hash('sha256', $job['content']),
 			]);
 			$bankFileId = (int) ($file['bank_file_id'] ?? 0);
@@ -370,19 +379,12 @@ class BankSlipController extends TenantAwareController
 				exit;
 				}
 
-			$downloadFileName = (string) $job['file_name'];
-			$storageFileName = $this->remittanceStorageFileName($bankFileId, $downloadFileName);
-			$relativePath = $relativeDirectory . '/' . $storageFileName;
-			$fullPath = $directory . '/' . $storageFileName;
-
 			if (file_put_contents($fullPath, $job['content']) === false)
 				{
 				http_response_code(500);
 				echo 'Não foi possível salvar a remessa.';
 				exit;
 				}
-
-			$bankFileModel->updateStorage($bankFileId, $downloadFileName, $relativePath);
 
 			$jobs[$index]['file_name'] = $downloadFileName;
 			$jobs[$index]['full_path'] = $fullPath;
@@ -487,25 +489,6 @@ class BankSlipController extends TenantAwareController
 			}
 
 		return 'tenant_files/' . $databaseName . '/remittance';
-		}
-
-	/**
-	 * Builds the internal remittance storage file name using the bank file id.
-	 */
-	private function remittanceStorageFileName(int $bankFileId, string $sourceFileName): string
-		{
-		$extension = $this->fileExtension($sourceFileName);
-		return $bankFileId . '.' . $extension;
-		}
-
-	/**
-	 * Returns a safe file extension.
-	 */
-	private function fileExtension(string $fileName): string
-		{
-		$extension = strtolower((string) pathinfo($fileName, PATHINFO_EXTENSION));
-		$extension = preg_replace('/[^a-z0-9]+/', '', $extension) ?? '';
-		return $extension !== '' ? $extension : 'rem';
 		}
 
 	/**
