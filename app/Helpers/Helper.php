@@ -1,5 +1,58 @@
 <?php
 /**
+ * Normalizes text to uppercase ASCII preserving Portuguese replacements.
+ */
+if (!function_exists('normalizeAsciiText'))
+	{
+	function normalizeAsciiText(?string $value): string
+		{
+		$text = trim((string) ($value ?? ''));
+		if ($text === '')
+			{
+			return '';
+			}
+
+		$utf8 = $text;
+		if (preg_match('//u', $utf8) !== 1)
+			{
+			$convertedIso = @iconv('ISO-8859-1', 'UTF-8//IGNORE', $utf8);
+			$convertedWin = @iconv('Windows-1252', 'UTF-8//IGNORE', $utf8);
+			if ($convertedIso !== false && $convertedIso !== '')
+				{
+				$utf8 = $convertedIso;
+				}
+			elseif ($convertedWin !== false && $convertedWin !== '')
+				{
+				$utf8 = $convertedWin;
+				}
+			}
+
+		$utf8 = strtr($utf8, [
+			'Á' => 'A', 'À' => 'A', 'Â' => 'A', 'Ã' => 'A', 'Ä' => 'A',
+			'á' => 'a', 'à' => 'a', 'â' => 'a', 'ã' => 'a', 'ä' => 'a',
+			'É' => 'E', 'È' => 'E', 'Ê' => 'E', 'Ë' => 'E',
+			'é' => 'e', 'è' => 'e', 'ê' => 'e', 'ë' => 'e',
+			'Í' => 'I', 'Ì' => 'I', 'Î' => 'I', 'Ï' => 'I',
+			'í' => 'i', 'ì' => 'i', 'î' => 'i', 'ï' => 'i',
+			'Ó' => 'O', 'Ò' => 'O', 'Ô' => 'O', 'Õ' => 'O', 'Ö' => 'O',
+			'ó' => 'o', 'ò' => 'o', 'ô' => 'o', 'õ' => 'o', 'ö' => 'o',
+			'Ú' => 'U', 'Ù' => 'U', 'Û' => 'U', 'Ü' => 'U',
+			'ú' => 'u', 'ù' => 'u', 'û' => 'u', 'ü' => 'u',
+			'Ç' => 'C', 'ç' => 'c',
+		]);
+
+		$ascii = @iconv('UTF-8', 'ASCII//TRANSLIT//IGNORE', $utf8);
+		if ($ascii !== false && $ascii !== '')
+			{
+			$utf8 = $ascii;
+			}
+
+		$utf8 = strtoupper($utf8);
+		return preg_replace('/[^A-Z0-9 \-\/.,]/', ' ', $utf8) ?? '';
+		}
+	}
+
+/**
  * Only digits
  */
 if (!function_exists('onlyDigits'))

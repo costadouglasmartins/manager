@@ -123,16 +123,7 @@ $canEditBankSlip = static function (array $bankSlip): bool {
                   <td class="text-end">
                     <div class="bank-slip-actions">
                       <?php if (authCan('bank_slip.delete')): ?>
-                        <a href="#"
-                           class="js-bank-slip-delete-link text-danger"
-                           data-bs-toggle="modal"
-                           data-bs-target="#bankSlipDeleteModal"
-                           data-bank-slip-id="<?= (int) $row['id']; ?>"
-                           data-bank-slip-delete-label="#<?= (int) $row['id']; ?><?= trim((string) ($row['document_number'] ?? '')) !== '' ? ' - Documento ' . htmlspecialchars((string) $row['document_number'], ENT_QUOTES, 'UTF-8') : ''; ?>"
-                           data-bank-slip-delete-url="<?= url('bank_slip/delete/' . (int) $row['id']); ?>"
-                           role="button"
-                           aria-label="Excluir boleto"
-                           title="Excluir">
+                        <a href="#" class="js-bank-slip-delete-link text-danger" data-bs-toggle="modal" data-bs-target="#bankSlipDeleteModal" data-bank-slip-id="<?= (int) $row['id']; ?>" data-bank-slip-delete-label="#<?= (int) $row['id']; ?><?= trim((string) ($row['document_number'] ?? '')) !== '' ? ' - Documento ' . htmlspecialchars((string) $row['document_number'], ENT_QUOTES, 'UTF-8') : ''; ?>" data-bank-slip-delete-url="<?= url('bank_slip/delete/' . (int) $row['id']); ?>" role="button" aria-label="Excluir boleto" title="Excluir">
                           <i class="bi bi-trash"></i>
                         </a>
                       <?php endif; ?>
@@ -144,7 +135,7 @@ $canEditBankSlip = static function (array $bankSlip): bool {
                         <a href="<?= url('bank_slip/generateBankSlip/' . (int) $row['id']); ?>" title="Gerar boleto" target="_blank" rel="noopener"><i class="bi bi-upc-scan"></i></a>
                       <?php endif; ?>
                       <?php if (authCan('bank_slip.generateRemittance') && !empty($row['bank_file_path'])): ?>
-                        <a href="<?= url((string) $row['bank_file_path']); ?>" title="Baixar remessa" download="<?= htmlspecialchars((string) ($row['bank_file_name'] ?? ''), ENT_QUOTES, 'UTF-8'); ?>"><i class="bi bi-file-arrow-down"></i></a>
+                        <a href="<?= url('bank_slip/downloadRemittance/' . (int) ($row['bank_file_id'] ?? 0)); ?>" title="Baixar remessa"><i class="bi bi-file-arrow-down"></i></a>
                       <?php endif; ?>
                     </div>
                   </td>

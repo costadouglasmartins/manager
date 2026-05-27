@@ -111,8 +111,7 @@ class ItauCnab400RemittanceService implements RemittanceGeneratorInterface
 
 	private function pad(string $value, int $length): string
 		{
-		$text = strtoupper(trim($value));
-		$text = preg_replace('/[^A-Z0-9 \-\/]/', ' ', $text) ?? '';
+		$text = normalizeAsciiText($value);
 		return str_pad(substr($text, 0, $length), $length, ' ');
 		}
 

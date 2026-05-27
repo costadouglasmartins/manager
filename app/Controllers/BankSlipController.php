@@ -175,6 +175,42 @@ class BankSlipController extends TenantAwareController
 		}
 
 	/**
+	 * Downloads a remittance file using the logical file name stored in metadata.
+	 *
+	 * @param mixed $id Bank file identifier.
+	 */
+	public function downloadRemittance($id): void
+		{
+		$this->requirePermission('bank_slip.generateRemittance');
+
+		$bankFileModel = new BankFile();
+		$bankFile = $bankFileModel->find((int) $id);
+		if ($bankFile === [] || empty($bankFile['file_path']))
+			{
+			http_response_code(404);
+			echo 'Arquivo de remessa não encontrado.';
+			exit;
+			}
+
+		$fullPath = $this->publicPath((string) $bankFile['file_path']);
+		if (!is_file($fullPath))
+			{
+			http_response_code(404);
+			echo 'Arquivo de remessa não encontrado no armazenamento.';
+			exit;
+			}
+
+		$downloadName = $bankFileModel->resolveDownloadFileName($bankFile);
+		if ($downloadName === '')
+			{
+			$downloadName = basename($fullPath);
+			}
+
+		$content = (string) file_get_contents($fullPath);
+		$this->downloadContent($downloadName, $content, 'text/plain; charset=ISO-8859-1');
+		}
+
+	/**
 	 * Deletes an existing bank slip.
 	 *
 	 * @param mixed $id Bank slip identifier.

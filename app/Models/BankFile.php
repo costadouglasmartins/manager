@@ -114,5 +114,74 @@ class BankFile extends TenantModel
 
 		return $row ?: [];
 		}
+
+	/**
+	 * Resolves the best download name for a remittance file.
+	 */
+	public function resolveDownloadFileName(array $bankFile): string
+		{
+		$fileName = trim((string) ($bankFile['file_name'] ?? ''));
+		if ($fileName !== '' && !preg_match('/^\d+\.(rem|txt)$/i', $fileName))
+			{
+			return $fileName;
+			}
+
+		if (strtoupper((string) ($bankFile['file_type'] ?? '')) !== 'REMITTANCE')
+			{
+			return $fileName !== '' ? $fileName : 'arquivo.txt';
+			}
+
+		$createdAt = trim((string) ($bankFile['created'] ?? ''));
+		$timestamp = strtotime($createdAt);
+		if ($timestamp === false)
+			{
+			return $fileName !== '' ? $fileName : 'arquivo.txt';
+			}
+
+		$day = date('Y-m-d', $timestamp);
+		$sequence = $this->sequenceInDay((int) ($bankFile['id'] ?? 0), $day);
+		if ($sequence < 1 || $sequence > 26)
+			{
+			return $fileName !== '' ? $fileName : 'arquivo.txt';
+			}
+
+		return 'C' . date('ymd', $timestamp) . chr(64 + $sequence) . '.TXT';
+		}
+
+	/**
+	 * Returns the remittance sequence position in a day ordered by creation time and id.
+	 */
+	private function sequenceInDay(int $bankFileId, string $day): int
+		{
+		if ($bankFileId <= 0)
+			{
+			return 0;
+			}
+
+		$stmt = $this->db->prepare("
+			SELECT id
+			FROM bank_files
+			WHERE file_type = 'REMITTANCE'
+			  AND created >= :start_date
+			  AND created <= :end_date
+			ORDER BY created ASC, id ASC
+		");
+		$stmt->execute([
+			'start_date' => $day . ' 00:00:00',
+			'end_date'   => $day . ' 23:59:59',
+		]);
+
+		$sequence = 0;
+		while ($row = $stmt->fetch(PDO::FETCH_ASSOC))
+			{
+			$sequence++;
+			if ((int) ($row['id'] ?? 0) === $bankFileId)
+				{
+				return $sequence;
+				}
+			}
+
+		return 0;
+		}
 	}
 ?>

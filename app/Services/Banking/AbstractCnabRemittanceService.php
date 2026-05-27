@@ -176,13 +176,7 @@ abstract class AbstractCnabRemittanceService implements RemittanceGeneratorInter
 	 */
 	private function normalizeText(string $value): string
 		{
-		$text = strtoupper(trim($value));
-		$converted = iconv('UTF-8', 'ASCII//TRANSLIT//IGNORE', $text);
-		if ($converted !== false)
-			{
-			$text = $converted;
-			}
-		return preg_replace('/[^A-Z0-9 \-\/.,]/', ' ', $text) ?? '';
+		return normalizeAsciiText($value);
 		}
 	}
 ?>
