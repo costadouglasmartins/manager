@@ -8,6 +8,8 @@ use PDO;
 
 class BankSlip extends TenantModel
 	{
+	public const STATUSES = ['DRAFT', 'READY', 'REMITTANCE_GENERATED', 'SENT', 'REGISTERED', 'REJECTED', 'PAID', 'CANCELED', 'WRITTEN_OFF'];
+
 	/**
 	 * Returns the manager bank table.
 	 */
@@ -26,6 +28,18 @@ class BankSlip extends TenantModel
 		              BankAccount.name AS bank_account_name,
 		              BankAccount.agency,
 		              BankAccount.account,
+		              BankAccount.bank_slip_instructions_line_1,
+		              BankAccount.bank_slip_instructions_line_2,
+		              BankAccount.bank_slip_instructions_line_3,
+		              BankAccount.bank_slip_instructions_line_4,
+		              BankAccount.bank_slip_protest,
+		              BankAccount.bank_slip_protest_number_of_days,
+		              BankAccount.bank_slip_wallet,
+		              BankAccount.bank_slip_species_title,
+		              BankAccount.bank_slip_interest_type,
+		              BankAccount.bank_slip_interest_amount_type,
+		              BankAccount.bank_slip_interest,
+		              BankAccount.bank_slip_late_fee_amount,
 		              Bank.name AS bank_name,
 		              Bank.number AS bank_number,
 		              Bank.cnab AS bank_cnab,
@@ -342,6 +356,47 @@ class BankSlip extends TenantModel
 		}
 
 	/**
+	 * Updates the current status of an existing bank slip.
+	 *
+	 * @param mixed $id Bank slip identifier.
+	 */
+	public function updateStatus($id, string $status): array
+		{
+		$bankSlipId = (int) $id;
+		if ($bankSlipId <= 0)
+			{
+			throw new \InvalidArgumentException('Boleto inválido.');
+			}
+
+		$status = strtoupper(trim($status));
+		if (!in_array($status, self::STATUSES, true))
+			{
+			throw new \InvalidArgumentException('Status inválido para o boleto.');
+			}
+
+		$bankSlip = $this->find($bankSlipId);
+		if ($bankSlip === [])
+			{
+			throw new \InvalidArgumentException('Boleto não encontrado.');
+			}
+
+		$stmt = $this->db->prepare("
+			UPDATE bank_slips
+			SET `status` = :status,
+			    `modified` = :modified
+			WHERE id = :id
+		");
+		$stmt->execute([
+			'status' => $status,
+			'modified' => date('Y-m-d H:i:s'),
+			'id' => $bankSlipId,
+		]);
+
+		$bankSlip['status'] = $status;
+		return $bankSlip;
+		}
+
+	/**
 	 * Deletes an existing bank slip.
 	 *
 	 * @param mixed $id Bank slip identifier.
@@ -406,7 +461,7 @@ class BankSlip extends TenantModel
 			throw new \InvalidArgumentException('Status inválido para o boleto.');
 			}
 
-		return [
+		$payload = [
 			'financial_operation_payment_id' => ($data['financial_operation_payment_id'] ?? '') !== '' ? (int) $data['financial_operation_payment_id'] : null,
 			'bank_account_id'                => (int) ($data['bank_account_id'] ?? 0),
 			'status'                         => $status,
@@ -414,7 +469,7 @@ class BankSlip extends TenantModel
 			'our_number'                     => trim((string) ($data['our_number'] ?? '')) ?: null,
 			'portfolio'                      => trim((string) ($data['portfolio'] ?? '109')),
 			'payer_document_type'            => strtoupper(trim((string) ($data['payer_document_type'] ?? 'CPF'))),
-			'payer_document'                 => preg_replace('/\D+/', '', (string) ($data['payer_document'] ?? '')) ?? '',
+			'payer_document'                 => normalizeCpfCnpjByType((string) ($data['payer_document'] ?? ''), (string) ($data['payer_document_type'] ?? 'CPF')),
 			'payer_name'                     => trim((string) ($data['payer_name'] ?? '')),
 			'payer_street'                   => trim((string) ($data['payer_street'] ?? '')),
 			'payer_neighborhood'             => trim((string) ($data['payer_neighborhood'] ?? '')) ?: null,
@@ -428,6 +483,16 @@ class BankSlip extends TenantModel
 			'discount_amount'                => $this->normalizeDecimal($data['discount_amount'] ?? '0'),
 			'fine_amount'                    => $this->normalizeDecimal($data['fine_amount'] ?? '0'),
 		];
+		if (!in_array($payload['payer_document_type'], ['CPF', 'CNPJ'], true))
+			{
+			throw new \InvalidArgumentException('Tipo de documento do pagador inválido.');
+			}
+		if (!isValidCpfCnpj($payload['payer_document'], $payload['payer_document_type']))
+			{
+			throw new \InvalidArgumentException('Documento do pagador inválido para o tipo informado.');
+			}
+
+		return $payload;
 		}
 
 	private function normalizeDecimal($value): string

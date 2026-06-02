@@ -52,6 +52,117 @@ document.querySelectorAll('[data-bs-toggle="popover"]').forEach((element) => {
 		});
 	})();
 
+(function ()
+	{
+	const modalElement = document.getElementById("bankSlipStatusModal");
+	const statusForm = document.getElementById("bankSlipStatusForm");
+	const statusName = document.getElementById("bankSlipStatusName");
+	const statusSelect = document.getElementById("bankSlipStatus");
+	const statusError = document.getElementById("bankSlipStatusError");
+	const submitButton = document.getElementById("bankSlipStatusSubmit");
+	let lastTrigger = null;
+
+	if (!modalElement || !statusForm || !statusName || !statusSelect || !statusError || !submitButton)
+		{
+		return;
+		}
+
+	const hideError = function ()
+		{
+		statusError.textContent = "";
+		statusError.classList.add("d-none");
+		};
+
+	const showError = function (message)
+		{
+		statusError.textContent = message;
+		statusError.classList.remove("d-none");
+		};
+
+	const syncModalData = function (trigger)
+		{
+		if (!trigger)
+			{
+			return;
+			}
+
+		const bankSlipId = trigger.getAttribute("data-bank-slip-id") || "";
+		const label = trigger.getAttribute("data-bank-slip-status-label") || (bankSlipId !== "" ? ("#" + bankSlipId) : "#");
+		const status = trigger.getAttribute("data-bank-slip-status") || "";
+		const updateUrl = trigger.getAttribute("data-bank-slip-status-url") || "";
+
+		statusForm.setAttribute("action", updateUrl);
+		statusName.textContent = label;
+		statusSelect.value = status;
+		hideError();
+		};
+
+	document.addEventListener("click", function (event)
+		{
+		const button = event.target instanceof Element ? event.target.closest(".js-bank-slip-status-button") : null;
+		if (!button)
+			{
+			return;
+			}
+
+		lastTrigger = button;
+		syncModalData(button);
+		});
+
+	modalElement.addEventListener("show.bs.modal", function (event)
+		{
+		const related = event.relatedTarget instanceof Element ? event.relatedTarget.closest(".js-bank-slip-status-button") : null;
+		syncModalData(related || lastTrigger);
+		});
+
+	statusForm.addEventListener("submit", async function (event)
+		{
+		event.preventDefault();
+		hideError();
+
+		if (!statusForm.checkValidity())
+			{
+			statusForm.classList.add("was-validated");
+			return;
+			}
+
+		submitButton.disabled = true;
+
+		try
+			{
+			const response = await fetch(statusForm.getAttribute("action") || "", {
+				method: "POST",
+				credentials: "same-origin",
+				headers: {
+					"Accept": "application/json",
+					"X-Requested-With": "XMLHttpRequest",
+					"Content-Type": "application/x-www-form-urlencoded",
+				},
+				body: new URLSearchParams({ status: statusSelect.value }).toString(),
+			});
+			const data = await response.json().catch(function ()
+				{
+				return {};
+				});
+
+			if (!response.ok || data.error)
+				{
+				throw new Error(data.error || "Não foi possível alterar o status do boleto.");
+				}
+
+			window.location.reload();
+			}
+		catch (error)
+			{
+			showError(error.message || "Erro de comunicação ao alterar o status do boleto.");
+			}
+		finally
+			{
+			submitButton.disabled = false;
+			}
+		});
+	})();
+
 const remittanceForm = document.getElementById('bankSlipRemittanceForm');
 
 if (remittanceForm)

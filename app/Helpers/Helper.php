@@ -85,11 +85,189 @@ if (!function_exists('cleanCpfCnpj'))
 		return preg_replace('/[^A-Z0-9]+/', '', strtoupper($value)) ?? '';
 		}
 
-	}
+		}
 
-/**
- * Mask CPF and CNPJ
- */
+	/**
+	 * Detects the document type from a cleaned CPF/CNPJ value.
+	 */
+	if (!function_exists('detectCpfCnpjType'))
+		{
+
+		function detectCpfCnpjType(?string $value): ?string
+			{
+			$clean = cleanCpfCnpj($value);
+			if (preg_match('/^\d{11}$/', $clean) === 1)
+				{
+				return 'CPF';
+				}
+			if (preg_match('/^[A-Z0-9]{14}$/', $clean) === 1)
+				{
+				return 'CNPJ';
+				}
+
+			return null;
+			}
+
+		}
+
+	/**
+	 * Normalizes CPF/CNPJ according to the informed or detected type.
+	 */
+	if (!function_exists('normalizeCpfCnpjByType'))
+		{
+
+		function normalizeCpfCnpjByType(?string $value, ?string $documentType = null): string
+			{
+			$type = strtoupper(trim((string) ($documentType ?? '')));
+			if ($type === '')
+				{
+				$type = (string) (detectCpfCnpjType($value) ?? '');
+				}
+
+			if ($type === 'CPF')
+				{
+				return onlyDigits($value);
+				}
+
+			return cleanCpfCnpj($value);
+			}
+
+		}
+
+	/**
+	 * Validates a CPF number using check digits.
+	 */
+	if (!function_exists('isValidCpf'))
+		{
+
+		function isValidCpf(?string $value): bool
+			{
+			$cpf = onlyDigits($value);
+			if (preg_match('/^\d{11}$/', $cpf) !== 1)
+				{
+				return false;
+				}
+			if (preg_match('/^(\d)\1{10}$/', $cpf) === 1)
+				{
+				return false;
+				}
+
+			for ($position = 9; $position < 11; $position++)
+				{
+				$sum = 0;
+				for ($i = 0; $i < $position; $i++)
+					{
+					$sum += ((int) $cpf[$i]) * (($position + 1) - $i);
+					}
+
+				$digit = ((10 * $sum) % 11) % 10;
+				if ((int) $cpf[$position] !== $digit)
+					{
+					return false;
+					}
+				}
+
+			return true;
+			}
+
+		}
+
+	/**
+	 * Validates a numeric CNPJ using check digits.
+	 */
+	if (!function_exists('isValidNumericCnpj'))
+		{
+
+		function isValidNumericCnpj(?string $value): bool
+			{
+			$cnpj = onlyDigits($value);
+			if (preg_match('/^\d{14}$/', $cnpj) !== 1)
+				{
+				return false;
+				}
+			if (preg_match('/^(\d)\1{13}$/', $cnpj) === 1)
+				{
+				return false;
+				}
+
+			$weightsFirst = [5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2];
+			$weightsSecond = [6, 5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2];
+
+			$sum = 0;
+			for ($i = 0; $i < 12; $i++)
+				{
+				$sum += ((int) $cnpj[$i]) * $weightsFirst[$i];
+				}
+			$remainder = $sum % 11;
+			$digitOne = ($remainder < 2) ? 0 : 11 - $remainder;
+			if ((int) $cnpj[12] !== $digitOne)
+				{
+				return false;
+				}
+
+			$sum = 0;
+			for ($i = 0; $i < 13; $i++)
+				{
+				$sum += ((int) $cnpj[$i]) * $weightsSecond[$i];
+				}
+			$remainder = $sum % 11;
+			$digitTwo = ($remainder < 2) ? 0 : 11 - $remainder;
+
+			return (int) $cnpj[13] === $digitTwo;
+			}
+
+		}
+
+	/**
+	 * Validates numeric and alphanumeric CNPJ models.
+	 */
+	if (!function_exists('isValidCnpj'))
+		{
+
+		function isValidCnpj(?string $value): bool
+			{
+			$clean = cleanCpfCnpj($value);
+			if (preg_match('/^\d{14}$/', $clean) === 1)
+				{
+				return isValidNumericCnpj($clean);
+				}
+
+			return preg_match('/^[A-Z0-9]{12}\d{2}$/', $clean) === 1;
+			}
+
+		}
+
+	/**
+	 * Validates CPF/CNPJ based on type (explicit or inferred).
+	 */
+	if (!function_exists('isValidCpfCnpj'))
+		{
+
+		function isValidCpfCnpj(?string $value, ?string $documentType = null): bool
+			{
+			$type = strtoupper(trim((string) ($documentType ?? '')));
+			if ($type === '')
+				{
+				$type = (string) (detectCpfCnpjType($value) ?? '');
+				}
+
+			if ($type === 'CPF')
+				{
+				return isValidCpf($value);
+				}
+			if ($type === 'CNPJ')
+				{
+				return isValidCnpj($value);
+				}
+
+			return false;
+			}
+
+		}
+
+	/**
+	 * Mask CPF and CNPJ
+	 */
 if (!function_exists('maskCpfCnpj'))
 	{
 

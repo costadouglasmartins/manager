@@ -11,15 +11,22 @@
 	white-space: nowrap;
 }
 
-.bank-slip-actions a {
+.bank-slip-actions a,
+.bank-slip-action-button {
+	background: transparent;
+	border: 0;
 	color: var(--app-accent);
+	cursor: pointer;
 	font-size: 1.05rem;
 	line-height: 1;
+	padding: 0;
 	text-decoration: none;
 }
 
 .bank-slip-actions a:hover,
-.bank-slip-actions a:focus {
+.bank-slip-actions a:focus,
+.bank-slip-action-button:hover,
+.bank-slip-action-button:focus {
 	color: var(--app-accent-hover);
 }
 

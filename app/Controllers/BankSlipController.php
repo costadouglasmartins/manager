@@ -134,6 +134,36 @@ class BankSlipController extends TenantAwareController
 				'formError' => $e->getMessage(),
 			]);
 			}
+			}
+
+	/**
+	 * Updates a bank slip status and returns the new value as JSON.
+	 *
+	 * @param mixed $id Bank slip identifier.
+	 */
+	public function updateStatus($id): void
+		{
+		$this->requirePermission('bank_slip.updateStatus');
+
+		if (strtoupper((string) ($_SERVER['REQUEST_METHOD'] ?? 'GET')) !== 'POST')
+			{
+			$this->json(['error' => 'Método não permitido.'], 405, ['Allow' => 'POST']);
+			}
+
+		$model = new BankSlip();
+
+		try
+			{
+			$bankSlip = $model->updateStatus($id, (string) ($_POST['status'] ?? ''));
+			$this->json([
+				'id' => (int) ($bankSlip['id'] ?? 0),
+				'status' => (string) ($bankSlip['status'] ?? ''),
+			]);
+			}
+		catch (\Throwable $e)
+			{
+			$this->json(['error' => $e->getMessage()], 422);
+			}
 		}
 
 	public function informations($id): void

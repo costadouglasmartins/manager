@@ -1,6 +1,6 @@
 <?php
 $filters = $filters ?? ['id' => '', 'bank_account_id' => '', 'bank_account_ids' => [], 'status' => '', 'document_number' => ''];
-$statuses = ['DRAFT', 'READY', 'REMITTANCE_GENERATED', 'SENT', 'REGISTERED', 'REJECTED', 'PAID', 'CANCELED', 'WRITTEN_OFF'];
+$statuses = \App\Models\BankSlip::STATUSES;
 $selectedBankAccountIds = $filters['bank_account_ids'] ?? [];
 if (!is_array($selectedBankAccountIds))
   {
@@ -25,7 +25,7 @@ $canEditBankSlip = static function (array $bankSlip): bool {
   return (string) ($bankSlip['status'] ?? '') === 'DRAFT';
 };
 ?>
-<link rel="stylesheet" href="<?= url('assets/css/bank_slips/index.css?v=7'); ?>">
+<link rel="stylesheet" href="<?= url('assets/css/bank_slips/index.css?v=8'); ?>">
 
 <h5>Boletos bancários</h5>
 
@@ -137,6 +137,21 @@ $canEditBankSlip = static function (array $bankSlip): bool {
                       <?php if (authCan('bank_slip.generateRemittance') && !empty($row['bank_file_path'])): ?>
                         <a href="<?= url('bank_slip/downloadRemittance/' . (int) ($row['bank_file_id'] ?? 0)); ?>" title="Baixar remessa"><i class="bi bi-file-arrow-down"></i></a>
                       <?php endif; ?>
+                      <?php if (authCan('bank_slip.updateStatus')): ?>
+                        <button
+                          type="button"
+                          class="bank-slip-action-button js-bank-slip-status-button"
+                          data-bs-toggle="modal"
+                          data-bs-target="#bankSlipStatusModal"
+                          data-bank-slip-id="<?= (int) $row['id']; ?>"
+                          data-bank-slip-status="<?= htmlspecialchars((string) $row['status'], ENT_QUOTES, 'UTF-8'); ?>"
+                          data-bank-slip-status-label="#<?= (int) $row['id']; ?><?= trim((string) ($row['document_number'] ?? '')) !== '' ? ' - Documento ' . htmlspecialchars((string) $row['document_number'], ENT_QUOTES, 'UTF-8') : ''; ?>"
+                          data-bank-slip-status-url="<?= url('bank_slip/updateStatus/' . (int) $row['id']); ?>"
+                          aria-label="Alterar status do boleto"
+                          title="Alterar status">
+                          <i class="bi bi-arrow-repeat"></i>
+                        </button>
+                      <?php endif; ?>
                     </div>
                   </td>
                 </tr>
@@ -200,4 +215,33 @@ $canEditBankSlip = static function (array $bankSlip): bool {
   </div>
 <?php endif; ?>
 
-<script src="<?= url('assets/js/bank_slips/index.js?v=7'); ?>"></script>
+<?php if (authCan('bank_slip.updateStatus')): ?>
+  <div class="modal fade" id="bankSlipStatusModal" tabindex="-1" aria-labelledby="bankSlipStatusModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <form id="bankSlipStatusForm" action="" method="POST">
+          <div class="modal-header">
+            <h5 class="modal-title" id="bankSlipStatusModalLabel">Alterar status</h5>
+            <a href="#" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></a>
+          </div>
+          <div class="modal-body">
+            <p>Selecione o novo status do boleto <strong id="bankSlipStatusName">#</strong>.</p>
+            <div class="alert alert-danger d-none" id="bankSlipStatusError" role="alert"></div>
+            <label class="form-label" for="bankSlipStatus">Status</label>
+            <select class="form-select" id="bankSlipStatus" name="status" required>
+              <?php foreach ($statuses as $status): ?>
+                <option value="<?= $status; ?>"><?= $status; ?></option>
+              <?php endforeach; ?>
+            </select>
+          </div>
+          <div class="modal-footer">
+            <a href="#" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</a>
+            <button type="submit" class="btn btn-primary" id="bankSlipStatusSubmit">Salvar</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+<?php endif; ?>
+
+<script src="<?= url('assets/js/bank_slips/index.js?v=8'); ?>"></script>

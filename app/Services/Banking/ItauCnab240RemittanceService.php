@@ -55,6 +55,7 @@ class ItauCnab240RemittanceService extends AbstractCnabRemittanceService
 	public function generate(array $bankAccount, array $bankSlips): string
 		{
 		$bankSlips = array_values($bankSlips);
+		$this->validateDocuments($bankAccount, $bankSlips);
 		$lotNumber = 1;
 		$fileSequence = (int) date('His');
 		$detailSequence = 1;
@@ -87,6 +88,39 @@ class ItauCnab240RemittanceService extends AbstractCnabRemittanceService
 		return implode("\r\n", $lines) . "\r\n";
 		}
 
+	private function validateDocuments(array $bankAccount, array $bankSlips): void
+		{
+		$companyDocument = $this->companyDocument($bankAccount);
+		if ($companyDocument !== '' && !isValidCpfCnpj($companyDocument))
+			{
+			throw new \InvalidArgumentException('Documento do beneficiário inválido para remessa CNAB240.');
+			}
+
+		$errors = [];
+		foreach ($bankSlips as $bankSlip)
+			{
+			$identifier = '#' . (int) ($bankSlip['id'] ?? 0);
+			$payerType = strtoupper(trim((string) ($bankSlip['payer_document_type'] ?? '')));
+			$payerDocument = normalizeCpfCnpjByType((string) ($bankSlip['payer_document'] ?? ''), $payerType);
+
+			if (!in_array($payerType, ['CPF', 'CNPJ'], true))
+				{
+				$errors[] = "Boleto {$identifier}: tipo de documento do pagador inválido.";
+				continue;
+				}
+			$isPayerValid = $payerType === 'CPF' ? isValidCpf($payerDocument) : isValidCnpj($payerDocument);
+			if (!$isPayerValid)
+				{
+				$errors[] = "Boleto {$identifier}: documento do pagador inválido para o tipo informado.";
+				}
+			}
+
+		if ($errors !== [])
+			{
+			throw new \InvalidArgumentException(implode(' ', $errors));
+			}
+		}
+
 	private function headerFile(array $bankAccount, int $fileSequence): string
 		{
 		[$account, $accountDigit] = $this->account($bankAccount);
@@ -98,7 +132,7 @@ class ItauCnab240RemittanceService extends AbstractCnabRemittanceService
 		$this->put($line, 8, 8, '0', 'numeric');
 		$this->put($line, 9, 17, '', 'alpha');
 		$this->put($line, 18, 18, $this->documentType($companyDocument), 'numeric');
-		$this->put($line, 19, 32, $companyDocument, 'numeric');
+		$this->putCompanyDocument($line, 19, 32, $companyDocument);
 		$this->put($line, 33, 52, '', 'alpha');
 		$this->put($line, 53, 53, '0', 'numeric');
 		$this->put($line, 54, 57, $this->agency($bankAccount), 'numeric');
@@ -138,7 +172,7 @@ class ItauCnab240RemittanceService extends AbstractCnabRemittanceService
 		$this->put($line, 14, 16, '030', 'numeric');
 		$this->put($line, 17, 17, '', 'alpha');
 		$this->put($line, 18, 18, $this->documentType($companyDocument), 'numeric');
-		$this->put($line, 19, 33, $companyDocument, 'numeric');
+		$this->putCompanyDocument($line, 19, 33, $companyDocument);
 		$this->put($line, 34, 53, '', 'alpha');
 		$this->put($line, 54, 54, '0', 'numeric');
 		$this->put($line, 55, 58, $this->agency($bankAccount), 'numeric');
@@ -215,8 +249,10 @@ class ItauCnab240RemittanceService extends AbstractCnabRemittanceService
 
 	private function segmentQ(array $bankSlip, int $lotNumber, int $detailSequence): string
 		{
-		$payerDocument = $this->onlyDigits((string) ($bankSlip['payer_document'] ?? ''));
-		$payerDocumentType = strtoupper((string) ($bankSlip['payer_document_type'] ?? '')) === 'CPF' ? '1' : $this->documentType($payerDocument);
+		$payerType = strtoupper((string) ($bankSlip['payer_document_type'] ?? ''));
+		$payerDocument = normalizeCpfCnpjByType((string) ($bankSlip['payer_document'] ?? ''), $payerType);
+		$payerDocumentFieldType = preg_match('/^\d+$/', $payerDocument) === 1 ? 'numeric' : 'alpha';
+		$payerDocumentType = $payerType === 'CPF' ? '1' : '2';
 		$zipCode = $this->padNumeric((string) ($bankSlip['payer_zip_code'] ?? ''), 8);
 		$line = $this->newLine();
 
@@ -228,7 +264,7 @@ class ItauCnab240RemittanceService extends AbstractCnabRemittanceService
 		$this->put($line, 15, 15, '', 'alpha');
 		$this->put($line, 16, 17, '01', 'numeric');
 		$this->put($line, 18, 18, $payerDocumentType, 'numeric');
-		$this->put($line, 19, 33, $payerDocument, 'numeric');
+		$this->put($line, 19, 33, $payerDocument, $payerDocumentFieldType);
 		$this->put($line, 34, 63, (string) ($bankSlip['payer_name'] ?? ''), 'alpha');
 		$this->put($line, 64, 73, '', 'alpha');
 		$this->put($line, 74, 113, (string) ($bankSlip['payer_street'] ?? ''), 'alpha');
@@ -335,7 +371,13 @@ class ItauCnab240RemittanceService extends AbstractCnabRemittanceService
 
 	private function companyDocument(array $bankAccount): string
 		{
-		return $this->onlyDigits((string) ($bankAccount['beneficiary_document'] ?? $bankAccount['company_document'] ?? $bankAccount['document'] ?? ''));
+		return normalizeCpfCnpjByType((string) ($bankAccount['beneficiary_document'] ?? $bankAccount['company_document'] ?? $bankAccount['document'] ?? ''));
+		}
+
+	private function putCompanyDocument(string &$line, int $start, int $end, string $document): void
+		{
+		$fieldType = preg_match('/^\d+$/', $document) === 1 ? 'numeric' : 'alpha';
+		$this->put($line, $start, $end, $document, $fieldType);
 		}
 
 	private function ourNumber(array $bankSlip): string
