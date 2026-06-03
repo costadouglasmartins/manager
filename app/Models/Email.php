@@ -7,13 +7,34 @@ use PDO;
 
 class Email extends Model
 	{
+	/**
+	 * Returns the base email query with the related person name.
+	 */
+	private function baseSelectSql(): string
+		{
+		$emailsTable = $this->managerTable('emails');
+		$peopleTable = $this->managerTable('people');
+
+		return "SELECT Email.id,
+		               Email.email,
+		               Email.observations,
+		               Email.person_id,
+		               Email.is_login,
+		               Email.created,
+		               Email.modified,
+		               Person.name AS person_name
+		        FROM {$emailsTable} AS Email
+		        LEFT JOIN {$peopleTable} AS Person ON Person.id = Email.person_id";
+		}
 
 	/**
 	 * Get all method
 	 */
 	public function getAll()
 		{
-		$stmt = $this->db->query("SELECT e.*, p.name AS person_name FROM emails e LEFT JOIN people p ON p.id = e.person_id ORDER BY e.id DESC");
+		$stmt = $this->db->query($this->baseSelectSql() . "
+			ORDER BY Email.id DESC
+		");
 		return $stmt->fetchAll(PDO::FETCH_ASSOC);
 		}
 
@@ -26,7 +47,18 @@ class Email extends Model
 			{
 			$this->db->beginTransaction();
 
-			$sql = "INSERT INTO emails (`email`, `is_login`, `observations`, `person_id`, `created`) VALUES (:email, :is_login, :observations, :person_id, :created)";
+			$sql = "INSERT INTO emails
+			           (email,
+			            is_login,
+			            observations,
+			            person_id,
+			            created)
+			        VALUES
+			           (:email,
+			            :is_login,
+			            :observations,
+			            :person_id,
+			            :created)";
 			$stmt = $this->db->prepare($sql);
 			$stmt->execute([
 				'email'        => $data['email'],
@@ -53,7 +85,9 @@ class Email extends Model
 	 */
 	public function find($id)
 		{
-		$stmt = $this->db->prepare("SELECT e.*, p.name AS person_name FROM emails e LEFT JOIN people p ON p.id = e.person_id WHERE e.id = :id");
+		$stmt = $this->db->prepare($this->baseSelectSql() . "
+			WHERE Email.id = :id
+		");
 		$stmt->execute(['id' => $id]);
 		return $stmt->fetch(PDO::FETCH_ASSOC);
 		}
@@ -64,12 +98,11 @@ class Email extends Model
 	public function update($id, $data)
 		{
 		$stmt = $this->db->prepare("
-			UPDATE emails
-			SET
-				`email`        = :email,
-				`observations` = :observations,
-				`person_id`    = :person_id
-			WHERE id = :id
+			UPDATE emails AS Email
+			SET Email.email = :email,
+			    Email.observations = :observations,
+			    Email.person_id = :person_id
+			WHERE Email.id = :id
 		");
 
 		$stmt->execute([
@@ -85,12 +118,8 @@ class Email extends Model
 	 */
 	public function search(array $filters = [], int $limit = 10, int $offset = 0, ?int $tenantId = null): array
 		{
-		$emailsTable = $this->managerTable('emails');
-		$peopleTable = $this->managerTable('people');
-		$sql = "SELECT Email.*, Person.name AS person_name
-		        FROM {$emailsTable} AS Email
-		        LEFT JOIN {$peopleTable} AS Person ON Person.id = Email.person_id
-		        WHERE 1=1";
+		$sql = $this->baseSelectSql() . "
+			WHERE 1=1";
 		$params = [];
 
 		$this->appendTenantScope($sql, $params, $tenantId);
@@ -119,7 +148,9 @@ class Email extends Model
 			$params['person_name'] = '%' . $filters['person_name'] . '%';
 			}
 
-		$sql .= " ORDER BY Email.id DESC LIMIT :limit OFFSET :offset";
+		$sql .= "
+			ORDER BY Email.id DESC
+			LIMIT :limit OFFSET :offset";
 
 		$stmt = $this->db->prepare($sql);
 
@@ -219,7 +250,9 @@ class Email extends Model
 	 */
 	public function findAllByEmailId($id)
 		{
-		$stmt = $this->db->prepare("SELECT e.*, p.name AS person_name FROM emails e LEFT JOIN people p ON p.id = e.person_id WHERE e.id = :id");
+		$stmt = $this->db->prepare($this->baseSelectSql() . "
+			WHERE Email.id = :id
+		");
 		$stmt->execute(['id' => $id]);
 		$data = $stmt->fetch(PDO::FETCH_ASSOC);
 		return ['email' => $data];

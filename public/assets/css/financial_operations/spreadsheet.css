@@ -1,0 +1,148 @@
+.financial-spreadsheet-shell {
+  max-height: calc(100vh - 210px);
+  overflow: auto;
+}
+
+.financial-spreadsheet {
+  font-size: 0.78rem;
+  margin-bottom: 0;
+  table-layout: fixed;
+  width: 100%;
+}
+
+.financial-spreadsheet th,
+.financial-spreadsheet td {
+  height: 28px;
+  line-height: 1.2;
+  padding: 0.28rem 0.32rem;
+}
+
+.financial-spreadsheet-month-short {
+  display: none;
+}
+
+.financial-spreadsheet .financial-spreadsheet-label {
+  width: 24%;
+  z-index: 2;
+}
+
+.financial-spreadsheet td {
+  font-variant-numeric: tabular-nums;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+[data-bs-theme="dark"] .financial-spreadsheet-shell {
+  background: var(--app-surface-solid);
+}
+
+[data-bs-theme="dark"] .financial-spreadsheet {
+  --bs-table-bg: var(--app-surface-solid);
+  --bs-table-color: var(--app-text);
+  --bs-table-border-color: var(--app-border);
+}
+
+[data-bs-theme="dark"] .financial-spreadsheet.table > :not(caption) > * > * {
+  border-color: var(--app-border);
+}
+
+[data-bs-theme="dark"] .financial-spreadsheet .table-dark,
+[data-bs-theme="dark"] .financial-spreadsheet .table-dark > th,
+[data-bs-theme="dark"] .financial-spreadsheet .table-dark > td,
+[data-bs-theme="dark"] .financial-spreadsheet tr.table-dark > th,
+[data-bs-theme="dark"] .financial-spreadsheet tr.table-dark > td {
+  --bs-table-bg: #202733;
+  --bs-table-color: #f3f6fb;
+  --bs-table-border-color: #3b4452;
+  background-color: #202733;
+  color: #f3f6fb;
+}
+
+[data-bs-theme="dark"] .financial-spreadsheet .table-success,
+[data-bs-theme="dark"] .financial-spreadsheet .table-success > th,
+[data-bs-theme="dark"] .financial-spreadsheet .table-success > td,
+[data-bs-theme="dark"] .financial-spreadsheet tr.table-success > th,
+[data-bs-theme="dark"] .financial-spreadsheet tr.table-success > td {
+  --bs-table-bg: #1b2d24;
+  --bs-table-color: #d5f5df;
+  --bs-table-border-color: #355244;
+  background-color: #1b2d24;
+  color: #d5f5df;
+}
+
+[data-bs-theme="dark"] .financial-spreadsheet .table-danger,
+[data-bs-theme="dark"] .financial-spreadsheet .table-danger > th,
+[data-bs-theme="dark"] .financial-spreadsheet .table-danger > td,
+[data-bs-theme="dark"] .financial-spreadsheet tr.table-danger > th,
+[data-bs-theme="dark"] .financial-spreadsheet tr.table-danger > td {
+  --bs-table-bg: #321d22;
+  --bs-table-color: #ffd8de;
+  --bs-table-border-color: #5b3a42;
+  background-color: #321d22;
+  color: #ffd8de;
+}
+
+[data-bs-theme="dark"] .financial-spreadsheet .table-warning,
+[data-bs-theme="dark"] .financial-spreadsheet .table-warning > th,
+[data-bs-theme="dark"] .financial-spreadsheet .table-warning > td,
+[data-bs-theme="dark"] .financial-spreadsheet tr.table-warning > th,
+[data-bs-theme="dark"] .financial-spreadsheet tr.table-warning > td {
+  --bs-table-bg: #352b13;
+  --bs-table-color: #ffe8a3;
+  --bs-table-border-color: #65522a;
+  background-color: #352b13;
+  color: #ffe8a3;
+}
+
+[data-bs-theme="dark"] .financial-spreadsheet .text-success-emphasis,
+[data-bs-theme="dark"] .financial-spreadsheet .text-danger-emphasis,
+[data-bs-theme="dark"] .financial-spreadsheet .text-warning-emphasis,
+[data-bs-theme="dark"] .financial-spreadsheet .text-white {
+  color: inherit !important;
+}
+
+[data-bs-theme="dark"] .financial-spreadsheet .financial-spreadsheet-label {
+  box-shadow: 1px 0 0 var(--app-border);
+}
+
+@media (max-width: 768px) {
+  .financial-spreadsheet-shell {
+    max-height: calc(100vh - 250px);
+  }
+
+  .financial-spreadsheet {
+    font-size: 0.64rem;
+  }
+
+  .financial-spreadsheet .financial-spreadsheet-label {
+    width: 26%;
+  }
+
+  .financial-spreadsheet th,
+  .financial-spreadsheet td {
+    height: 24px;
+    padding: 0.18rem 0.16rem;
+  }
+
+  .financial-spreadsheet-month-full {
+    display: none;
+  }
+
+  .financial-spreadsheet-month-short {
+    display: inline;
+  }
+}
+
+@media (min-width: 769px) and (max-width: 1399.98px) {
+  .financial-spreadsheet {
+    font-size: 0.7rem;
+  }
+
+  .financial-spreadsheet-month-full {
+    display: none;
+  }
+
+  .financial-spreadsheet-month-short {
+    display: inline;
+  }
+}

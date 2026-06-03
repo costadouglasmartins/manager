@@ -63,6 +63,34 @@ class FinancialOperationController extends TenantAwareController
 		}
 
 	/**
+	 * Displays the annual spreadsheet of income, expenses, balances, and percentages.
+	 */
+	public function spreadsheet(): void
+		{
+		$this->requirePermission('financial_operation.index');
+
+		$year = isset($_GET['year']) ? (int) $_GET['year'] : (int) date('Y');
+		if ($year < 1900 || $year > 2100)
+			{
+			$year = (int) date('Y');
+			}
+
+		$operation = new FinancialOperation();
+		$report = $operation->yearlySpreadsheet($year);
+
+		if ($this->wantsJson())
+			{
+			$this->json($report);
+			}
+
+		$this->view('financial_operations/spreadsheet', [
+			'title'  => 'Planilha anual financeira',
+			'year'   => $year,
+			'report' => $report,
+		]);
+		}
+
+	/**
 	 * Renders the financial operation creation form.
 	 */
 	public function create(): void

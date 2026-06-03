@@ -7,6 +7,16 @@ use PDO;
 
 class FinancialOperation extends TenantModel
 	{
+	private const INCOME_CATEGORY_TERMS = [
+		'receita',
+		'renda',
+		'salario',
+		'salário',
+		'13',
+		'ferias',
+		'férias',
+	];
+
 	/**
 	 * Returns the base financial operation select query with category data.
 	 */
@@ -199,6 +209,254 @@ class FinancialOperation extends TenantModel
 		$stmt->execute();
 
 		return (int) $stmt->fetchColumn();
+		}
+
+	/**
+	 * Builds the annual spreadsheet grouped by financial category and subcategory.
+	 */
+	public function yearlySpreadsheet(int $year): array
+		{
+		$year = max(1900, min(2100, $year));
+		$rows = $this->spreadsheetBaseRows();
+		$amounts = $this->spreadsheetAmounts($year);
+
+		foreach ($amounts as $amount)
+			{
+			$key = $this->spreadsheetRowKey(
+				(int) $amount['financial_operation_category_id'],
+				$amount['financial_operation_subcategory_id'] !== null ? (int) $amount['financial_operation_subcategory_id'] : null
+			);
+
+			if (!isset($rows[$key]))
+				{
+				$rows[$key] = [
+					'key'              => $key,
+					'section'          => $this->sectionForCategory((string) $amount['category_name']),
+					'category_id'      => (int) $amount['financial_operation_category_id'],
+					'subcategory_id'   => $amount['financial_operation_subcategory_id'] !== null ? (int) $amount['financial_operation_subcategory_id'] : null,
+					'category_name'    => (string) $amount['category_name'],
+					'subcategory_name' => $amount['subcategory_name'] !== null ? (string) $amount['subcategory_name'] : '',
+					'label'            => $this->spreadsheetRowLabel((string) $amount['category_name'], $amount['subcategory_name'] !== null ? (string) $amount['subcategory_name'] : ''),
+					'months'           => array_fill(1, 12, 0.0),
+					'total'            => 0.0,
+				];
+			}
+
+			$month = (int) $amount['month_number'];
+			if ($month < 1 || $month > 12)
+				{
+				continue;
+				}
+
+			$value = (float) $amount['amount'];
+			$rows[$key]['months'][$month] += $value;
+			$rows[$key]['total'] += $value;
+			}
+
+		$sections = [
+			'income'  => [
+				'title'        => 'RECEITAS',
+				'rows'         => [],
+				'month_totals' => array_fill(1, 12, 0.0),
+				'total'        => 0.0,
+			],
+			'expense' => [
+				'title'        => 'DESPESAS',
+				'rows'         => [],
+				'month_totals' => array_fill(1, 12, 0.0),
+				'total'        => 0.0,
+			],
+		];
+
+		foreach ($rows as $row)
+			{
+			$section = $row['section'];
+			$sections[$section]['rows'][] = $row;
+
+			foreach ($row['months'] as $month => $value)
+				{
+				$sections[$section]['month_totals'][$month] += (float) $value;
+				}
+
+			$sections[$section]['total'] += (float) $row['total'];
+			}
+
+		foreach ($sections as &$section)
+			{
+			usort($section['rows'], function (array $left, array $right): int {
+				return strcasecmp($left['label'], $right['label']);
+			});
+			}
+		unset($section);
+
+		$balanceMonths = [];
+		$expensePercentMonths = [];
+
+		for ($month = 1; $month <= 12; $month++)
+			{
+			$income = (float) $sections['income']['month_totals'][$month];
+			$expense = (float) $sections['expense']['month_totals'][$month];
+			$balanceMonths[$month] = $income - $expense;
+			$expensePercentMonths[$month] = $income > 0 ? ($expense / $income) * 100 : null;
+			}
+
+		return [
+			'year'                    => $year,
+			'months'                  => $this->spreadsheetMonths(),
+			'sections'                => $sections,
+			'balance_months'          => $balanceMonths,
+			'balance_total'           => $sections['income']['total'] - $sections['expense']['total'],
+			'expense_percent_months'  => $expensePercentMonths,
+			'expense_percent_total'   => $sections['income']['total'] > 0 ? ($sections['expense']['total'] / $sections['income']['total']) * 100 : null,
+		];
+		}
+
+	/**
+	 * Returns all categories/subcategories as spreadsheet rows, even before launches exist.
+	 */
+	private function spreadsheetBaseRows(): array
+		{
+		$stmt = $this->db->query("
+			SELECT FinancialOperationCategory.id AS category_id,
+			       FinancialOperationCategory.name AS category_name,
+			       FinancialOperationSubcategory.id AS subcategory_id,
+			       FinancialOperationSubcategory.name AS subcategory_name
+			FROM financial_operations_categories AS FinancialOperationCategory
+			LEFT JOIN financial_operations_subcategories AS FinancialOperationSubcategory ON FinancialOperationSubcategory.financial_operation_category_id = FinancialOperationCategory.id
+			ORDER BY FinancialOperationCategory.name ASC,
+			         FinancialOperationSubcategory.name ASC
+		");
+
+		$rows = [];
+
+		foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row)
+			{
+			$categoryName = (string) $row['category_name'];
+			$subcategoryName = $row['subcategory_name'] !== null ? (string) $row['subcategory_name'] : '';
+			$key = $this->spreadsheetRowKey((int) $row['category_id'], $row['subcategory_id'] !== null ? (int) $row['subcategory_id'] : null);
+
+			$rows[$key] = [
+				'key'              => $key,
+				'section'          => $this->sectionForCategory($categoryName),
+				'category_id'      => (int) $row['category_id'],
+				'subcategory_id'   => $row['subcategory_id'] !== null ? (int) $row['subcategory_id'] : null,
+				'category_name'    => $categoryName,
+				'subcategory_name' => $subcategoryName,
+				'label'            => $this->spreadsheetRowLabel($categoryName, $subcategoryName),
+				'months'           => array_fill(1, 12, 0.0),
+				'total'            => 0.0,
+			];
+			}
+
+		return $rows;
+		}
+
+	/**
+	 * Returns operation/payment amounts grouped by row and month for the requested year.
+	 */
+	private function spreadsheetAmounts(int $year): array
+		{
+		$stmt = $this->db->prepare("
+			SELECT FinancialOperation.financial_operation_category_id,
+			       FinancialOperation.financial_operation_subcategory_id,
+			       FinancialOperationCategory.name AS category_name,
+			       FinancialOperationSubcategory.name AS subcategory_name,
+			       MONTH(COALESCE(FinancialOperationPayment.created, FinancialOperation.created)) AS month_number,
+			       SUM(CASE
+			             WHEN FinancialOperationPayment.id IS NULL THEN FinancialOperation.total_amount
+			             ELSE FinancialOperationPayment.value
+			           END) AS amount
+			FROM financial_operations AS FinancialOperation
+			INNER JOIN financial_operations_categories AS FinancialOperationCategory ON FinancialOperationCategory.id = FinancialOperation.financial_operation_category_id
+			LEFT JOIN financial_operations_subcategories AS FinancialOperationSubcategory ON FinancialOperationSubcategory.id = FinancialOperation.financial_operation_subcategory_id
+			LEFT JOIN financial_operations_payments AS FinancialOperationPayment ON FinancialOperationPayment.financial_operation_id = FinancialOperation.id
+			WHERE YEAR(COALESCE(FinancialOperationPayment.created, FinancialOperation.created)) = :year
+			GROUP BY FinancialOperation.financial_operation_category_id,
+			         FinancialOperation.financial_operation_subcategory_id,
+			         FinancialOperationCategory.name,
+			         FinancialOperationSubcategory.name,
+			         MONTH(COALESCE(FinancialOperationPayment.created, FinancialOperation.created))
+			ORDER BY FinancialOperationCategory.name ASC,
+			         FinancialOperationSubcategory.name ASC,
+			         month_number ASC
+		");
+		$stmt->execute(['year' => $year]);
+
+		return $stmt->fetchAll(PDO::FETCH_ASSOC);
+		}
+
+	/**
+	 * Returns the static month labels used by the spreadsheet.
+	 */
+	private function spreadsheetMonths(): array
+		{
+		return [
+			1  => 'JANEIRO',
+			2  => 'FEVEREIRO',
+			3  => 'MARÇO',
+			4  => 'ABRIL',
+			5  => 'MAIO',
+			6  => 'JUNHO',
+			7  => 'JULHO',
+			8  => 'AGOSTO',
+			9  => 'SETEMBRO',
+			10 => 'OUTUBRO',
+			11 => 'NOVEMBRO',
+			12 => 'DEZEMBRO',
+		];
+		}
+
+	/**
+	 * Builds a stable row key for category/subcategory groups.
+	 */
+	private function spreadsheetRowKey(int $categoryId, ?int $subcategoryId): string
+		{
+		return $categoryId . ':' . ($subcategoryId ?? 0);
+		}
+
+	/**
+	 * Formats the spreadsheet row label.
+	 */
+	private function spreadsheetRowLabel(string $categoryName, string $subcategoryName): string
+		{
+		$categoryName = trim($categoryName);
+		$subcategoryName = trim($subcategoryName);
+
+		if ($subcategoryName === '')
+			{
+			return $categoryName;
+			}
+
+		return $categoryName . ' - ' . $subcategoryName;
+		}
+
+	/**
+	 * Classifies a category between income and expense sections.
+	 */
+	private function sectionForCategory(string $categoryName): string
+		{
+		$normalized = $this->normalizeCategoryName($categoryName);
+
+		foreach (self::INCOME_CATEGORY_TERMS as $term)
+			{
+			if (str_contains($normalized, $this->normalizeCategoryName($term)))
+				{
+				return 'income';
+				}
+			}
+
+		return 'expense';
+		}
+
+	/**
+	 * Normalizes category text for section classification.
+	 */
+	private function normalizeCategoryName(string $categoryName): string
+		{
+		$converted = iconv('UTF-8', 'ASCII//TRANSLIT//IGNORE', trim($categoryName));
+		$text = $converted !== false ? $converted : trim($categoryName);
+
+		return strtolower($text);
 		}
 
 	/**

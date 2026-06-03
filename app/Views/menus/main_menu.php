@@ -135,6 +135,7 @@
             <li><hr class="dropdown-divider" /></li>
             <?php if (authCan('financial_operation.index')): ?>
               <li><a class="dropdown-item" href="<?= url('financial_operation'); ?>"><i class="bi bi-receipt me-2"></i>Operações Financeiras</a></li>
+              <li><a class="dropdown-item" href="<?= url('financial_operation/spreadsheet'); ?>"><i class="bi bi-table me-2"></i>Planilha anual</a></li>
             <?php endif; ?>
             <li><hr class="dropdown-divider" /></li>
             <?php if (authCan('financial_operation_category.index')): ?>
