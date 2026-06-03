@@ -2,6 +2,7 @@
 
 namespace App\Controllers;
 
+use App\Core\Authorization;
 use App\Core\TenantAwareController;
 use App\Models\FinancialOperation;
 use App\Models\FinancialOperationCategory;
@@ -88,6 +89,38 @@ class FinancialOperationController extends TenantAwareController
 			'year'   => $year,
 			'report' => $report,
 		]);
+		}
+
+	/**
+	 * Creates or updates a financial operation from an annual spreadsheet cell.
+	 */
+	public function spreadsheetSave(): void
+		{
+		if (!Authorization::can('financial_operation.store') && !Authorization::can('financial_operation.update'))
+			{
+			$this->json([
+				'error' => 'forbidden',
+				'message' => 'Voce nao tem permissao para alterar operacoes financeiras.',
+			], 403);
+			}
+
+		try
+			{
+			$operation = new FinancialOperation();
+			$result = $operation->saveSpreadsheetCell($_POST);
+
+			$this->json([
+				'success' => true,
+				'result'  => $result,
+			]);
+			}
+		catch (\Throwable $e)
+			{
+			$this->json([
+				'error' => 'save_failed',
+				'message' => $e->getMessage(),
+			], 422);
+			}
 		}
 
 	/**

@@ -122,6 +122,131 @@ class FinancialOperation extends TenantModel
 		}
 
 	/**
+	 * Creates or updates the financial value represented by one spreadsheet cell.
+	 */
+	public function saveSpreadsheetCell(array $data): array
+		{
+		$categoryId = (int) ($data['financial_operation_category_id'] ?? 0);
+		$subcategoryId = isset($data['financial_operation_subcategory_id']) && $data['financial_operation_subcategory_id'] !== ''
+			? (int) $data['financial_operation_subcategory_id']
+			: null;
+		$year = (int) ($data['year'] ?? 0);
+		$month = (int) ($data['month'] ?? 0);
+		$amount = $this->normalizeDecimal($data['value'] ?? '0');
+		$targetAmount = (float) $amount;
+
+		if ($categoryId <= 0)
+			{
+			throw new \InvalidArgumentException('Categoria invalida.');
+			}
+
+		if ($subcategoryId !== null && $subcategoryId <= 0)
+			{
+			$subcategoryId = null;
+			}
+
+		if ($year < 1900 || $year > 2100 || $month < 1 || $month > 12)
+			{
+			throw new \InvalidArgumentException('Periodo invalido.');
+			}
+
+		$now = date('Y-m-d H:i:s');
+		$cellDate = sprintf('%04d-%02d-01 12:00:00', $year, $month);
+
+		try
+			{
+			$this->db->beginTransaction();
+
+			$payment = $this->findSpreadsheetPayment($categoryId, $subcategoryId, $year, $month);
+			if ($payment)
+				{
+				$paymentId = (int) $payment['id'];
+				$operationId = (int) $payment['financial_operation_id'];
+				$otherAmount = $this->spreadsheetCellOtherAmount($categoryId, $subcategoryId, $year, $month, $paymentId, null);
+				$paymentAmount = number_format($targetAmount - $otherAmount, 2, '.', '');
+
+				$stmt = $this->db->prepare("
+					UPDATE financial_operations_payments
+					SET value = :value,
+					    modified = :modified
+					WHERE id = :id
+				");
+				$stmt->execute([
+					'value'    => $paymentAmount,
+					'modified' => $now,
+					'id'       => $paymentId,
+				]);
+
+				$this->syncOperationTotalFromPayments($operationId, $now);
+				$this->db->commit();
+
+				return [
+					'action' => 'updated_payment',
+					'financial_operation_id' => $operationId,
+					'financial_operation_payment_id' => $paymentId,
+				];
+				}
+
+			$operation = $this->findSpreadsheetOperationWithoutPayments($categoryId, $subcategoryId, $year, $month);
+			if ($operation)
+				{
+				$operationId = (int) $operation['id'];
+				$otherAmount = $this->spreadsheetCellOtherAmount($categoryId, $subcategoryId, $year, $month, null, $operationId);
+				$operationAmount = number_format($targetAmount - $otherAmount, 2, '.', '');
+				$stmt = $this->db->prepare("
+					UPDATE financial_operations
+					SET total_amount = :total_amount,
+					    modified = :modified
+					WHERE id = :id
+				");
+				$stmt->execute([
+					'total_amount' => $operationAmount,
+					'modified'     => $now,
+					'id'           => $operationId,
+				]);
+
+				$this->db->commit();
+
+				return [
+					'action' => 'updated_operation',
+					'financial_operation_id' => $operationId,
+					'financial_operation_payment_id' => null,
+				];
+				}
+
+			if ($targetAmount === 0.0)
+				{
+				$this->db->commit();
+
+				return [
+					'action' => 'no_change',
+					'financial_operation_id' => null,
+					'financial_operation_payment_id' => null,
+				];
+				}
+
+			$operationId = $this->createSpreadsheetOperation($categoryId, $subcategoryId, $amount, $cellDate, $now);
+			$paymentId = $this->createSpreadsheetPayment($operationId, $amount, $cellDate, $now);
+			$this->db->commit();
+
+			return [
+				'action' => 'created_operation',
+				'financial_operation_id' => $operationId,
+				'financial_operation_payment_id' => $paymentId,
+			];
+			}
+		catch (\Exception $e)
+			{
+			if ($this->db->inTransaction())
+				{
+				$this->db->rollBack();
+				}
+
+			throw $e;
+			}
+		}
+
+	/**
 	 * Searches operations using the provided filters and pagination.
 	 */
 	public function search(array $filters = [], int $limit = 10, int $offset = 0): array
@@ -457,6 +582,239 @@ class FinancialOperation extends TenantModel
 		$text = $converted !== false ? $converted : trim($categoryName);
 
 		return strtolower($text);
+		}
+
+	/**
+	 * Finds the latest payment represented by a spreadsheet cell.
+	 */
+	private function findSpreadsheetPayment(int $categoryId, ?int $subcategoryId, int $year, int $month): ?array
+		{
+		$subcategorySql = $subcategoryId === null
+			? 'FinancialOperation.financial_operation_subcategory_id IS NULL'
+			: 'FinancialOperation.financial_operation_subcategory_id = :subcategory_id';
+
+		$stmt = $this->db->prepare("
+			SELECT FinancialOperationPayment.id,
+			       FinancialOperationPayment.financial_operation_id
+			FROM financial_operations_payments AS FinancialOperationPayment
+			INNER JOIN financial_operations AS FinancialOperation ON FinancialOperation.id = FinancialOperationPayment.financial_operation_id
+			WHERE FinancialOperation.financial_operation_category_id = :category_id
+			  AND {$subcategorySql}
+			  AND YEAR(FinancialOperationPayment.created) = :year
+			  AND MONTH(FinancialOperationPayment.created) = :month
+			ORDER BY FinancialOperationPayment.modified DESC,
+			         FinancialOperationPayment.id DESC
+			LIMIT 1
+		");
+
+		$params = [
+			'category_id' => $categoryId,
+			'year'        => $year,
+			'month'       => $month,
+		];
+
+		if ($subcategoryId !== null)
+			{
+			$params['subcategory_id'] = $subcategoryId;
+			}
+
+		$stmt->execute($params);
+		$row = $stmt->fetch(PDO::FETCH_ASSOC);
+
+		return $row ?: null;
+		}
+
+	/**
+	 * Finds the latest operation without payments represented by a spreadsheet cell.
+	 */
+	private function findSpreadsheetOperationWithoutPayments(int $categoryId, ?int $subcategoryId, int $year, int $month): ?array
+		{
+		$subcategorySql = $subcategoryId === null
+			? 'FinancialOperation.financial_operation_subcategory_id IS NULL'
+			: 'FinancialOperation.financial_operation_subcategory_id = :subcategory_id';
+
+		$stmt = $this->db->prepare("
+			SELECT FinancialOperation.id
+			FROM financial_operations AS FinancialOperation
+			LEFT JOIN financial_operations_payments AS FinancialOperationPayment ON FinancialOperationPayment.financial_operation_id = FinancialOperation.id
+			WHERE FinancialOperation.financial_operation_category_id = :category_id
+			  AND {$subcategorySql}
+			  AND YEAR(FinancialOperation.created) = :year
+			  AND MONTH(FinancialOperation.created) = :month
+			  AND FinancialOperationPayment.id IS NULL
+			ORDER BY FinancialOperation.modified DESC,
+			         FinancialOperation.id DESC
+			LIMIT 1
+		");
+
+		$params = [
+			'category_id' => $categoryId,
+			'year'        => $year,
+			'month'       => $month,
+		];
+
+		if ($subcategoryId !== null)
+			{
+			$params['subcategory_id'] = $subcategoryId;
+			}
+
+		$stmt->execute($params);
+		$row = $stmt->fetch(PDO::FETCH_ASSOC);
+
+		return $row ?: null;
+		}
+
+	/**
+	 * Creates the operation backing a spreadsheet cell.
+	 */
+	private function createSpreadsheetOperation(int $categoryId, ?int $subcategoryId, string $amount, string $created, string $modified): int
+		{
+		$stmt = $this->db->prepare("
+			INSERT INTO financial_operations
+			    (financial_operation_category_id,
+			     financial_operation_subcategory_id,
+			     total_amount,
+			     created,
+			     modified)
+			VALUES
+			    (:financial_operation_category_id,
+			     :financial_operation_subcategory_id,
+			     :total_amount,
+			     :created,
+			     :modified)
+		");
+		$stmt->execute([
+			'financial_operation_category_id'    => $categoryId,
+			'financial_operation_subcategory_id' => $subcategoryId,
+			'total_amount'                       => $amount,
+			'created'                            => $created,
+			'modified'                           => $modified,
+		]);
+
+		return (int) $this->db->lastInsertId();
+		}
+
+	/**
+	 * Returns the cell amount that is not represented by the selected editable record.
+	 */
+	private function spreadsheetCellOtherAmount(int $categoryId, ?int $subcategoryId, int $year, int $month, ?int $excludePaymentId, ?int $excludeOperationId): float
+		{
+		$paymentSubcategorySql = $subcategoryId === null
+			? 'FinancialOperation.financial_operation_subcategory_id IS NULL'
+			: 'FinancialOperation.financial_operation_subcategory_id = :payment_subcategory_id';
+		$operationSubcategorySql = $subcategoryId === null
+			? 'FinancialOperation.financial_operation_subcategory_id IS NULL'
+			: 'FinancialOperation.financial_operation_subcategory_id = :operation_subcategory_id';
+		$paymentExclusionSql = $excludePaymentId === null ? '' : 'AND FinancialOperationPayment.id <> :exclude_payment_id';
+		$operationExclusionSql = $excludeOperationId === null ? '' : 'AND FinancialOperation.id <> :exclude_operation_id';
+
+		$stmt = $this->db->prepare("
+			SELECT COALESCE(SUM(CellAmount.amount), 0) AS amount
+			FROM (
+				SELECT FinancialOperationPayment.value AS amount
+				FROM financial_operations_payments AS FinancialOperationPayment
+				INNER JOIN financial_operations AS FinancialOperation ON FinancialOperation.id = FinancialOperationPayment.financial_operation_id
+				WHERE FinancialOperation.financial_operation_category_id = :payment_category_id
+				  AND {$paymentSubcategorySql}
+				  AND YEAR(FinancialOperationPayment.created) = :payment_year
+				  AND MONTH(FinancialOperationPayment.created) = :payment_month
+				  {$paymentExclusionSql}
+
+				UNION ALL
+
+				SELECT FinancialOperation.total_amount AS amount
+				FROM financial_operations AS FinancialOperation
+				LEFT JOIN financial_operations_payments AS FinancialOperationPayment ON FinancialOperationPayment.financial_operation_id = FinancialOperation.id
+				WHERE FinancialOperation.financial_operation_category_id = :operation_category_id
+				  AND {$operationSubcategorySql}
+				  AND YEAR(FinancialOperation.created) = :operation_year
+				  AND MONTH(FinancialOperation.created) = :operation_month
+				  AND FinancialOperationPayment.id IS NULL
+				  {$operationExclusionSql}
+			) AS CellAmount
+		");
+
+		$params = [
+			'payment_category_id'   => $categoryId,
+			'payment_year'          => $year,
+			'payment_month'         => $month,
+			'operation_category_id' => $categoryId,
+			'operation_year'        => $year,
+			'operation_month'       => $month,
+		];
+
+		if ($subcategoryId !== null)
+			{
+			$params['payment_subcategory_id'] = $subcategoryId;
+			$params['operation_subcategory_id'] = $subcategoryId;
+			}
+
+		if ($excludePaymentId !== null)
+			{
+			$params['exclude_payment_id'] = $excludePaymentId;
+			}
+
+		if ($excludeOperationId !== null)
+			{
+			$params['exclude_operation_id'] = $excludeOperationId;
+			}
+
+		$stmt->execute($params);
+
+		return (float) $stmt->fetchColumn();
+		}
+
+	/**
+	 * Creates the payment backing a spreadsheet cell.
+	 */
+	private function createSpreadsheetPayment(int $operationId, string $amount, string $created, string $modified): int
+		{
+		$stmt = $this->db->prepare("
+			INSERT INTO financial_operations_payments
+			    (financial_operation_id,
+			     value,
+			     created,
+			     modified)
+			VALUES
+			    (:financial_operation_id,
+			     :value,
+			     :created,
+			     :modified)
+		");
+		$stmt->execute([
+			'financial_operation_id' => $operationId,
+			'value'                  => $amount,
+			'created'                => $created,
+			'modified'               => $modified,
+		]);
+
+		return (int) $this->db->lastInsertId();
+		}
+
+	/**
+	 * Keeps the operation total aligned with the sum of its payments.
+	 */
+	private function syncOperationTotalFromPayments(int $operationId, string $modified): void
+		{
+		$stmt = $this->db->prepare("
+			SELECT COALESCE(SUM(FinancialOperationPayment.value), 0) AS total_amount
+			FROM financial_operations_payments AS FinancialOperationPayment
+			WHERE FinancialOperationPayment.financial_operation_id = :financial_operation_id
+		");
+		$stmt->execute(['financial_operation_id' => $operationId]);
+		$totalAmount = number_format((float) $stmt->fetchColumn(), 2, '.', '');
+
+		$updateStmt = $this->db->prepare("
+			UPDATE financial_operations
+			SET total_amount = :total_amount,
+			    modified = :modified
+			WHERE id = :id
+		");
+		$updateStmt->execute([
+			'total_amount' => $totalAmount,
+			'modified'     => $modified,
+			'id'           => $operationId,
+		]);
 		}
 
 	/**

@@ -133,8 +133,9 @@
               <li><a class="dropdown-item" href="<?= url('bank_account'); ?>"><i class="bi bi-wallet2 me-2"></i>Contas Bancárias</a></li>
             <?php endif; ?>
             <li><hr class="dropdown-divider" /></li>
-            <?php if (authCan('financial_operation.index')): ?>
+            <?php if (authCan('financial_operation.spreadsheet')): ?>
               <li><a class="dropdown-item" href="<?= url('financial_operation'); ?>"><i class="bi bi-receipt me-2"></i>Operações Financeiras</a></li>
+              <li><hr class="dropdown-divider" /></li>
               <li><a class="dropdown-item" href="<?= url('financial_operation/spreadsheet'); ?>"><i class="bi bi-table me-2"></i>Planilha anual</a></li>
             <?php endif; ?>
             <li><hr class="dropdown-divider" /></li>

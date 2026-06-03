@@ -1,6 +1,5 @@
 .financial-spreadsheet-shell {
-  max-height: calc(100vh - 210px);
-  overflow: auto;
+  overflow: visible;
 }
 
 .financial-spreadsheet {
@@ -30,6 +29,28 @@
   font-variant-numeric: tabular-nums;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.financial-spreadsheet .financial-spreadsheet-value {
+  cursor: pointer;
+  position: relative;
+}
+
+.financial-spreadsheet-edit-icon {
+  color: var(--bs-primary);
+  font-size: 0.78rem;
+  left: 0.35rem;
+  opacity: 0;
+  pointer-events: none;
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  transition: opacity 0.15s ease;
+}
+
+.financial-spreadsheet-value:hover .financial-spreadsheet-edit-icon,
+.financial-spreadsheet-value:focus .financial-spreadsheet-edit-icon {
+  opacity: 1;
 }
 
 [data-bs-theme="dark"] .financial-spreadsheet-shell {
@@ -106,10 +127,6 @@
 }
 
 @media (max-width: 768px) {
-  .financial-spreadsheet-shell {
-    max-height: calc(100vh - 250px);
-  }
-
   .financial-spreadsheet {
     font-size: 0.64rem;
   }
