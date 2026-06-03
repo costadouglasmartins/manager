@@ -2,9 +2,11 @@
 
 namespace App\Controllers;
 
+use App\Core\Authorization;
 use App\Core\TenantContext;
 use App\Core\TenantAwareController;
 use App\Models\Address;
+use App\Services\ZipCodeLookupService;
 
 class AddressController extends TenantAwareController
 	{
@@ -75,6 +77,22 @@ class AddressController extends TenantAwareController
 		}
 
 	/**
+	 * Looks up a ZIP code using the ViaCEP service.
+	 */
+	public function zipCodeSearch()
+		{
+		$this->requireAddressFormAccess();
+
+		$zipCode = (string) ($_GET['zip_code'] ?? $_GET['cep'] ?? '');
+		$service = new ZipCodeLookupService();
+		$result = $service->lookup($zipCode);
+		$status = (int) ($result['http_status'] ?? 200);
+		unset($result['http_status']);
+
+		$this->json($result, $status);
+		}
+
+	/**
 	 * Store method
 	 */
 	public function store()
@@ -128,6 +146,19 @@ class AddressController extends TenantAwareController
 		{
 		$tenant = TenantContext::tenant();
 		return (int) ($tenant['id'] ?? 0);
+		}
+
+	/**
+	 * Allows access to address helper endpoints when the user can create or edit addresses.
+	 */
+	private function requireAddressFormAccess(): void
+		{
+		if (Authorization::can('address.create') || Authorization::can('address.edit'))
+			{
+			return;
+			}
+
+		$this->requirePermission('address.create');
 		}
 	}
 

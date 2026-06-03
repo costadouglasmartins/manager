@@ -1,16 +1,23 @@
 (function ()
   {
-  function allowOnlyNumbers(input)
+  function digitsOnly(value, maxLength)
     {
-    let value = input.value.replace(/\D+/g, "");
+    let digits = String(value || "").replace(/\D+/g, "");
 
-    if (input.maxLength > -1)
+    if (typeof maxLength === "number" && maxLength > -1)
       {
-      value = value.slice(0, input.maxLength);
+      digits = digits.slice(0, maxLength);
       }
 
-    input.value = value;
+    return digits;
     }
+
+  function allowOnlyNumbers(input)
+    {
+    input.value = digitsOnly(input.value, input.maxLength);
+    }
+
+  window.digitsOnly = digitsOnly;
 
   document.addEventListener("input", function (event)
     {

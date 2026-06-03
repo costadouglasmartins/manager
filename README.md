@@ -37,6 +37,7 @@ Este documento registra as convenções de desenvolvimento que devem ser seguida
 - Todas as views devem manter os botões de ação principais em uma barra fixa no rodapé da página usando a classe `view-actions`.
 - Aplique a mesma regra em views `informations.php` e em views antigas que ainda não seguem um padrão próprio de área de ações.
 - Não inclua botões de ação de linha de tabela, botões de modal ou controles internos de blocos repetíveis na barra fixa da view.
+- Crie elementos HTML com os atributos separados por espaço e tudo na mesma linha sempre.
 - Escape saídas em views com `htmlspecialchars()` ou com o padrão local de helper `$e()`.
 - Mantenha nomes de campos agrupados por entidade, como `person[name]`, `user[type]`, `emails[0][address]`.
 
