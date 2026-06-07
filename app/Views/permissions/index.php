@@ -132,37 +132,41 @@ if (isset($_GET['created']))
   <form method="POST" action="<?= url('permission/saveUser'); ?>">
     <input type="hidden" name="user_id" value="<?= (int) $selectedUserId; ?>">
 
+    <div class="row g-3 mb-3">
     <?php foreach ($groups as $groupName => $items): ?>
-      <div class="mb-3">
-        <div class="fw-semibold mb-2 text-capitalize"><?= htmlspecialchars($groupName); ?></div>
-        <div class="table-responsive">
-          <table class="table table-sm table-bordered align-middle mb-0">
-            <thead>
-              <tr>
-                <th class="col-1">Permissão</th>
-                <th class="col-4">Funcionalidade acesso</th>
-                <th class="col-7">Descrição</th>
-              </tr>
-            </thead>
-            <tbody>
-              <?php foreach ($items as $p): ?>
-                <?php
-                  $pid = (int) $p['id'];
-                  $checked = in_array($pid, $userPermissionIds, true);
-                ?>
-                <tr>
-                  <td class="text-center">
-                    <input class="form-check-input" type="checkbox" name="permission_ids[]" value="<?= $pid; ?>" <?= ($checked ? 'checked' : ''); ?>>
-                  </td>
-                  <td><code><?= htmlspecialchars($p['ability']); ?></code></td>
-                  <td><?= htmlspecialchars((string) ($p['description'] ?? '')); ?></td>
-                </tr>
-              <?php endforeach; ?>
-            </tbody>
-          </table>
+      <div class="col-12 col-md-6 col-xl-4">
+        <div class="card h-100">
+          <div class="card-header fw-semibold text-capitalize"><?= htmlspecialchars($groupName); ?></div>
+          <div class="card-body p-0">
+              <table class="table table-sm table-bordered align-middle mb-0">
+                <thead>
+                  <tr>
+                    <th class="col-1">On</th>
+                    <th>Ability</th>
+                    <th>Descrição</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <?php foreach ($items as $p): ?>
+                    <?php
+                      $pid = (int) $p['id'];
+                      $checked = in_array($pid, $userPermissionIds, true);
+                    ?>
+                    <tr>
+                      <td class="text-center">
+                        <input class="form-check-input" type="checkbox" name="permission_ids[]" value="<?= $pid; ?>" <?= ($checked ? 'checked' : ''); ?>>
+                      </td>
+                      <td style="word-break:break-all"><code><?= htmlspecialchars($p['ability']); ?></code></td>
+                      <td class="text-muted small"><?= htmlspecialchars((string) ($p['description'] ?? '')); ?></td>
+                    </tr>
+                  <?php endforeach; ?>
+                </tbody>
+              </table>
+          </div>
         </div>
       </div>
     <?php endforeach; ?>
+    </div>
 
     <div class="d-flex flex-wrap gap-2 align-items-center">
       <button type="submit" class="btn btn-primary">
