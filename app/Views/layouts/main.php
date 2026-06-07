@@ -3,6 +3,7 @@ $pageTitle = trim((string) ($title ?? 'Início'));
 $managerUser = $_SESSION['manager']['user'] ?? null;
 $isAuthenticated = !empty($managerUser);
 $userName = $isAuthenticated ? (string) ($managerUser['name'] ?? 'Usuário(a)') : 'Usuário(a)';
+$hasTenantContext = class_exists('App\\Core\\TenantContext') && \App\Core\TenantContext::hasTenant();
 ?>
 <!DOCTYPE html>
 <html lang="pt-BR" id="htmlRoot" data-bs-theme="light">
@@ -43,6 +44,9 @@ $userName = $isAuthenticated ? (string) ($managerUser['name'] ?? 'Usuário(a)') 
   <script src="<?= url('assets/js/menu.js?v=3'); ?>"></script>
   <script src="<?= url('assets/js/main.js?v=4'); ?>"></script>
   <script src="<?= url('assets/js/helper.js?v=1'); ?>"></script>
+  <?php if ($isAuthenticated && $hasTenantContext): ?>
+    <?php require __DIR__ . '/../support_chats/widget.php'; ?>
+  <?php endif; ?>
 
 </body>
 </html>
