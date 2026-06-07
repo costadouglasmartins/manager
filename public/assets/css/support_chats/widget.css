@@ -2,7 +2,7 @@
   position: fixed;
   right: max(1rem, env(safe-area-inset-right));
   bottom: max(1rem, env(safe-area-inset-bottom));
-  z-index: 1080;
+  z-index: 1040;
   display: flex;
   flex-direction: column;
   align-items: flex-end;
@@ -217,8 +217,7 @@
 }
 
 .support-widget.is-history-collapsed .support-widget-history-header strong,
-.support-widget.is-history-collapsed .support-widget-history-list,
-.support-widget.is-history-collapsed .support-widget-history-preview {
+.support-widget.is-history-collapsed .support-widget-history-list {
   display: none;
 }
 
@@ -267,13 +266,6 @@
   font-size: 0.72rem;
 }
 
-.support-widget-history-preview {
-  min-height: 0;
-  flex: 1;
-  padding: 0 0.75rem 0.75rem;
-  overflow-y: auto;
-}
-
 .support-widget-history-empty,
 .support-widget-history-loading {
   padding: 0.8rem 0.65rem;
@@ -282,49 +274,70 @@
   text-align: center;
 }
 
-.support-widget-history-preview-title {
+.support-widget-history-modal-meta {
+  color: var(--app-muted);
+  font-size: 0.8rem;
+}
+
+.support-widget-history-modal-messages {
   display: flex;
   flex-direction: column;
-  gap: 0.15rem;
-  padding: 0.7rem 0;
+  gap: 0.75rem;
+  min-height: 280px;
+  max-height: min(620px, calc(100vh - 220px));
+  overflow-y: auto;
 }
 
-.support-widget-history-preview-title strong {
-  font-size: 0.82rem;
+.support-widget-history-modal-message {
+  display: flex;
+  max-width: 82%;
+  flex-direction: column;
+  gap: 0.28rem;
 }
 
-.support-widget-history-preview-title span {
+.support-widget-history-modal-message.is-self {
+  align-self: flex-end;
+}
+
+.support-widget-history-modal-message.is-other {
+  align-self: flex-start;
+}
+
+.support-widget-history-modal-message-meta {
   color: var(--app-muted);
   font-size: 0.72rem;
 }
 
-.support-widget-history-messages {
-  display: flex;
-  flex-direction: column;
-  gap: 0.45rem;
-}
-
-.support-widget-history-message {
-  padding: 0.55rem 0.6rem;
-  border-radius: 6px;
-  background: rgba(148, 163, 184, 0.14);
-}
-
-.support-widget-history-message.is-self {
-  background: rgba(37, 99, 235, 0.1);
-}
-
-.support-widget-history-message-meta {
-  margin-bottom: 0.2rem;
-  color: var(--app-muted);
-  font-size: 0.68rem;
-}
-
-.support-widget-history-message-text {
+.support-widget-history-modal-message-bubble {
+  padding: 0.72rem 0.85rem;
+  border: 1px solid var(--app-border);
+  border-radius: 8px;
+  background: var(--app-surface-raised);
   color: var(--app-text);
-  font-size: 0.76rem;
-  line-height: 1.35;
+  line-height: 1.42;
   white-space: pre-wrap;
+}
+
+.support-widget-history-modal-message.is-self .support-widget-history-modal-message-bubble {
+  border-color: color-mix(in srgb, var(--app-accent) 35%, var(--app-border));
+  background: color-mix(in srgb, var(--app-accent) 13%, var(--app-surface-raised));
+}
+
+.support-widget-history-modal-empty {
+  display: flex;
+  min-height: 240px;
+  align-items: center;
+  justify-content: center;
+  color: var(--app-muted);
+  text-align: center;
+}
+
+[data-bs-theme="dark"] .support-widget-history {
+  background: color-mix(in srgb, var(--app-surface-raised) 88%, transparent);
+}
+
+[data-bs-theme="dark"] .support-widget-history-item {
+  background: var(--app-surface-raised);
 }
 
 @media (max-width: 575.98px) {

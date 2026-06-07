@@ -1,4 +1,4 @@
-<link rel="stylesheet" href="<?= url('assets/css/support_chats/widget.css?v=3'); ?>">
+<link rel="stylesheet" href="<?= url('assets/css/support_chats/widget.css?v=4'); ?>">
 
 <div class="support-widget" id="supportWidget" data-bootstrap-url="<?= url('support_chat/bootstrap'); ?>" data-chat-url-base="<?= url('support_chat/show'); ?>" data-ws-auth-url="<?= url('support_chat/wsAuth'); ?>">
   <button class="support-widget-toggle" id="supportWidgetToggle" type="button" aria-expanded="false" aria-controls="supportWidgetPanel">
@@ -40,15 +40,31 @@
       <aside class="support-widget-history" aria-labelledby="supportWidgetHistoryTitle">
         <div class="support-widget-history-header">
           <strong id="supportWidgetHistoryTitle">Histórico</strong>
-          <button class="support-widget-history-toggle" id="supportWidgetHistoryToggle" type="button" aria-label="Recolher histórico" aria-expanded="true" aria-controls="supportWidgetHistoryList supportWidgetHistoryPreview" title="Recolher histórico">
+          <button class="support-widget-history-toggle" id="supportWidgetHistoryToggle" type="button" aria-label="Recolher histórico" aria-expanded="true" aria-controls="supportWidgetHistoryList" title="Recolher histórico">
             <i class="bi bi-chevron-right"></i>
           </button>
         </div>
         <div id="supportWidgetHistoryList" class="support-widget-history-list"></div>
-        <div id="supportWidgetHistoryPreview" class="support-widget-history-preview"></div>
       </aside>
     </div>
   </section>
 </div>
 
-<script src="<?= url('assets/js/support_chats/widget.js?v=4'); ?>"></script>
+<div class="modal fade support-widget-history-modal" id="supportWidgetHistoryModal" tabindex="-1" aria-labelledby="supportWidgetHistoryModalTitle" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-scrollable modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <div>
+          <h5 class="modal-title" id="supportWidgetHistoryModalTitle">Histórico</h5>
+          <p class="support-widget-history-modal-meta mb-0" id="supportWidgetHistoryModalMeta"></p>
+        </div>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+      </div>
+      <div class="modal-body">
+        <div id="supportWidgetHistoryModalMessages" class="support-widget-history-modal-messages"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="<?= url('assets/js/support_chats/widget.js?v=5'); ?>"></script>

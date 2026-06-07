@@ -20,8 +20,11 @@ document.addEventListener("DOMContentLoaded", () => {
     headerMeta: document.getElementById("supportWidgetHeaderMeta"),
     messages: document.getElementById("supportWidgetMessages"),
     historyList: document.getElementById("supportWidgetHistoryList"),
-    historyPreview: document.getElementById("supportWidgetHistoryPreview"),
     historyToggle: document.getElementById("supportWidgetHistoryToggle"),
+    historyModal: document.getElementById("supportWidgetHistoryModal"),
+    historyModalTitle: document.getElementById("supportWidgetHistoryModalTitle"),
+    historyModalMeta: document.getElementById("supportWidgetHistoryModalMeta"),
+    historyModalMessages: document.getElementById("supportWidgetHistoryModalMessages"),
     typing: document.getElementById("supportWidgetTyping"),
     form: document.getElementById("supportWidgetComposer"),
     input: document.getElementById("supportWidgetInput"),
@@ -37,8 +40,7 @@ document.addEventListener("DOMContentLoaded", () => {
     reconnectDelay: 1200,
     typingTimer: null,
     lastTypingState: false,
-    historyPreviewChatId: null,
-    historyPreview: null,
+    historyModalChatId: null,
     historyCollapsed: false,
   };
 
@@ -213,61 +215,68 @@ document.addEventListener("DOMContentLoaded", () => {
     elements.messages.scrollTop = elements.messages.scrollHeight;
   }
 
-  function renderHistoryPreview() {
-    if (!elements.historyPreview) {
+  function historyModalInstance() {
+    if (!elements.historyModal || !window.bootstrap || !window.bootstrap.Modal) {
+      return null;
+    }
+
+    return window.bootstrap.Modal.getOrCreateInstance(elements.historyModal);
+  }
+
+  function showHistoryModal() {
+    const modal = historyModalInstance();
+    if (modal) {
+      modal.show();
+    }
+  }
+
+  function renderHistoryModalLoading(chatId) {
+    if (!elements.historyModalTitle || !elements.historyModalMeta || !elements.historyModalMessages) {
       return;
     }
 
-    const history = historyChats();
-    const preview = state.historyPreview;
+    elements.historyModalTitle.textContent = `Atendimento #${Number(chatId)}`;
+    elements.historyModalMeta.textContent = "";
+    elements.historyModalMessages.innerHTML = '<div class="support-widget-history-modal-empty">Carregando conversa...</div>';
+  }
 
-    if (!history.length) {
-      elements.historyPreview.innerHTML = "";
+  function renderHistoryModalError() {
+    if (!elements.historyModalMessages) {
       return;
     }
 
-    if (!state.historyPreviewChatId) {
-      elements.historyPreview.innerHTML = '<div class="support-widget-history-empty">Selecione um atendimento finalizado.</div>';
+    elements.historyModalMessages.innerHTML = '<div class="support-widget-history-modal-empty">Não foi possível carregar este histórico.</div>';
+  }
+
+  function renderHistoryModal(payload) {
+    if (!elements.historyModalTitle || !elements.historyModalMeta || !elements.historyModalMessages) {
       return;
     }
 
-    if (preview && preview.loading) {
-      elements.historyPreview.innerHTML = '<div class="support-widget-history-loading">Carregando histórico...</div>';
+    const chat = payload.chat || {};
+    const messages = payload.messages || [];
+    const attendantName = chat.attendant_name || chat.attendant_username || "Sem atendente";
+    const closedAt = chat.closed_at || chat.last_message_at || chat.created;
+
+    elements.historyModalTitle.textContent = `Atendimento #${Number(chat.id || 0)}`;
+    elements.historyModalMeta.textContent = `${attendantName} | Finalizado em ${formatDate(closedAt)}`;
+
+    if (!messages.length) {
+      elements.historyModalMessages.innerHTML = '<div class="support-widget-history-modal-empty">Nenhuma mensagem neste atendimento.</div>';
       return;
     }
 
-    if (preview && preview.error) {
-      elements.historyPreview.innerHTML = '<div class="support-widget-history-empty">Não foi possível carregar este histórico.</div>';
-      return;
-    }
+    elements.historyModalMessages.innerHTML = messages.map((message) => {
+      const isSelf = Number(message.sender_user_id || 0) === currentUserId() && message.sender_role === "customer";
+      const cssClass = isSelf ? "is-self" : "is-other";
 
-    if (!preview || !preview.chat) {
-      elements.historyPreview.innerHTML = "";
-      return;
-    }
-
-    const chat = preview.chat;
-    const messages = (preview.messages || []).slice(-20);
-
-    elements.historyPreview.innerHTML = `
-      <div class="support-widget-history-preview-title">
-        <strong>Atendimento #${Number(chat.id)}</strong>
-        <span>Finalizado em ${escapeHtml(formatDate(chat.closed_at || chat.last_message_at || chat.created))}</span>
-      </div>
-      <div class="support-widget-history-messages">
-        ${messages.map((message) => {
-          const isSelf = Number(message.sender_user_id || 0) === currentUserId() && message.sender_role === "customer";
-          const cssClass = isSelf ? "is-self" : "is-other";
-
-          return `
-            <div class="support-widget-history-message ${cssClass}">
-              <div class="support-widget-history-message-meta">${escapeHtml(message.sender_name || message.sender_role)} | ${escapeHtml(formatDate(message.created))}</div>
-              <div class="support-widget-history-message-text">${escapeHtml(message.message_text || "")}</div>
-            </div>
-          `;
-        }).join("")}
-      </div>
-    `;
+      return `
+        <div class="support-widget-history-modal-message ${cssClass}">
+          <div class="support-widget-history-modal-message-meta">${escapeHtml(message.sender_name || message.sender_role)} | ${escapeHtml(formatDate(message.created))}</div>
+          <div class="support-widget-history-modal-message-bubble">${escapeHtml(message.message_text || "")}</div>
+        </div>
+      `;
+    }).join("");
   }
 
   function renderHistory() {
@@ -278,22 +287,19 @@ document.addEventListener("DOMContentLoaded", () => {
     const history = historyChats();
 
     if (!history.length) {
-      state.historyPreviewChatId = null;
-      state.historyPreview = null;
+      state.historyModalChatId = null;
       elements.historyList.innerHTML = '<div class="support-widget-history-empty">Nenhum histórico finalizado.</div>';
-      renderHistoryPreview();
       return;
     }
 
     const historyIds = history.map((chat) => Number(chat.id));
-    if (state.historyPreviewChatId && !historyIds.includes(Number(state.historyPreviewChatId))) {
-      state.historyPreviewChatId = null;
-      state.historyPreview = null;
+    if (state.historyModalChatId && !historyIds.includes(Number(state.historyModalChatId))) {
+      state.historyModalChatId = null;
     }
 
     elements.historyList.innerHTML = history.map((chat) => {
       const chatDate = chat.closed_at || chat.last_message_at || chat.created;
-      const activeClass = Number(chat.id) === Number(state.historyPreviewChatId) ? " is-active" : "";
+      const activeClass = Number(chat.id) === Number(state.historyModalChatId) ? " is-active" : "";
       const attendantName = chat.attendant_name || chat.attendant_username || "Sem atendente";
 
       return `
@@ -313,12 +319,10 @@ document.addEventListener("DOMContentLoaded", () => {
       button.addEventListener("click", () => {
         const chatId = Number(button.dataset.historyChatId || 0);
         if (chatId > 0) {
-          loadHistoryPreview(chatId);
+          openHistoryModal(chatId);
         }
       });
     });
-
-    renderHistoryPreview();
   }
 
   async function fetchJson(url, options) {
@@ -344,18 +348,18 @@ document.addEventListener("DOMContentLoaded", () => {
     renderHistory();
   }
 
-  async function loadHistoryPreview(chatId) {
-    state.historyPreviewChatId = Number(chatId);
-    state.historyPreview = { loading: true };
+  async function openHistoryModal(chatId) {
+    state.historyModalChatId = Number(chatId);
+    renderHistoryModalLoading(chatId);
     renderHistory();
+    showHistoryModal();
 
     try {
-      state.historyPreview = await fetchJson(`${chatUrlBase}/${encodeURIComponent(chatId)}`);
+      const payload = await fetchJson(`${chatUrlBase}/${encodeURIComponent(chatId)}`);
+      renderHistoryModal(payload);
     } catch (error) {
-      state.historyPreview = { error: true };
+      renderHistoryModalError();
     }
-
-    renderHistory();
   }
 
   function sendSocketMessage(payload) {
