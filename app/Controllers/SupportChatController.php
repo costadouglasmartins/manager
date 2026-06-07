@@ -38,8 +38,9 @@ class SupportChatController extends Controller
 		$tenant = $context['tenant'];
 
 		$model = new SupportChat();
-		$chat = $model->findLatestChatForCustomer((int) ($user['id'] ?? 0), (int) ($tenant['id'] ?? 0));
+		$chat = $model->findActiveChatForCustomer((int) ($user['id'] ?? 0), (int) ($tenant['id'] ?? 0));
 		$messages = [];
+		$history = $model->listClosedChatsForCustomer((int) ($user['id'] ?? 0), (int) ($tenant['id'] ?? 0));
 
 		if ($chat)
 			{
@@ -60,6 +61,7 @@ class SupportChatController extends Controller
 			],
 			'chat' => $chat,
 			'messages' => $messages,
+			'history' => $history,
 		]);
 		}
 

@@ -8,9 +8,9 @@ use PDO;
 class SupportChat extends Model
 	{
 	/**
-	 * Returns the latest chat for the current customer and tenant.
+	 * Returns the latest active chat for the current customer and tenant.
 	 */
-	public function findLatestChatForCustomer(int $customerUserId, int $tenantId): ?array
+	public function findActiveChatForCustomer(int $customerUserId, int $tenantId): ?array
 		{
 		$chatsTable = $this->managerTable('support_chats');
 		$usersTable = $this->managerTable('users');
@@ -41,6 +41,7 @@ class SupportChat extends Model
 		        LEFT JOIN {$peopleTable} AS AttendantPerson ON AttendantPerson.id = AttendantUser.person_id
 		        WHERE Chat.customer_user_id = :customer_user_id
 		          AND Chat.tenant_id = :tenant_id
+		          AND Chat.status IN ('pending', 'open')
 		        ORDER BY
 		          CASE Chat.status
 		            WHEN 'pending' THEN 0
@@ -59,6 +60,64 @@ class SupportChat extends Model
 
 		$row = $stmt->fetch(PDO::FETCH_ASSOC);
 		return $row ?: null;
+		}
+
+	/**
+	 * Returns the latest active chat for backward-compatible callers.
+	 */
+	public function findLatestChatForCustomer(int $customerUserId, int $tenantId): ?array
+		{
+		return $this->findActiveChatForCustomer($customerUserId, $tenantId);
+		}
+
+	/**
+	 * Returns closed chats for the current customer and tenant.
+	 *
+	 * @return array<int, array<string, mixed>>
+	 */
+	public function listClosedChatsForCustomer(int $customerUserId, int $tenantId, int $limit = 12): array
+		{
+		$chatsTable = $this->managerTable('support_chats');
+		$usersTable = $this->managerTable('users');
+		$peopleTable = $this->managerTable('people');
+		$tenantsTable = $this->managerTable('tenants');
+
+		$sql = "SELECT Chat.id,
+		               Chat.status,
+		               Chat.customer_user_id,
+		               Chat.attendant_user_id,
+		               Chat.tenant_id,
+		               Chat.tenant_database_number,
+		               Chat.created,
+		               Chat.modified,
+		               Chat.last_message_at,
+		               Chat.closed_at,
+		               CustomerPerson.name AS customer_name,
+		               CustomerUser.username AS customer_username,
+		               Tenant.observations AS tenant_name,
+		               Tenant.database_number,
+		               AttendantPerson.name AS attendant_name,
+		               AttendantUser.username AS attendant_username
+		        FROM {$chatsTable} AS Chat
+		        INNER JOIN {$usersTable} AS CustomerUser ON CustomerUser.id = Chat.customer_user_id
+		        INNER JOIN {$peopleTable} AS CustomerPerson ON CustomerPerson.id = CustomerUser.person_id
+		        LEFT JOIN {$tenantsTable} AS Tenant ON Tenant.id = Chat.tenant_id
+		        LEFT JOIN {$usersTable} AS AttendantUser ON AttendantUser.id = Chat.attendant_user_id
+		        LEFT JOIN {$peopleTable} AS AttendantPerson ON AttendantPerson.id = AttendantUser.person_id
+		        WHERE Chat.customer_user_id = :customer_user_id
+		          AND Chat.tenant_id = :tenant_id
+		          AND Chat.status = 'closed'
+		        ORDER BY COALESCE(Chat.closed_at, Chat.last_message_at, Chat.created) DESC,
+		                 Chat.id DESC
+		        LIMIT :limit";
+
+		$stmt = $this->db->prepare($sql);
+		$stmt->bindValue(':customer_user_id', $customerUserId, PDO::PARAM_INT);
+		$stmt->bindValue(':tenant_id', $tenantId, PDO::PARAM_INT);
+		$stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
+		$stmt->execute();
+
+		return $stmt->fetchAll(PDO::FETCH_ASSOC);
 		}
 
 	/**

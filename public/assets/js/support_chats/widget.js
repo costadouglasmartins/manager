@@ -8,6 +8,10 @@ document.addEventListener("DOMContentLoaded", () => {
   const bootstrapUrl = root.dataset.bootstrapUrl || "";
   const chatUrlBase = (root.dataset.chatUrlBase || "").replace(/\/$/, "");
   const wsAuthUrl = root.dataset.wsAuthUrl || "";
+  const storageKeys = {
+    panel: "manager.supportChat.panelState",
+    history: "manager.supportChat.historyState",
+  };
 
   const elements = {
     toggle: document.getElementById("supportWidgetToggle"),
@@ -15,6 +19,9 @@ document.addEventListener("DOMContentLoaded", () => {
     panel: document.getElementById("supportWidgetPanel"),
     headerMeta: document.getElementById("supportWidgetHeaderMeta"),
     messages: document.getElementById("supportWidgetMessages"),
+    historyList: document.getElementById("supportWidgetHistoryList"),
+    historyPreview: document.getElementById("supportWidgetHistoryPreview"),
+    historyToggle: document.getElementById("supportWidgetHistoryToggle"),
     typing: document.getElementById("supportWidgetTyping"),
     form: document.getElementById("supportWidgetComposer"),
     input: document.getElementById("supportWidgetInput"),
@@ -30,7 +37,26 @@ document.addEventListener("DOMContentLoaded", () => {
     reconnectDelay: 1200,
     typingTimer: null,
     lastTypingState: false,
+    historyPreviewChatId: null,
+    historyPreview: null,
+    historyCollapsed: false,
   };
+
+  function readStoredValue(key) {
+    try {
+      return window.localStorage.getItem(key);
+    } catch (error) {
+      return null;
+    }
+  }
+
+  function writeStoredValue(key, value) {
+    try {
+      window.localStorage.setItem(key, value);
+    } catch (error) {
+      // localStorage can be blocked by browser privacy settings.
+    }
+  }
 
   function escapeHtml(value) {
     return String(value || "")
@@ -95,8 +121,18 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
+  function activeChat() {
+    const chat = state.bootstrap && state.bootstrap.chat;
+    return chat && chat.status !== "closed" ? chat : null;
+  }
+
+  function historyChats() {
+    return (state.bootstrap && state.bootstrap.history) || [];
+  }
+
   function chatId() {
-    return Number((state.bootstrap && state.bootstrap.chat && state.bootstrap.chat.id) || 0);
+    const chat = activeChat();
+    return Number((chat && chat.id) || 0);
   }
 
   function currentUserId() {
@@ -109,13 +145,53 @@ document.addEventListener("DOMContentLoaded", () => {
     elements.connection.classList.toggle("text-muted", !isOnline);
   }
 
+  function setPanelOpen(isOpen, shouldPersist = true, shouldFocus = true) {
+    elements.panel.hidden = !isOpen;
+    elements.toggle.setAttribute("aria-expanded", isOpen ? "true" : "false");
+
+    if (shouldPersist) {
+      writeStoredValue(storageKeys.panel, isOpen ? "open" : "closed");
+    }
+
+    if (isOpen && shouldFocus) {
+      elements.input.focus();
+    }
+  }
+
+  function togglePanel(forceOpen) {
+    const shouldOpen = typeof forceOpen === "boolean" ? forceOpen : elements.panel.hidden;
+    setPanelOpen(shouldOpen);
+  }
+
+  function setHistoryCollapsed(isCollapsed, shouldPersist = true) {
+    state.historyCollapsed = Boolean(isCollapsed);
+    root.classList.toggle("is-history-collapsed", state.historyCollapsed);
+
+    if (elements.historyToggle) {
+      elements.historyToggle.setAttribute("aria-expanded", state.historyCollapsed ? "false" : "true");
+      elements.historyToggle.setAttribute("aria-label", state.historyCollapsed ? "Expandir histórico" : "Recolher histórico");
+      elements.historyToggle.setAttribute("title", state.historyCollapsed ? "Expandir histórico" : "Recolher histórico");
+
+      const icon = elements.historyToggle.querySelector("i");
+      if (icon) {
+        icon.classList.toggle("bi-chevron-right", !state.historyCollapsed);
+        icon.classList.toggle("bi-chevron-left", state.historyCollapsed);
+      }
+    }
+
+    if (shouldPersist) {
+      writeStoredValue(storageKeys.history, state.historyCollapsed ? "collapsed" : "expanded");
+    }
+  }
+
   function renderMessages() {
-    const chat = state.bootstrap && state.bootstrap.chat;
-    const messages = (state.bootstrap && state.bootstrap.messages) || [];
+    const chat = activeChat();
+    const messages = chat ? ((state.bootstrap && state.bootstrap.messages) || []) : [];
     const tenant = state.bootstrap && state.bootstrap.tenant;
     const tenantName = tenant ? (tenant.fantasy || tenant.name || ("Tenant " + tenant.database_number)) : "Suporte";
 
     elements.headerMeta.textContent = chat ? `${tenantName} | ${statusLabel(chat.status)}` : `${tenantName} | Sem conversa iniciada`;
+    elements.typing.textContent = "";
 
     if (!messages.length) {
       elements.messages.innerHTML = '<div class="support-widget-empty"><p class="mb-0">Digite a primeira mensagem para iniciar o atendimento.</p></div>';
@@ -135,6 +211,114 @@ document.addEventListener("DOMContentLoaded", () => {
     }).join("");
 
     elements.messages.scrollTop = elements.messages.scrollHeight;
+  }
+
+  function renderHistoryPreview() {
+    if (!elements.historyPreview) {
+      return;
+    }
+
+    const history = historyChats();
+    const preview = state.historyPreview;
+
+    if (!history.length) {
+      elements.historyPreview.innerHTML = "";
+      return;
+    }
+
+    if (!state.historyPreviewChatId) {
+      elements.historyPreview.innerHTML = '<div class="support-widget-history-empty">Selecione um atendimento finalizado.</div>';
+      return;
+    }
+
+    if (preview && preview.loading) {
+      elements.historyPreview.innerHTML = '<div class="support-widget-history-loading">Carregando histórico...</div>';
+      return;
+    }
+
+    if (preview && preview.error) {
+      elements.historyPreview.innerHTML = '<div class="support-widget-history-empty">Não foi possível carregar este histórico.</div>';
+      return;
+    }
+
+    if (!preview || !preview.chat) {
+      elements.historyPreview.innerHTML = "";
+      return;
+    }
+
+    const chat = preview.chat;
+    const messages = (preview.messages || []).slice(-20);
+
+    elements.historyPreview.innerHTML = `
+      <div class="support-widget-history-preview-title">
+        <strong>Atendimento #${Number(chat.id)}</strong>
+        <span>Finalizado em ${escapeHtml(formatDate(chat.closed_at || chat.last_message_at || chat.created))}</span>
+      </div>
+      <div class="support-widget-history-messages">
+        ${messages.map((message) => {
+          const isSelf = Number(message.sender_user_id || 0) === currentUserId() && message.sender_role === "customer";
+          const cssClass = isSelf ? "is-self" : "is-other";
+
+          return `
+            <div class="support-widget-history-message ${cssClass}">
+              <div class="support-widget-history-message-meta">${escapeHtml(message.sender_name || message.sender_role)} | ${escapeHtml(formatDate(message.created))}</div>
+              <div class="support-widget-history-message-text">${escapeHtml(message.message_text || "")}</div>
+            </div>
+          `;
+        }).join("")}
+      </div>
+    `;
+  }
+
+  function renderHistory() {
+    if (!elements.historyList) {
+      return;
+    }
+
+    const history = historyChats();
+
+    if (!history.length) {
+      state.historyPreviewChatId = null;
+      state.historyPreview = null;
+      elements.historyList.innerHTML = '<div class="support-widget-history-empty">Nenhum histórico finalizado.</div>';
+      renderHistoryPreview();
+      return;
+    }
+
+    const historyIds = history.map((chat) => Number(chat.id));
+    if (state.historyPreviewChatId && !historyIds.includes(Number(state.historyPreviewChatId))) {
+      state.historyPreviewChatId = null;
+      state.historyPreview = null;
+    }
+
+    elements.historyList.innerHTML = history.map((chat) => {
+      const chatDate = chat.closed_at || chat.last_message_at || chat.created;
+      const activeClass = Number(chat.id) === Number(state.historyPreviewChatId) ? " is-active" : "";
+      const attendantName = chat.attendant_name || chat.attendant_username || "Sem atendente";
+
+      return `
+        <button type="button" class="support-widget-history-item${activeClass}" data-history-chat-id="${Number(chat.id)}">
+          <span class="support-widget-history-item-top">
+            <strong>Chat #${Number(chat.id)}</strong>
+            <span>${escapeHtml(formatDate(chatDate))}</span>
+          </span>
+          <span class="support-widget-history-item-bottom">
+            <span>${escapeHtml(attendantName)}</span>
+          </span>
+        </button>
+      `;
+    }).join("");
+
+    elements.historyList.querySelectorAll("[data-history-chat-id]").forEach((button) => {
+      button.addEventListener("click", () => {
+        const chatId = Number(button.dataset.historyChatId || 0);
+        if (chatId > 0) {
+          loadHistoryPreview(chatId);
+        }
+      });
+    });
+
+    renderHistoryPreview();
   }
 
   async function fetchJson(url, options) {
@@ -157,16 +341,21 @@ document.addEventListener("DOMContentLoaded", () => {
   async function refreshBootstrap() {
     state.bootstrap = await fetchJson(bootstrapUrl);
     renderMessages();
+    renderHistory();
   }
 
-  function togglePanel(forceOpen) {
-    const shouldOpen = typeof forceOpen === "boolean" ? forceOpen : elements.panel.hidden;
-    elements.panel.hidden = !shouldOpen;
-    elements.toggle.setAttribute("aria-expanded", shouldOpen ? "true" : "false");
+  async function loadHistoryPreview(chatId) {
+    state.historyPreviewChatId = Number(chatId);
+    state.historyPreview = { loading: true };
+    renderHistory();
 
-    if (shouldOpen) {
-      elements.input.focus();
+    try {
+      state.historyPreview = await fetchJson(`${chatUrlBase}/${encodeURIComponent(chatId)}`);
+    } catch (error) {
+      state.historyPreview = { error: true };
     }
+
+    renderHistory();
   }
 
   function sendSocketMessage(payload) {
@@ -271,6 +460,12 @@ document.addEventListener("DOMContentLoaded", () => {
   elements.toggle.addEventListener("click", () => togglePanel());
   elements.close.addEventListener("click", () => togglePanel(false));
 
+  if (elements.historyToggle) {
+    elements.historyToggle.addEventListener("click", () => {
+      setHistoryCollapsed(!state.historyCollapsed);
+    });
+  }
+
   elements.form.addEventListener("submit", (event) => {
     event.preventDefault();
 
@@ -306,6 +501,9 @@ document.addEventListener("DOMContentLoaded", () => {
       sendTyping(false);
     }, 900);
   });
+
+  setHistoryCollapsed(readStoredValue(storageKeys.history) === "collapsed", false);
+  setPanelOpen(readStoredValue(storageKeys.panel) === "open", false, false);
 
   refreshBootstrap().catch(() => {
     setConnectionStatus("Falha ao carregar", false);
