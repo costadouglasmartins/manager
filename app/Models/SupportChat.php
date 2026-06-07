@@ -175,7 +175,7 @@ class SupportChat extends Model
 	 */
 	public function getMessages(int $chatId, int $limit = 200): array
 		{
-		$messagesTable = $this->managerTable('support_chat_messages');
+		$messagesTable = $this->managerTable('support_chats_messages');
 		$stmt = $this->db->prepare("
 			SELECT id,
 			       support_chat_id,
