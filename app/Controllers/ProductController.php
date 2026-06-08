@@ -9,6 +9,14 @@ use App\Models\ProductCategory;
 class ProductController extends TenantAwareController
 	{
 	/**
+	 * Returns the authenticated manager user id.
+	 */
+	private function currentUserId(): int
+		{
+		return (int) ($_SESSION['manager']['user']['id'] ?? 0);
+		}
+
+	/**
 	 * Lists products with filters and pagination.
 	 */
 	public function index(): void
@@ -92,7 +100,9 @@ class ProductController extends TenantAwareController
 
 		try
 			{
-			$product->create($_POST, $_FILES['images'] ?? []);
+			$data = $_POST;
+			$data['user_id'] = $this->currentUserId();
+			$product->create($data, $_FILES['images'] ?? []);
 			$this->redirect('product');
 			}
 		catch (\Throwable $e)

@@ -17,6 +17,7 @@ CREATE TABLE IF NOT EXISTS products_categories (
 
 CREATE TABLE IF NOT EXISTS products (
   id int NOT NULL AUTO_INCREMENT,
+  user_id int NOT NULL,
   product_category_id int DEFAULT NULL,
   sku varchar(60) DEFAULT NULL,
   barcode varchar(80) DEFAULT NULL,
@@ -33,10 +34,15 @@ CREATE TABLE IF NOT EXISTS products (
   PRIMARY KEY (id),
   UNIQUE KEY uq_products_sku (sku),
   UNIQUE KEY uq_products_barcode (barcode),
+  KEY idx_products_user_id (user_id),
   KEY idx_products_category (product_category_id),
   KEY idx_products_name (name),
   KEY idx_products_active (active),
   KEY idx_products_stock_quantity (stock_quantity),
+  CONSTRAINT fk_products_manager_main_users
+    FOREIGN KEY (user_id) REFERENCES manager_main.users (id)
+    ON DELETE RESTRICT
+    ON UPDATE CASCADE,
   CONSTRAINT fk_products_categories
     FOREIGN KEY (product_category_id) REFERENCES products_categories (id)
     ON DELETE SET NULL

@@ -3,7 +3,7 @@
 namespace App\Models;
 
 use App\Core\TenantModel;
-use App\Services\ImageUploadService;
+use App\Services\FileUploadService;
 use PDO;
 
 class Product extends TenantModel
@@ -14,6 +14,7 @@ class Product extends TenantModel
 	private function baseSelectSql(): string
 		{
 		return "SELECT Product.id,
+		              Product.user_id,
 		              Product.product_category_id,
 		              Product.sku,
 		              Product.barcode,
@@ -45,8 +46,9 @@ class Product extends TenantModel
 	public function create(array $data, array $files = []): array
 		{
 		$payload = $this->normalizePayload($data, '1');
+		$userId = $this->normalizeUserId($data['user_id'] ?? null);
 		$initialStock = $this->normalizeQuantity($data['initial_stock'] ?? '0');
-		$imageService = new ImageUploadService();
+		$fileUploadService = new FileUploadService();
 		$storedImages = [];
 
 		try
@@ -55,15 +57,16 @@ class Product extends TenantModel
 
 			$stmt = $this->db->prepare("
 				INSERT INTO products
-				    (`product_category_id`, `sku`, `barcode`, `name`, `description`,
+				    (`user_id`, `product_category_id`, `sku`, `barcode`, `name`, `description`,
 				     `cost_price`, `sale_price`, `stock_quantity`, `minimum_stock`, `unit`,
 				     `active`, `created`, `modified`)
 				VALUES
-				    (:product_category_id, :sku, :barcode, :name, :description,
+				    (:user_id, :product_category_id, :sku, :barcode, :name, :description,
 				     :cost_price, :sale_price, :stock_quantity, :minimum_stock, :unit,
 				     :active, :created, :modified)
 			");
 			$stmt->execute([
+				'user_id'             => $userId,
 				'product_category_id' => $payload['product_category_id'],
 				'sku'                 => $payload['sku'],
 				'barcode'             => $payload['barcode'],
@@ -97,9 +100,9 @@ class Product extends TenantModel
 				$this->updateProductStock($productId, $initialStock);
 				}
 
-			if ($imageService->hasUploads($files))
+			if ($fileUploadService->hasUploads($files))
 				{
-				$storedImages = $imageService->storeUploadedImages('products', $files, $this->productImageUploadOptions($productId));
+				$storedImages = $fileUploadService->storeUploadedFiles('products', $files, $this->productImageUploadOptions($productId));
 				$this->insertImageRows($productId, $storedImages);
 				$this->ensureMainImage($productId);
 				}
@@ -115,7 +118,7 @@ class Product extends TenantModel
 				$this->db->rollBack();
 				}
 
-			$imageService->deleteStoredImages($storedImages);
+			$fileUploadService->deleteStoredFiles($storedImages);
 			throw $e;
 			}
 		}
@@ -146,7 +149,7 @@ class Product extends TenantModel
 		{
 		$productId = (int) $id;
 		$payload = $this->normalizePayload($data, '0');
-		$imageService = new ImageUploadService();
+		$fileUploadService = new FileUploadService();
 		$storedImages = [];
 		$deletedImages = [];
 
@@ -191,9 +194,9 @@ class Product extends TenantModel
 				$this->deleteImageRows($productId, $removeImageIds);
 				}
 
-			if ($imageService->hasUploads($files))
+			if ($fileUploadService->hasUploads($files))
 				{
-				$storedImages = $imageService->storeUploadedImages('products', $files, $this->productImageUploadOptions($productId));
+				$storedImages = $fileUploadService->storeUploadedFiles('products', $files, $this->productImageUploadOptions($productId));
 				$this->insertImageRows($productId, $storedImages);
 				}
 
@@ -213,11 +216,11 @@ class Product extends TenantModel
 				$this->db->rollBack();
 				}
 
-			$imageService->deleteStoredImages($storedImages);
+			$fileUploadService->deleteStoredFiles($storedImages);
 			throw $e;
 			}
 
-		$imageService->deleteStoredImages($deletedImages);
+		$fileUploadService->deleteStoredFiles($deletedImages);
 		}
 
 	/**
@@ -233,7 +236,7 @@ class Product extends TenantModel
 			throw new \InvalidArgumentException('Produto inválido.');
 			}
 
-		$imageService = new ImageUploadService();
+		$fileUploadService = new FileUploadService();
 		$images = [];
 
 		try
@@ -268,7 +271,7 @@ class Product extends TenantModel
 			throw $e;
 			}
 
-		$imageService->deleteStoredImages($images);
+		$fileUploadService->deleteStoredFiles($images);
 		}
 
 	/**
@@ -505,8 +508,16 @@ class Product extends TenantModel
 	private function productImageUploadOptions(int $productId): array
 		{
 		return [
-			'directory_parts' => [$productId],
-			'file_prefix'     => 'product_' . $productId,
+			'directory_parts'          => [$productId],
+			'file_prefix'              => 'product_' . $productId,
+			'allowed_mime_types'       => ['image/jpeg', 'image/png', 'image/webp'],
+			'allowed_extensions'       => ['jpg', 'jpeg', 'png', 'webp'],
+			'process_image'            => true,
+			'upload_error_message'     => 'Não foi possível enviar uma das imagens.',
+			'invalid_file_message'     => 'Arquivo de imagem inválido.',
+			'max_file_size_message'    => 'Cada imagem deve ter no máximo 8 MB.',
+			'mime_type_error_message'  => 'Envie somente imagens JPG, PNG ou WebP.',
+			'image_type_error_message' => 'Envie somente imagens JPG, PNG ou WebP.',
 		];
 		}
 
@@ -751,6 +762,22 @@ class Product extends TenantModel
 			'unit'                => strtoupper(trim((string) ($data['unit'] ?? 'UN'))) ?: 'UN',
 			'active'              => ((string) ($data['active'] ?? $defaultActive) === '1') ? 1 : 0,
 		];
+		}
+
+	/**
+	 * Returns a valid authenticated user id for product ownership.
+	 *
+	 * @param mixed $value Raw value.
+	 */
+	private function normalizeUserId($value): int
+		{
+		$userId = (int) $value;
+		if ($userId <= 0)
+			{
+			throw new \RuntimeException('Usuário autenticado não encontrado para salvar o produto.');
+			}
+
+		return $userId;
 		}
 
 	/**
