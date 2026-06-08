@@ -14,6 +14,17 @@ Este documento registra as convenções de desenvolvimento que devem ser seguida
 - Use `camelCase` em nomes de métodos quando a convenção do PHP/framework ao redor pedir esse padrão.
 - Prefira nomes claros para models, controllers e services, sempre alinhados com a entidade de domínio.
 - Mantenha rótulos e textos visíveis ao usuário em português quando a view atual já estiver em português.
+- Em novos códigos, documente métodos com comentários de bloco iniciados por `/**`, mantenha cada linha intermediária iniciada por `*` e finalize o bloco com `**/`.
+
+Exemplo recomendado para comentários de métodos:
+
+```php
+/**
+ * Describe what the method does.
+ * @param int $id Identifier used by the method.
+ * @return bool True when the operation succeeds.
+ **/
+```
 
 ## Estrutura PHP
 
