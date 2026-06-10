@@ -278,7 +278,7 @@ $jsonFlags = JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JS
       </template>
     </section>
 
-    <div class="person-edit-actions view-actions">
+    <div class="person-edit-actions d-flex gap-2 justify-content-end mt-3">
       <a href="<?= url('person'); ?>" class="btn btn-secondary">Cancelar</a>
       <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg"></i> Salvar</button>
     </div>

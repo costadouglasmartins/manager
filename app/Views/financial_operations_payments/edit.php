@@ -45,7 +45,7 @@ $paymentValue = number_format((float) ($payment['value'] ?? 0), 2, ',', '.');
       </div>
     </section>
 
-    <div class="financial-actions view-actions">
+    <div class="financial-actions d-flex gap-2 justify-content-end mt-3">
       <a href="<?= url('financial_operation_payment'); ?>" class="btn btn-secondary">Cancelar</a>
       <button class="btn btn-primary" type="submit"><i class="bi bi-check-lg"></i> Salvar</button>
     </div>

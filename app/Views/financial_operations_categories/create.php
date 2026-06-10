@@ -21,7 +21,7 @@
       </div>
     </section>
 
-    <div class="financial-actions view-actions">
+    <div class="financial-actions d-flex gap-2 justify-content-end mt-3">
       <a href="<?= url('financial_operation_category'); ?>" class="btn btn-secondary">Cancelar</a>
       <button class="btn btn-primary" type="submit"><i class="bi bi-check-lg"></i> Salvar</button>
     </div>

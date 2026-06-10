@@ -111,7 +111,7 @@ $value = static function (string $field, string $default = '') use ($formData): 
       <div class="product-upload-preview" data-product-upload-preview></div>
     </section>
 
-    <div class="store-actions view-actions">
+    <div class="store-actions d-flex gap-2 justify-content-end mt-3">
       <a href="<?= url('product'); ?>" class="btn btn-secondary">Cancelar</a>
       <button class="btn btn-primary" type="submit"><i class="bi bi-check-lg"></i> Salvar</button>
     </div>

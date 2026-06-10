@@ -36,13 +36,8 @@
     </div>
 
   </div>
-  <br>
-  <div class="row">
-    <div class="col-lg-12">
-      <div class="d-flex flex-column gap-2 align-items-center align-items-lg-end view-actions">
-        <button class="btn btn-primary" type="submit">Salvar</button>
-      </div>
-    </div>
+  <div class="d-flex flex-column gap-2 align-items-center align-items-lg-end mt-3">
+    <button class="btn btn-primary" type="submit">Salvar</button>
   </div>
 </form>
 <!-- /E-mail -->
