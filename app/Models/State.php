@@ -21,6 +21,28 @@ class State extends Model
 		}
 
 	/**
+	 * Returns states belonging to a country, ordered for use in select fields.
+	 */
+	public function findByCountryId(int $countryId): array
+		{
+		if ($countryId <= 0)
+			{
+			return [];
+			}
+
+		$statesTable = $this->managerTable('states');
+		$stmt = $this->db->prepare("
+			SELECT id, `name`, acronym, country_id
+			FROM {$statesTable}
+			WHERE country_id = :country_id
+			ORDER BY `name` ASC, id ASC
+		");
+		$stmt->execute(['country_id' => $countryId]);
+
+		return $stmt->fetchAll(PDO::FETCH_ASSOC);
+		}
+
+	/**
 	 * Create method
 	 * @param Array $data Data to save
 	 * @return array

@@ -21,6 +21,21 @@ class Country extends Model
 		}
 
 	/**
+	 * Returns countries ordered for use in select fields.
+	 */
+	public function getAllForSelect(): array
+		{
+		$countriesTable = $this->managerTable('countries');
+		$stmt = $this->db->query("
+			SELECT id, `name`, acronym
+			FROM {$countriesTable}
+			ORDER BY `name` ASC, id ASC
+		");
+
+		return $stmt->fetchAll(PDO::FETCH_ASSOC);
+		}
+
+	/**
 	 * Creates a country and returns the inserted identifier.
 	 *
 	 * @param array $data Data to save.

@@ -91,11 +91,19 @@ class City extends Model
 	/**
 	 * Search method
 	 */
-	public function search(array $filters = [], int $limit = 10, int $offset = 0): array
+	public function search(array $filters = [], ?int $limit = 10, int $offset = 0): array
 		{
 		$citiesTable = $this->managerTable('cities');
 		$statesTable = $this->managerTable('states');
-		$sql = "SELECT c.*, s.name AS state_name FROM {$citiesTable} c LEFT JOIN {$statesTable} s ON s.id = c.state_id WHERE 1=1";
+		$countriesTable = $this->managerTable('countries');
+		$sql = "SELECT c.*,
+		               s.name AS state_name,
+		               s.acronym AS state_acronym,
+		               co.name AS country_name
+		        FROM {$citiesTable} c
+		        LEFT JOIN {$statesTable} s ON s.id = c.state_id
+		        LEFT JOIN {$countriesTable} co ON co.id = s.country_id
+		        WHERE 1=1";
 		$params = [];
 
 		if (isset($filters['id']) && $filters['id'] !== '')
@@ -116,7 +124,17 @@ class City extends Model
 			$params['state_id'] = (int) $filters['state_id'];
 			}
 
-		$sql .= " ORDER BY c.id DESC LIMIT :limit OFFSET :offset";
+		if (isset($filters['country_id']) && $filters['country_id'] !== '')
+			{
+			$sql .= " AND s.country_id = :country_id";
+			$params['country_id'] = (int) $filters['country_id'];
+			}
+
+		$sql .= " ORDER BY c.id DESC";
+		if ($limit !== null)
+			{
+			$sql .= " LIMIT :limit OFFSET :offset";
+			}
 
 		$stmt = $this->db->prepare($sql);
 
@@ -126,8 +144,11 @@ class City extends Model
 			$stmt->bindValue(':' . $key, $value, $paramType);
 			}
 
-		$stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
-		$stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
+		if ($limit !== null)
+			{
+			$stmt->bindValue(':limit', max(1, $limit), PDO::PARAM_INT);
+			$stmt->bindValue(':offset', max(0, $offset), PDO::PARAM_INT);
+			}
 
 		$stmt->execute();
 
@@ -140,25 +161,35 @@ class City extends Model
 	public function count(array $filters = []): int
 		{
 		$citiesTable = $this->managerTable('cities');
-		$sql = "SELECT COUNT(*) AS total FROM {$citiesTable} WHERE 1=1";
+		$statesTable = $this->managerTable('states');
+		$sql = "SELECT COUNT(*) AS total
+		        FROM {$citiesTable} c
+		        LEFT JOIN {$statesTable} s ON s.id = c.state_id
+		        WHERE 1=1";
 		$params = [];
 
 		if (!empty($filters['id']))
 			{
-			$sql .= " AND id = :id";
+			$sql .= " AND c.id = :id";
 			$params['id'] = (int) $filters['id'];
 			}
 
 		if (!empty($filters['name']))
 			{
-			$sql .= " AND `name` LIKE :name";
+			$sql .= " AND c.`name` LIKE :name";
 			$params['name'] = '%' . $filters['name'] . '%';
 			}
 
 		if (!empty($filters['state_id']))
 			{
-			$sql .= " AND state_id = :state_id";
+			$sql .= " AND c.state_id = :state_id";
 			$params['state_id'] = (int) $filters['state_id'];
+			}
+
+		if (!empty($filters['country_id']))
+			{
+			$sql .= " AND s.country_id = :country_id";
+			$params['country_id'] = (int) $filters['country_id'];
 			}
 
 		$stmt = $this->db->prepare($sql);

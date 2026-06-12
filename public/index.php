@@ -46,7 +46,8 @@ if (session_status() === PHP_SESSION_NONE)
   {
   session_start();
   }
-	
+
+require_once ROOT_PATH . '/vendor/autoload.php';
 require_once ROOT_PATH . '/app/Core/App.php';
 require_once ROOT_PATH . '/app/Core/Controller.php';
 require_once ROOT_PATH . '/app/Core/Database.php';

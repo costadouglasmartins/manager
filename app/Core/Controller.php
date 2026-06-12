@@ -3,9 +3,18 @@
 namespace App\Core;
 
 use App\Core\Authorization;
+use App\Services\PdfService;
 
 class Controller
 	{
+
+	/**
+	 * Creates the shared PDF service available to application controllers.
+	 */
+	protected function pdfService(): PdfService
+		{
+		return new PdfService();
+		}
 
 	/**
 	 * Renders a view, optionally wrapping it with the main layout.
