@@ -188,7 +188,7 @@
       <?php if ($isAuthenticated): ?>
         <li class="nav-item dropdown me-lg-3">
           <a class="nav-link dropdown-toggle app-nav-link d-flex align-items-center" href="#" id="systemMenu" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-            <i class="bi bi-gear-fill"></i>&nbsp;Sistema
+            <i class="bi bi-gear-fill"></i>&nbsp;
           </a>
           <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="systemMenu">
             <?php if (authCan('home.index')): ?>
@@ -202,7 +202,7 @@
       <ul class="navbar-nav app-navbar-nav mb-2 mb-lg-0">
         <li class="nav-item dropdown me-lg-3">
           <a class="nav-link dropdown-toggle app-nav-link d-flex align-items-center" href="#" id="accountMenu" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-            <i class="bi bi-person-circle me-2"></i> <?= htmlspecialchars($userName, ENT_QUOTES, 'UTF-8'); ?>
+            <i class="bi bi-person-circle me-2"></i>
           </a>
           <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="accountMenu">
             <!--
