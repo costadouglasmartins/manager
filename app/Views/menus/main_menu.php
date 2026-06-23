@@ -125,13 +125,29 @@
             <i class="bi bi-bank me-1"></i> Financeiro
           </a>
           <ul class="dropdown-menu" aria-labelledby="financeMenu">
-            <?php if (authCan('bank.index')): ?>
-              <li><a class="dropdown-item" href="<?= url('bank'); ?>"><i class="bi bi-bank me-2"></i>Bancos</a></li>
-            <?php endif; ?>
-            <li><hr class="dropdown-divider" /></li>
-            <?php if (authCan('bank_account.index')): ?>
-              <li><a class="dropdown-item" href="<?= url('bank_account'); ?>"><i class="bi bi-wallet2 me-2"></i>Contas Bancárias</a></li>
-            <?php endif; ?>
+            <li class="dropdown-submenu">
+              <a class="dropdown-item submenu-toggle" href="#"><i class="bi bi-gear me-2"></i>Configurações</a>
+              <ul class="dropdown-menu">
+                <li class="dropdown-submenu">
+                  <a class="dropdown-item submenu-toggle" href="#"><i class="bi bi-folder me-2"></i>Bancos</a>
+                  <ul class="dropdown-menu">
+                    <?php if (authCan('bank.index')): ?>
+                      <li><a class="dropdown-item" href="<?= url('bank'); ?>"><i class="bi bi-bank me-2"></i>Bancos</a></li>
+                    <?php endif; ?>
+                    <li><hr class="dropdown-divider" /></li>
+                    <?php if (authCan('bank_account.index')): ?>
+                      <li><a class="dropdown-item" href="<?= url('bank_account'); ?>"><i class="bi bi-wallet2 me-2"></i>Contas Bancárias</a></li>
+                    <?php endif; ?>
+                  </ul>
+                </li>
+                <li><hr class="dropdown-divider" /></li>
+                <li class="dropdown-submenu">
+                  <a class="dropdown-item submenu-toggle" href="#"><i class="bi bi-folder me-2"></i>Submenu 2</a>
+                  <ul class="dropdown-menu">
+                  </ul>
+                </li>
+              </ul>
+            </li>
             <li><hr class="dropdown-divider" /></li>
             <?php if (authCan('financial_operation.spreadsheet')): ?>
               <li><a class="dropdown-item" href="<?= url('financial_operation'); ?>"><i class="bi bi-receipt me-2"></i>Operações Financeiras</a></li>
