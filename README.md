@@ -3,6 +3,162 @@ Manager System
 - Apenas para usuários admin e user;
 - Este é o cliente tenant para todos os bancos de dados.
 
+## Instalação em servidor web
+
+As configurações Docker usadas no ambiente local ficam no diretório acima da aplicação e servem como referência para produção: PHP-FPM 8.4, Nginx, MySQL 8.0 e Redis 7. No Docker, a pasta `src` é montada em `/var/www/html`, então o servidor web deve enxergar `manager_main` e `manager` lado a lado:
+
+```text
+/var/www/html/
+  manager_main/
+  manager/
+```
+
+### Requisitos
+
+- PHP 8.4 com as extensões `intl`, `pdo`, `pdo_mysql`, `zip` e `redis`.
+- Composer instalado no servidor.
+- MySQL 8.0 acessível pela aplicação.
+- Redis 7 acessível pela aplicação.
+- Nginx com PHP-FPM ou Apache com suporte a `.htaccess`.
+
+Em produção, evite habilitar Xdebug. Ele aparece no Docker para desenvolvimento, mas não é necessário para executar a aplicação no servidor.
+
+### Publicação dos arquivos
+
+1. Envie os diretórios `manager_main` e `manager` para `/var/www/html`.
+2. Instale as dependências PHP de cada aplicação:
+
+```sh
+cd /var/www/html/manager_main
+composer install --no-dev --optimize-autoloader
+
+cd /var/www/html/manager
+composer install --no-dev --optimize-autoloader
+```
+
+3. Garanta permissão de escrita para o usuário do PHP-FPM nas pastas públicas que recebem arquivos por tenant:
+
+```sh
+mkdir -p /var/www/html/manager/public/tenant_files
+chown -R www-data:www-data /var/www/html/manager/public/tenant_files
+chmod -R 775 /var/www/html/manager/public/tenant_files
+```
+
+### Variáveis de ambiente
+
+Configure as variáveis no PHP-FPM, no serviço da aplicação ou no gerenciador de processos usado pelo servidor. Os valores abaixo seguem os nomes esperados pelo código e pelos serviços definidos no Docker:
+
+```env
+DB_HOST=127.0.0.1
+DB_PORT=3306
+DB_DATABASE_MANAGER=manager_main
+DB_USERNAME=usuario_do_banco
+DB_PASSWORD=senha_do_banco
+DB_CHARSET=utf8mb4
+
+SUPPORT_CHAT_SECRET=troque_por_um_segredo_forte
+SUPPORT_CHAT_WS_URL=wss://seu-dominio.com/ws
+```
+
+No Docker local, o host do banco é `mysql`, a porta é `3306` e o Redis fica disponível no host `redis`. Em um servidor tradicional, ajuste `DB_HOST` e a conexão do Redis conforme a infraestrutura instalada.
+
+### Banco de dados
+
+Crie ou restaure o banco principal `manager_main` e os bancos de tenants no formato `manager_XXXX`, por exemplo `manager_0001`. O Docker cria um banco inicial chamado `generic_system`, mas esta aplicação usa `manager_main` como banco principal por padrão.
+
+Para o módulo de loja, execute `app/Database/store_schema.sql` em cada banco tenant que deve possuir produtos, imagens e movimentações de estoque.
+
+### Nginx
+
+O Nginx deve apontar a raiz para `/var/www/html`, mantendo as URLs públicas usadas no Docker:
+
+- `https://seu-dominio.com/manager_main/public/`
+- `https://seu-dominio.com/manager/public/`
+
+Exemplo equivalente ao `nginx.conf` local:
+
+```nginx
+server {
+    listen 80;
+    server_name seu-dominio.com;
+
+    root /var/www/html;
+    index index.php index.html;
+
+    location = / {
+        return 302 /manager_main/public/;
+    }
+
+    location = /manager_main/public {
+        return 301 /manager_main/public/;
+    }
+
+    location = /manager/public {
+        return 301 /manager/public/;
+    }
+
+    location /manager_main/public/ {
+        try_files $uri $uri/ @manager_main;
+    }
+
+    location @manager_main {
+        rewrite ^/manager_main/public/(.*)$ /manager_main/public/index.php?url=$1&$args last;
+    }
+
+    location /manager/public/ {
+        try_files $uri $uri/ @manager;
+    }
+
+    location @manager {
+        rewrite ^/manager/public/(.*)$ /manager/public/index.php?url=$1&$args last;
+    }
+
+    location ~ \.php$ {
+        try_files $uri =404;
+        include fastcgi_params;
+        fastcgi_pass 127.0.0.1:9000;
+        fastcgi_index index.php;
+        fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
+    }
+
+    location ~ /\. {
+        deny all;
+    }
+}
+```
+
+Se o PHP-FPM do servidor usa socket Unix, troque `fastcgi_pass 127.0.0.1:9000` pelo socket configurado, por exemplo `fastcgi_pass unix:/run/php/php8.4-fpm.sock;`.
+
+### Apache
+
+Se usar Apache, mantenha a mesma raiz em `/var/www/html` e habilite `AllowOverride All`, conforme o `vhost.conf` usado como referência:
+
+```apache
+<VirtualHost *:80>
+    ServerName seu-dominio.com
+    DocumentRoot /var/www/html
+
+    <Directory /var/www/html>
+        Options Indexes FollowSymLinks
+        AllowOverride All
+        Require all granted
+    </Directory>
+</VirtualHost>
+```
+
+### Chat de suporte
+
+O Docker executa o WebSocket do chat com o comando abaixo, a partir de `/var/www/html`:
+
+```sh
+SUPPORT_CHAT_SECRET=troque_por_um_segredo_forte \
+SUPPORT_CHAT_WS_HOST=0.0.0.0 \
+SUPPORT_CHAT_WS_PORT=8081 \
+php manager_main/app/SupportChat/server.php
+```
+
+Em produção, execute esse processo com `systemd`, Supervisor ou outro gerenciador de processos. Se expuser o WebSocket direto, libere a porta `8081`; se usar proxy reverso, encaminhe a rota pública configurada em `SUPPORT_CHAT_WS_URL` para esse serviço.
+
 # Regras de programação do projeto
 
 Este documento registra as convenções de desenvolvimento que devem ser seguidas neste projeto.
