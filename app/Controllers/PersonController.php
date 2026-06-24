@@ -8,6 +8,7 @@ use App\Core\TenantAwareController;
 use App\Models\Person;
 use App\Models\Neighborhood;
 use App\Models\City;
+use App\Services\ZipCodeLookupService;
 
 class PersonController extends TenantAwareController
 	{
@@ -171,14 +172,39 @@ class PersonController extends TenantAwareController
 
 		$items = array_map(function ($r)
 			{
+			$label = trim((string) ($r['name'] ?? ''));
+			$stateAcronym = trim((string) ($r['state_acronym'] ?? ''));
+
+			if ($stateAcronym !== '')
+				{
+				$label .= ' - ' . $stateAcronym;
+				}
+
 			return [
 				'id'    => (int) $r['id'],
-				'label' => $r['name'],
+				'label' => $label,
 				'name'  => $r['name'],
+				'state_acronym' => $r['state_acronym'] ?? null,
 			];
 			}, $rows);
 
 		$this->json(['items' => $items]);
+		}
+
+	/**
+	 * Looks up a ZIP code using the ViaCEP service for the person form.
+	 */
+	public function zipCodeSearch()
+		{
+		$this->requirePersonFormAccess();
+
+		$zipCode = (string) ($_GET['zip_code'] ?? $_GET['cep'] ?? '');
+		$service = new ZipCodeLookupService();
+		$result = $service->lookup($zipCode);
+		$status = (int) ($result['http_status'] ?? 200);
+		unset($result['http_status']);
+
+		$this->json($result, $status);
 		}
   
 	/**

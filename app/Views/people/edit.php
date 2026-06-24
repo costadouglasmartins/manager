@@ -144,6 +144,7 @@ $jsonFlags = JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JS
             <div class="col-12 col-lg-2">
               <label class="form-label">CEP</label>
               <input class="form-control mask-cep js-address-zip" name="addresses[__INDEX__][zip_code]" type="text" maxlength="9" placeholder="00000-000" />
+              <div class="form-text js-address-zip-feedback" aria-live="polite"></div>
             </div>
 
             <div class="col-12 col-lg-5">
@@ -279,6 +280,7 @@ $jsonFlags = JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JS
     </section>
 
     <div class="person-edit-actions d-flex gap-2 justify-content-end mt-3">
+      <button type="button" class="btn btn-outline-secondary" id="btnClearPersonForm"><i class="bi bi-eraser"></i> Limpar</button>
       <a href="<?= url('person'); ?>" class="btn btn-secondary">Cancelar</a>
       <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg"></i> Salvar</button>
     </div>
@@ -289,8 +291,9 @@ $jsonFlags = JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JS
   const PERSON_NEIGHBORHOOD_SEARCH_URL = "<?= url('person/neighborhoodSearch'); ?>";
   const PERSON_NEIGHBORHOOD_CREATE_URL = "<?= url('person/neighborhoodCreate'); ?>";
   const PERSON_CITY_SEARCH_URL = "<?= url('person/citySearch'); ?>";
+  const PERSON_ZIP_CODE_SEARCH_URL = "<?= url('person/zipCodeSearch'); ?>";
   const initialAddresses = <?= json_encode($initialAddresses, $jsonFlags); ?>;
   const initialPhones = <?= json_encode($initialPhones, $jsonFlags); ?>;
   const initialEmails = <?= json_encode($initialEmails, $jsonFlags); ?>;
 </script>
-<script src="<?= url('assets/js/people/edit.js?v=1'); ?>"></script>
+<script src="<?= url('assets/js/people/edit.js?v=4'); ?>"></script>
