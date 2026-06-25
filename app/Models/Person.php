@@ -76,6 +76,12 @@ class Person extends Model
 				$userId = $this->createManagerUserForTenant($personId, $userData, $now);
 				}
 
+			$personSnapshot = $this->findAllByPersonId($personId);
+			$this->auditCreate('person', 'people', $personId, $personSnapshot, [
+				'affected_tables' => ['people', 'phone_numbers', 'addresses', 'emails', 'users', 'tenant_users'],
+				'created_user_id' => $userId,
+			]);
+
 			$this->db->commit();
 
 			return [
@@ -115,10 +121,12 @@ class Person extends Model
 	 */
 	public function update($id, $data)
 		{
+		$personId = (int) $id;
 		$personData = (isset($data['person']) && is_array($data['person'])) ? $data['person'] : $data;
 		$normalizedPersonData = $this->normalizePersonPayload($personData);
 		$emails = (is_array($data['emails'] ?? null) ? $data['emails'] : []);
 		$now = date('Y-m-d H:i:s');
+		$beforeData = $this->findAllByPersonId($personId);
 
 		try
 			{
@@ -163,6 +171,11 @@ class Person extends Model
 				{
 				$this->syncEmails((int) $id, $data['emails']);
 				}
+
+			$afterData = $this->findAllByPersonId($personId);
+			$this->auditUpdate('person', 'people', $personId, $beforeData, $afterData, [
+				'affected_tables' => ['people', 'phone_numbers', 'addresses', 'emails'],
+			]);
 
 			$this->db->commit();
 			}

@@ -39,6 +39,8 @@ class City extends Model
 				'modified'    => date('Y-m-d H:i:s'),
 			]);
 			$cityId = $this->db->lastInsertId();
+			$citySnapshot = $this->find($cityId);
+			$this->auditCreate('city', 'cities', $cityId, $citySnapshot);
 
 			$this->db->commit();
 
@@ -68,6 +70,8 @@ class City extends Model
 	 */
 	public function update($id, $data)
 		{
+		$cityId = (int) $id;
+		$beforeData = $this->find($cityId);
 		$citiesTable = $this->managerTable('cities');
 		$stmt = $this->db->prepare("
 			UPDATE {$citiesTable}
@@ -86,6 +90,9 @@ class City extends Model
 			'modified'    => date('Y-m-d H:i:s'),
 			'id'          => $id,
 		]);
+
+		$afterData = $this->find($cityId);
+		$this->auditUpdate('city', 'cities', $cityId, $beforeData, $afterData);
 		}
 
 	/**

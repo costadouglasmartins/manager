@@ -45,6 +45,8 @@ class FinancialOperationCategory extends TenantModel
 			]);
 
 			$categoryId = (int) $this->db->lastInsertId();
+			$categorySnapshot = $this->find($categoryId);
+			$this->auditCreate('financial_operation_category', 'financial_operations_categories', $categoryId, $categorySnapshot);
 			$this->db->commit();
 
 			return ['financial_operation_category_id' => $categoryId];
@@ -91,6 +93,8 @@ class FinancialOperationCategory extends TenantModel
 	 */
 	public function update($id, array $data): void
 		{
+		$categoryId = (int) $id;
+		$beforeData = $this->find($categoryId);
 		$stmt = $this->db->prepare("
 			UPDATE financial_operations_categories
 			SET `name` = :name,
@@ -103,6 +107,9 @@ class FinancialOperationCategory extends TenantModel
 			'modified' => date('Y-m-d H:i:s'),
 			'id'       => (int) $id,
 		]);
+
+		$afterData = $this->find($categoryId);
+		$this->auditUpdate('financial_operation_category', 'financial_operations_categories', $categoryId, $beforeData, $afterData);
 		}
 
 	/**

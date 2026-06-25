@@ -85,6 +85,8 @@ class BankAccount extends TenantModel
 			$stmt->execute($payload);
 
 			$bankAccountId = (int) $this->db->lastInsertId();
+			$bankAccountSnapshot = $this->find($bankAccountId);
+			$this->auditCreate('bank_account', 'bank_accounts', $bankAccountId, $bankAccountSnapshot);
 			$this->db->commit();
 
 			return ['bank_account_id' => $bankAccountId];
@@ -119,6 +121,8 @@ class BankAccount extends TenantModel
 	 */
 	public function update($id, array $data): void
 		{
+		$bankAccountId = (int) $id;
+		$beforeData = $this->find($bankAccountId);
 		$payload = $this->normalizePayload($data, '0');
 		$payload['modified'] = date('Y-m-d H:i:s');
 		$payload['id'] = (int) $id;
@@ -149,6 +153,9 @@ class BankAccount extends TenantModel
 		");
 
 		$stmt->execute($payload);
+
+		$afterData = $this->find($bankAccountId);
+		$this->auditUpdate('bank_account', 'bank_accounts', $bankAccountId, $beforeData, $afterData);
 		}
 
 	/**

@@ -4,6 +4,8 @@ namespace App\Core;
 
 class TenantModel
   {
+	use AuditsChanges;
+
 	protected $db;
 
 	/**

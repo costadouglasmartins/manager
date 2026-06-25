@@ -36,6 +36,8 @@ class PhoneNumber extends Model
 				'modified'     => date('Y-m-d H:i:s'),
 			]);
 			$phoneId = $this->db->lastInsertId();
+			$phoneSnapshot = $this->find($phoneId);
+			$this->auditCreate('phone_number', 'phone_numbers', $phoneId, $phoneSnapshot);
 
 			$this->db->commit();
 
@@ -63,6 +65,8 @@ class PhoneNumber extends Model
 	 */
 	public function update($id, $data)
 		{
+		$phoneId = (int) $id;
+		$beforeData = $this->find($phoneId);
 		$stmt = $this->db->prepare("
 			UPDATE phone_numbers
 			SET
@@ -80,6 +84,9 @@ class PhoneNumber extends Model
 			'modified'     => date('Y-m-d H:i:s'),
 			'id'           => $id,
 		]);
+
+		$afterData = $this->find($phoneId);
+		$this->auditUpdate('phone_number', 'phone_numbers', $phoneId, $beforeData, $afterData);
 		}
 
 	/**

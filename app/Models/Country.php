@@ -64,6 +64,8 @@ class Country extends Model
 			]);
 			// Store the created country id.
 			$countryId = $this->db->lastInsertId();
+			$countrySnapshot = $this->find($countryId);
+			$this->auditCreate('country', 'countries', $countryId, $countrySnapshot);
 
 			// Commit the transaction.
 			$this->db->commit();
@@ -103,6 +105,8 @@ class Country extends Model
 	 */
 	public function update($id, $data)
     {
+    $countryId = (int) $id;
+    $beforeData = $this->find($countryId);
     $countriesTable = $this->managerTable('countries');
     $stmt = $this->db->prepare("
         UPDATE {$countriesTable}
@@ -119,6 +123,9 @@ class Country extends Model
         'modified'  => date('Y-m-d H:i:s'),
         'id'        => $id
     ]);
+
+    $afterData = $this->find($countryId);
+    $this->auditUpdate('country', 'countries', $countryId, $beforeData, $afterData);
     }
 
 	/**

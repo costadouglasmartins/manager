@@ -38,6 +38,8 @@ class Neighborhood extends Model
 				'modified' => date('Y-m-d H:i:s'),
 			]);
 			$neighborhoodId = $this->db->lastInsertId();
+			$neighborhoodSnapshot = $this->find($neighborhoodId);
+			$this->auditCreate('neighborhood', 'neighborhoods', $neighborhoodId, $neighborhoodSnapshot);
 
 			$this->db->commit();
 
@@ -69,6 +71,38 @@ class Neighborhood extends Model
 		");
 		$stmt->execute(['id' => $id]);
 		return $stmt->fetch(PDO::FETCH_ASSOC);
+		}
+
+	/**
+	 * Updates an existing neighborhood.
+	 *
+	 * @param mixed $id Neighborhood identifier.
+	 * @param array $data Updated neighborhood data.
+	 */
+	public function update($id, $data)
+		{
+		$neighborhoodId = (int) $id;
+		$beforeData = $this->find($neighborhoodId);
+		$neighborhoodsTable = $this->managerTable('neighborhoods');
+
+		$stmt = $this->db->prepare("
+			UPDATE {$neighborhoodsTable}
+			SET
+				`name` = :name,
+				`city_id` = :city_id,
+				`modified` = :modified
+			WHERE id = :id
+		");
+
+		$stmt->execute([
+			'name' => $data['name'],
+			'city_id' => (int) $data['city_id'],
+			'modified' => date('Y-m-d H:i:s'),
+			'id' => $neighborhoodId,
+		]);
+
+		$afterData = $this->find($neighborhoodId);
+		$this->auditUpdate('neighborhood', 'neighborhoods', $neighborhoodId, $beforeData, $afterData);
 		}
 
 	/**

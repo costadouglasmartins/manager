@@ -68,6 +68,8 @@ class Email extends Model
 				'created'      => date('Y-m-d H:i:s'),
 			]);
 			$emailId = $this->db->lastInsertId();
+			$emailSnapshot = $this->find($emailId);
+			$this->auditCreate('email', 'emails', $emailId, $emailSnapshot);
 
 			$this->db->commit();
 
@@ -97,6 +99,8 @@ class Email extends Model
 	 */
 	public function update($id, $data)
 		{
+		$emailId = (int) $id;
+		$beforeData = $this->find($emailId);
 		$stmt = $this->db->prepare("
 			UPDATE emails AS Email
 			SET Email.email = :email,
@@ -111,6 +115,9 @@ class Email extends Model
 			'person_id'    => !empty($data['person_id']) ? (int) $data['person_id'] : null,
 			'id'           => $id,
 		]);
+
+		$afterData = $this->find($emailId);
+		$this->auditUpdate('email', 'emails', $emailId, $beforeData, $afterData);
 		}
 
 	/**

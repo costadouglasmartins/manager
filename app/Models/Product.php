@@ -107,6 +107,11 @@ class Product extends TenantModel
 				$this->ensureMainImage($productId);
 				}
 
+			$productSnapshot = $this->findAllByProductId($productId);
+			$this->auditCreate('product', 'products', $productId, $productSnapshot, [
+				'affected_tables' => ['products', 'products_images', 'products_stocks_movements'],
+			]);
+
 			$this->db->commit();
 
 			return ['product_id' => $productId];
@@ -156,6 +161,7 @@ class Product extends TenantModel
 		try
 			{
 			$this->db->beginTransaction();
+			$beforeData = $this->findAllByProductId($productId);
 
 			$stmt = $this->db->prepare("
 				UPDATE products
@@ -207,6 +213,10 @@ class Product extends TenantModel
 				}
 
 			$this->ensureMainImage($productId);
+			$afterData = $this->findAllByProductId($productId);
+			$this->auditUpdate('product', 'products', $productId, $beforeData, $afterData, [
+				'affected_tables' => ['products', 'products_images'],
+			]);
 			$this->db->commit();
 			}
 		catch (\Exception $e)
@@ -243,8 +253,8 @@ class Product extends TenantModel
 			{
 			$this->db->beginTransaction();
 
-			$product = $this->find($productId);
-			if (!$product)
+			$product = $this->findAllByProductId($productId);
+			if (empty($product['product']))
 				{
 				throw new \InvalidArgumentException('Produto não encontrado.');
 				}
@@ -258,6 +268,9 @@ class Product extends TenantModel
 
 			$stmt = $this->db->prepare("DELETE FROM products WHERE id = :id");
 			$stmt->execute(['id' => $productId]);
+			$this->auditDelete('product', 'products', $productId, $product, [
+				'affected_tables' => ['products', 'products_images'],
+			]);
 
 			$this->db->commit();
 			}

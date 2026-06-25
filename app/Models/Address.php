@@ -144,6 +144,8 @@ class Address extends Model
 				'modified'        => date('Y-m-d H:i:s'),
 			]);
 			$addressId = $this->db->lastInsertId();
+			$addressSnapshot = $this->find($addressId);
+			$this->auditCreate('address', 'addresses', $addressId, $addressSnapshot);
 
 			$this->db->commit();
 
@@ -171,6 +173,8 @@ class Address extends Model
 	 */
 	public function update($id, $data)
 		{
+		$addressId = (int) $id;
+		$beforeData = $this->find($addressId);
 		$stmt = $this->db->prepare("
 			UPDATE addresses
 			SET
@@ -194,6 +198,9 @@ class Address extends Model
 			'modified'        => date('Y-m-d H:i:s'),
 			'id'              => $id,
 		]);
+
+		$afterData = $this->find($addressId);
+		$this->auditUpdate('address', 'addresses', $addressId, $beforeData, $afterData);
 		}
 
 	/**

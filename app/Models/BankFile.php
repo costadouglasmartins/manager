@@ -56,8 +56,11 @@ class BankFile extends TenantModel
 			'created'         => date('Y-m-d H:i:s'),
 			'modified'        => date('Y-m-d H:i:s'),
 		]);
+		$bankFileId = (int) $this->db->lastInsertId();
+		$bankFileSnapshot = $this->find($bankFileId);
+		$this->auditCreate('bank_file', 'bank_files', $bankFileId, $bankFileSnapshot);
 
-		return ['bank_file_id' => (int) $this->db->lastInsertId()];
+		return ['bank_file_id' => $bankFileId];
 		}
 
 	/**
@@ -65,6 +68,7 @@ class BankFile extends TenantModel
 	 */
 	public function updateStorage(int $id, string $fileName, string $filePath): void
 		{
+		$beforeData = $this->find($id);
 		$stmt = $this->db->prepare("
 			UPDATE bank_files
 			SET file_name = :file_name,
@@ -78,6 +82,9 @@ class BankFile extends TenantModel
 			'modified'  => date('Y-m-d H:i:s'),
 			'id'        => $id,
 		]);
+
+		$afterData = $this->find($id);
+		$this->auditUpdate('bank_file', 'bank_files', $id, $beforeData, $afterData);
 		}
 
 	/**
@@ -253,6 +260,11 @@ class BankFile extends TenantModel
 
 			$deleteFile = $this->db->prepare("DELETE FROM bank_files WHERE id = :id");
 			$deleteFile->execute(['id' => $id]);
+
+			$this->auditDelete('bank_file', 'bank_files', $id, $bankFile, [
+				'affected_tables' => ['bank_files', 'bank_slips'],
+				'deleted_bank_slips_count' => (int) $deleteSlips->rowCount(),
+			]);
 
 			$this->db->commit();
 			}

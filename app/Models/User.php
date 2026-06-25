@@ -218,6 +218,8 @@ class User extends Model
 	 */
 	public function update($id, $data, ?int $tenantId = null)
 		{
+		$userId = (int) $id;
+		$beforeData = $this->findAuditSnapshot($userId, $tenantId);
 		$usersTable = $this->managerTable('users');
 		$tenantUsersTable = $this->managerTable('tenant_users');
 		$sql = "UPDATE {$usersTable} AS User";
@@ -245,6 +247,9 @@ class User extends Model
 
 		$stmt = $this->db->prepare($sql);
 		$stmt->execute($params);
+
+		$afterData = $this->findAuditSnapshot($userId, $tenantId);
+		$this->auditUpdate('user', 'users', $userId, $beforeData, $afterData);
 		}
 
 	/**
@@ -321,6 +326,57 @@ class User extends Model
 			}
 
 		return false;
+		}
+
+	/**
+	 * Returns a complete user snapshot for audit logs.
+	 *
+	 * @param int $id User identifier.
+	 * @param int|null $tenantId Optional tenant scope.
+	 * @return array|null
+	 */
+	private function findAuditSnapshot(int $id, ?int $tenantId = null): ?array
+		{
+		$usersTable = $this->managerTable('users');
+		$peopleTable = $this->managerTable('people');
+		$emailsTable = $this->managerTable('emails');
+		$tenantUsersTable = $this->managerTable('tenant_users');
+
+		$sql = "SELECT User.id,
+		               User.username,
+		               User.type,
+		               User.active,
+		               User.person_id,
+		               User.tenant_id,
+		               Person.name,
+		               Person.document,
+		               Email.email
+		        FROM {$usersTable} AS User
+		        LEFT JOIN {$peopleTable} AS Person ON Person.id = User.person_id
+		        LEFT JOIN {$emailsTable} AS Email
+		          ON Email.person_id = Person.id
+		         AND Email.is_login = '1'
+		        WHERE User.id = :id";
+		$params = ['id' => $id];
+
+		if ($tenantId !== null)
+			{
+			$sql .= " AND EXISTS (
+				SELECT 1
+				FROM {$tenantUsersTable} AS TenantUser
+				WHERE TenantUser.user_id = User.id
+				  AND TenantUser.tenant_id = :tenant_id
+			)";
+			$params['tenant_id'] = $tenantId;
+			}
+
+		$sql .= " LIMIT 1";
+
+		$stmt = $this->db->prepare($sql);
+		$stmt->execute($params);
+		$row = $stmt->fetch(PDO::FETCH_ASSOC);
+
+		return $row ?: null;
 		}
 	}
 ?>

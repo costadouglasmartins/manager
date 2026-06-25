@@ -65,6 +65,8 @@ class State extends Model
 				'modified'   => date('Y-m-d H:i:s'),
 			]);
 			$stateId = $this->db->lastInsertId();
+			$stateSnapshot = $this->find($stateId);
+			$this->auditCreate('state', 'states', $stateId, $stateSnapshot);
 
 			$this->db->commit();
 
@@ -98,6 +100,8 @@ class State extends Model
 	 */
 	public function update($id, $data)
 		{
+		$stateId = (int) $id;
+		$beforeData = $this->find($stateId);
 		$statesTable = $this->managerTable('states');
 		$stmt = $this->db->prepare("
 			UPDATE {$statesTable}
@@ -116,6 +120,9 @@ class State extends Model
 			'modified'   => date('Y-m-d H:i:s'),
 			'id'         => $id,
 		]);
+
+		$afterData = $this->find($stateId);
+		$this->auditUpdate('state', 'states', $stateId, $beforeData, $afterData);
 		}
 
 	/**

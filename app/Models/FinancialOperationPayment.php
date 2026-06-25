@@ -51,6 +51,8 @@ class FinancialOperationPayment extends TenantModel
 			]);
 
 			$paymentId = (int) $this->db->lastInsertId();
+			$paymentSnapshot = $this->find($paymentId);
+			$this->auditCreate('financial_operation_payment', 'financial_operations_payments', $paymentId, $paymentSnapshot);
 			$this->db->commit();
 
 			return ['financial_operation_payment_id' => $paymentId];
@@ -85,6 +87,8 @@ class FinancialOperationPayment extends TenantModel
 	 */
 	public function update($id, array $data): void
 		{
+		$paymentId = (int) $id;
+		$beforeData = $this->find($paymentId);
 		$stmt = $this->db->prepare("
 			UPDATE financial_operations_payments
 			SET `financial_operation_id` = :financial_operation_id,
@@ -99,6 +103,9 @@ class FinancialOperationPayment extends TenantModel
 			'modified'               => date('Y-m-d H:i:s'),
 			'id'                     => (int) $id,
 		]);
+
+		$afterData = $this->find($paymentId);
+		$this->auditUpdate('financial_operation_payment', 'financial_operations_payments', $paymentId, $beforeData, $afterData);
 		}
 
 	/**

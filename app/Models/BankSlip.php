@@ -115,8 +115,11 @@ class BankSlip extends TenantModel
 			'created'                        => date('Y-m-d H:i:s'),
 			'modified'                       => date('Y-m-d H:i:s'),
 		]);
+		$bankSlipId = (int) $this->db->lastInsertId();
+		$bankSlipSnapshot = $this->find($bankSlipId);
+		$this->auditCreate('bank_slip', 'bank_slips', $bankSlipId, $bankSlipSnapshot);
 
-		return ['bank_slip_id' => (int) $this->db->lastInsertId()];
+		return ['bank_slip_id' => $bankSlipId];
 		}
 
 	/**
@@ -138,13 +141,13 @@ class BankSlip extends TenantModel
 			{
 			$this->db->beginTransaction();
 
-			$bankSlip = $this->find($bankSlipId);
-			if (!$bankSlip)
+			$beforeData = $this->find($bankSlipId);
+			if (!$beforeData)
 				{
 				throw new \InvalidArgumentException('Boleto não encontrado.');
 				}
 
-			if ((string) ($bankSlip['status'] ?? '') !== 'DRAFT')
+			if ((string) ($beforeData['status'] ?? '') !== 'DRAFT')
 				{
 				throw new \RuntimeException('Apenas boletos com status DRAFT podem ser editados.');
 				}
@@ -178,6 +181,8 @@ class BankSlip extends TenantModel
 			$payload['id'] = $bankSlipId;
 			$stmt->execute($payload);
 
+			$afterData = $this->find($bankSlipId);
+			$this->auditUpdate('bank_slip', 'bank_slips', $bankSlipId, $beforeData, $afterData);
 			$this->db->commit();
 			}
 		catch (\Exception $e)
@@ -347,12 +352,27 @@ class BankSlip extends TenantModel
 			}
 
 		$placeholders = implode(',', array_fill(0, count($ids), '?'));
+		$beforeRows = [];
+		foreach ($ids as $id)
+			{
+			$beforeRows[$id] = $this->find($id);
+			}
+
 		$sql = "UPDATE bank_slips
 		        SET bank_file_id = ?, status = 'REMITTANCE_GENERATED', modified = ?
 		        WHERE id IN ({$placeholders})";
 		$params = array_merge([$bankFileId, date('Y-m-d H:i:s')], $ids);
 		$stmt = $this->db->prepare($sql);
 		$stmt->execute($params);
+
+		foreach ($ids as $id)
+			{
+			$afterRow = $this->find((int) $id);
+			$this->auditUpdate('bank_slip', 'bank_slips', (int) $id, $beforeRows[$id] ?? null, $afterRow, [
+				'source' => 'generate_remittance',
+				'bank_file_id' => $bankFileId,
+			]);
+			}
 		}
 
 	/**
@@ -392,8 +412,11 @@ class BankSlip extends TenantModel
 			'id' => $bankSlipId,
 		]);
 
-		$bankSlip['status'] = $status;
-		return $bankSlip;
+		$updatedBankSlip = $this->find($bankSlipId);
+		$this->auditUpdate('bank_slip', 'bank_slips', $bankSlipId, $bankSlip, $updatedBankSlip, [
+			'source' => 'status_change',
+		]);
+		return $updatedBankSlip;
 		}
 
 	/**
@@ -421,6 +444,7 @@ class BankSlip extends TenantModel
 
 			$stmt = $this->db->prepare("DELETE FROM bank_slips WHERE id = :id");
 			$stmt->execute(['id' => $bankSlipId]);
+			$this->auditDelete('bank_slip', 'bank_slips', $bankSlipId, $bankSlip);
 
 			$this->db->commit();
 			}

@@ -68,6 +68,17 @@ class Permission extends Model
 			'modified' => date('Y-m-d H:i:s'),
 		]);
 
+		if ($stmt->rowCount() > 0)
+			{
+			$permissionId = (int) $this->db->lastInsertId();
+			$this->auditCreate('permission', 'permissions', $permissionId, [
+				'id' => $permissionId,
+				'ability' => $ability,
+				'description' => ($description === '' ? null : $description),
+				'system' => self::CATALOG_SYSTEM,
+			]);
+			}
+
 		return ($stmt->rowCount() > 0);
 		}
 
@@ -81,6 +92,7 @@ class Permission extends Model
 		$existingAbilities = $this->getExistingAbilitiesLookup();
 
 		$added = 0;
+		$createdPermissions = [];
 		$permissionsTable = $this->managerTable('permissions');
 		$stmt = $this->db->prepare("
 			INSERT INTO {$permissionsTable} (`system`, ability, description, created, modified)
@@ -105,8 +117,23 @@ class Permission extends Model
 			if ($stmt->rowCount() > 0)
 				{
 				$added++;
+				$createdPermissions[] = [
+					'ability' => $ability,
+					'description' => $description,
+					'system' => self::CATALOG_SYSTEM,
+				];
 				$existingAbilities[$ability] = true;
 				}
+			}
+
+		if ($createdPermissions !== [])
+			{
+			$this->auditCreate('permission', 'permissions', null, [
+				'created_permissions' => $createdPermissions,
+			], [
+				'source' => 'sync_from_controllers',
+				'count' => count($createdPermissions),
+			]);
 			}
 
 		return $added;
@@ -314,6 +341,7 @@ class Permission extends Model
 
 		try
 			{
+			$beforeData = $this->buildUserPermissionSnapshot($userId);
 			$userPermissionsTable = $this->managerTable('user_permissions');
 			$permissionsTable = $this->managerTable('permissions');
 			$del = $this->db->prepare("
@@ -347,6 +375,10 @@ class Permission extends Model
 					}
 				}
 
+			$afterData = $this->buildUserPermissionSnapshot($userId);
+			$this->auditUpdate('permission', 'user_permissions', $userId, $beforeData, $afterData, [
+				'source' => 'set_permissions_for_user',
+			]);
 			$this->db->commit();
 			}
 		catch (\Throwable $e)
@@ -559,6 +591,7 @@ class Permission extends Model
 
 		try
 			{
+			$permissionSnapshot = $this->findPermissionSnapshot($permissionId);
 			$isOrphaned = false;
 			foreach ($this->getOrphanedPermissions() as $perm)
 				{
@@ -608,6 +641,10 @@ class Permission extends Model
 				return ['success' => false, 'users_affected' => 0];
 				}
 
+			$this->auditDelete('permission', 'permissions', $permissionId, $permissionSnapshot, [
+				'source' => 'delete_orphaned_permission',
+				'users_affected' => $usersAffected,
+			]);
 			$this->db->commit();
 
 			return [
@@ -620,6 +657,47 @@ class Permission extends Model
 			$this->db->rollBack();
 			throw $e;
 			}
+		}
+
+	/**
+	 * Builds the current permission assignment snapshot for a user.
+	 *
+	 * @param int $userId User identifier.
+	 * @return array<string, mixed>
+	 */
+	private function buildUserPermissionSnapshot(int $userId): array
+		{
+		return [
+			'user_id' => $userId,
+			'permission_ids' => $this->getPermissionIdsByUser($userId),
+			'abilities' => $this->getAbilitiesForUser($userId),
+		];
+		}
+
+	/**
+	 * Returns the permission snapshot used by audit logs.
+	 *
+	 * @param int $permissionId Permission identifier.
+	 * @return array<string, mixed>|null
+	 */
+	private function findPermissionSnapshot(int $permissionId): ?array
+		{
+		$permissionsTable = $this->managerTable('permissions');
+		$stmt = $this->db->prepare("
+			SELECT id,
+			       ability,
+			       description,
+			       `system`,
+			       created,
+			       modified
+			FROM {$permissionsTable}
+			WHERE id = :id
+			LIMIT 1
+		");
+		$stmt->execute(['id' => $permissionId]);
+		$row = $stmt->fetch(PDO::FETCH_ASSOC);
+
+		return $row ?: null;
 		}
 
 	/**

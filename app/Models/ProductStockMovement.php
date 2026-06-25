@@ -100,6 +100,10 @@ class ProductStockMovement extends TenantModel
 
 			$movementId = (int) $this->db->lastInsertId();
 			$this->updateProductStock($productId, $newQuantity);
+			$movementSnapshot = $this->findAllByProductStockMovementId($movementId);
+			$this->auditCreate('product_stock_movement', 'products_stocks_movements', $movementId, $movementSnapshot, [
+				'affected_tables' => ['products_stocks_movements', 'products'],
+			]);
 			$this->db->commit();
 
 			return ['product_stock_movement_id' => $movementId];
@@ -166,6 +170,7 @@ class ProductStockMovement extends TenantModel
 		try
 			{
 			$this->db->beginTransaction();
+			$beforeData = $this->findAllByProductStockMovementId($movementId);
 
 			$existing = $this->findForUpdate($movementId);
 			if (!$existing)
@@ -244,6 +249,11 @@ class ProductStockMovement extends TenantModel
 				$this->updateProductStock($oldProductId, $oldProductStockBeforeMovement);
 				}
 
+			$afterData = $this->findAllByProductStockMovementId($movementId);
+			$this->auditUpdate('product_stock_movement', 'products_stocks_movements', $movementId, $beforeData, $afterData, [
+				'affected_tables' => ['products_stocks_movements', 'products'],
+			]);
+
 			$this->db->commit();
 			}
 		catch (\Exception $e)
@@ -273,6 +283,7 @@ class ProductStockMovement extends TenantModel
 		try
 			{
 			$this->db->beginTransaction();
+			$beforeData = $this->findAllByProductStockMovementId($movementId);
 
 			$existing = $this->findForUpdate($movementId);
 			if (!$existing)
@@ -302,6 +313,9 @@ class ProductStockMovement extends TenantModel
 			$stmt->execute(['id' => $movementId]);
 
 			$this->updateProductStock($productId, $restoredStock);
+			$this->auditDelete('product_stock_movement', 'products_stocks_movements', $movementId, $beforeData, [
+				'affected_tables' => ['products_stocks_movements', 'products'],
+			]);
 			$this->db->commit();
 			}
 		catch (\Exception $e)

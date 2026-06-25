@@ -47,6 +47,8 @@ class ProductCategory extends TenantModel
 			]);
 
 			$categoryId = (int) $this->db->lastInsertId();
+			$categorySnapshot = $this->find($categoryId);
+			$this->auditCreate('product_category', 'products_categories', $categoryId, $categorySnapshot);
 			$this->db->commit();
 
 			return ['product_category_id' => $categoryId];
@@ -107,6 +109,8 @@ class ProductCategory extends TenantModel
 	 */
 	public function update($id, array $data): void
 		{
+		$categoryId = (int) $id;
+		$beforeData = $this->find($categoryId);
 		$stmt = $this->db->prepare("
 			UPDATE products_categories
 			SET `name` = :name,
@@ -123,6 +127,9 @@ class ProductCategory extends TenantModel
 			'modified'    => date('Y-m-d H:i:s'),
 			'id'          => (int) $id,
 		]);
+
+		$afterData = $this->find($categoryId);
+		$this->auditUpdate('product_category', 'products_categories', $categoryId, $beforeData, $afterData);
 		}
 
 	/**

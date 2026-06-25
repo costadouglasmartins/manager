@@ -59,6 +59,8 @@ class FinancialOperation extends TenantModel
 			]);
 
 			$operationId = (int) $this->db->lastInsertId();
+			$operationSnapshot = $this->findAllByFinancialOperationId($operationId);
+			$this->auditCreate('financial_operation', 'financial_operations', $operationId, $operationSnapshot);
 			$this->db->commit();
 
 			return ['financial_operation_id' => $operationId];
@@ -105,6 +107,8 @@ class FinancialOperation extends TenantModel
 	 */
 	public function update($id, array $data): void
 		{
+		$operationId = (int) $id;
+		$beforeData = $this->findAllByFinancialOperationId($operationId);
 		$stmt = $this->db->prepare("
 			UPDATE financial_operations
 			SET `financial_operation_category_id` = :financial_operation_category_id,
@@ -119,6 +123,9 @@ class FinancialOperation extends TenantModel
 			'modified'                        => date('Y-m-d H:i:s'),
 			'id'                              => (int) $id,
 		]);
+
+		$afterData = $this->findAllByFinancialOperationId($operationId);
+		$this->auditUpdate('financial_operation', 'financial_operations', $operationId, $beforeData, $afterData);
 		}
 
 	/**
@@ -162,6 +169,8 @@ class FinancialOperation extends TenantModel
 				{
 				$paymentId = (int) $payment['id'];
 				$operationId = (int) $payment['financial_operation_id'];
+				$paymentModel = new FinancialOperationPayment();
+				$beforePayment = $paymentModel->find($paymentId);
 				$otherAmount = $this->spreadsheetCellOtherAmount($categoryId, $subcategoryId, $year, $month, $paymentId, null);
 				$paymentAmount = number_format($targetAmount - $otherAmount, 2, '.', '');
 
@@ -178,6 +187,11 @@ class FinancialOperation extends TenantModel
 				]);
 
 				$this->syncOperationTotalFromPayments($operationId, $now);
+				$afterPayment = $paymentModel->find($paymentId);
+				$this->auditUpdate('financial_operation', 'financial_operations_payments', $paymentId, $beforePayment, $afterPayment, [
+					'source' => 'spreadsheet',
+					'financial_operation_id' => $operationId,
+				]);
 				$this->db->commit();
 
 				return [
@@ -191,6 +205,7 @@ class FinancialOperation extends TenantModel
 			if ($operation)
 				{
 				$operationId = (int) $operation['id'];
+				$beforeOperation = $this->findAllByFinancialOperationId($operationId);
 				$otherAmount = $this->spreadsheetCellOtherAmount($categoryId, $subcategoryId, $year, $month, null, $operationId);
 				$operationAmount = number_format($targetAmount - $otherAmount, 2, '.', '');
 				$stmt = $this->db->prepare("
@@ -205,6 +220,10 @@ class FinancialOperation extends TenantModel
 					'id'           => $operationId,
 				]);
 
+				$afterOperation = $this->findAllByFinancialOperationId($operationId);
+				$this->auditUpdate('financial_operation', 'financial_operations', $operationId, $beforeOperation, $afterOperation, [
+					'source' => 'spreadsheet',
+				]);
 				$this->db->commit();
 
 				return [
@@ -227,6 +246,11 @@ class FinancialOperation extends TenantModel
 
 			$operationId = $this->createSpreadsheetOperation($categoryId, $subcategoryId, $amount, $cellDate, $now);
 			$paymentId = $this->createSpreadsheetPayment($operationId, $amount, $cellDate, $now);
+			$operationSnapshot = $this->findAllByFinancialOperationId($operationId);
+			$this->auditCreate('financial_operation', 'financial_operations', $operationId, $operationSnapshot, [
+				'source' => 'spreadsheet',
+				'financial_operation_payment_id' => $paymentId,
+			]);
 			$this->db->commit();
 
 			return [
