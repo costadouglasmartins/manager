@@ -3,9 +3,11 @@
 namespace App\Controllers;
 
 use App\Core\Controller;
+use App\Core\Database;
 use App\Core\TenantContext;
 use App\Models\Tenant;
 use App\Models\User;
+use App\Services\AuditLogService;
 
 class UserController extends Controller
 	{
@@ -39,6 +41,37 @@ class UserController extends Controller
 		http_response_code(404);
 		echo 'Usuario nao encontrado ou sem acesso para o tenant selecionado.';
 		exit;
+		}
+
+	/**
+	 * Writes an authentication audit event without blocking the auth flow.
+	 * @param string $action Authentication action.
+	 * @param array $user Authenticated user payload.
+	 * @param array|null $tenant Tenant selected in the session, when available.
+	 * @param array $context Additional context.
+	 * @return void
+	 **/
+	private function writeAuthenticationLog(string $action, array $user, ?array $tenant = null, array $context = []): void
+		{
+		try
+			{
+			$logger = new AuditLogService(Database::getManagerConnection());
+
+			if ($action === 'login')
+				{
+				$logger->logLogin($user, $tenant, $context);
+				return;
+				}
+
+			if ($action === 'logout')
+				{
+				$logger->logLogout($user, $tenant, $context);
+				}
+			}
+		catch (\Throwable $e)
+			{
+			error_log('AUDIT AUTH LOG ERROR: ' . $e->getMessage());
+			}
 		}
 
 	/**
@@ -159,6 +192,7 @@ class UserController extends Controller
 					];
 
 					// Select the user's own tenant first, then fall back to the accessible tenant list.
+					$authenticationLogged = false;
 					try
 						{
 						$tenantModel = new Tenant();
@@ -172,6 +206,9 @@ class UserController extends Controller
 							if ($tenant)
 								{
 								TenantContext::setTenant($tenant);
+								$this->writeAuthenticationLog('login', $user, $tenant, [
+									'tenant_selection' => 'primary_user_tenant',
+								]);
 								$this->redirect('/');
 								exit;
 								}
@@ -182,11 +219,18 @@ class UserController extends Controller
 						if (count($tenants) === 1)
 							{
 							TenantContext::setTenant($tenants[0]);
+							$this->writeAuthenticationLog('login', $user, $tenants[0], [
+								'tenant_selection' => 'single_accessible_tenant',
+							]);
 							$this->redirect('/');
 							exit;
 							}
 						elseif (count($tenants) > 1)
 							{
+							$this->writeAuthenticationLog('login', $user, null, [
+								'tenant_selection' => 'pending_user_choice',
+								'available_tenants_count' => count($tenants),
+							]);
 							$this->redirect('tenant/select');
 							exit;
 							}
@@ -195,9 +239,20 @@ class UserController extends Controller
 						{
 						error_log('ERROR LOGIN: Exception during tenant selection: ' . $e->getMessage());
 						error_log('ERROR LOGIN: Trace: ' . $e->getTraceAsString());
+						$this->writeAuthenticationLog('login', $user, null, [
+							'tenant_selection' => 'selection_error',
+							'error_message' => $e->getMessage(),
+						]);
+						$authenticationLogged = true;
 						}
 
 				// If execution reaches this point, no tenant was found or an error occurred, so redirect home anyway.
+				if (!$authenticationLogged)
+					{
+					$this->writeAuthenticationLog('login', $user, TenantContext::tenant(), [
+						'tenant_selection' => TenantContext::hasTenant() ? 'already_selected' : 'not_found',
+					]);
+					}
 				$this->redirect('/');
 				exit;
 				}
@@ -218,6 +273,16 @@ class UserController extends Controller
 	 */
 	public function logout()
 		{
+		$currentUser = $_SESSION['manager']['user'] ?? [];
+		$currentTenant = TenantContext::tenant();
+
+		if (!empty($currentUser))
+			{
+			$this->writeAuthenticationLog('logout', $currentUser, $currentTenant, [
+				'tenant_selection' => $currentTenant ? 'selected' : 'none',
+			]);
+			}
+
 		\App\Core\Authorization::clearCache();
 		// Destroy the session and redirect.
 		$_SESSION = [];

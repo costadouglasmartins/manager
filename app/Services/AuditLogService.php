@@ -59,6 +59,50 @@ class AuditLogService
 		}
 
 	/**
+	 * Persists a successful login event in manager_main.logs.
+	 * @param array $user Authenticated user payload.
+	 * @param array|null $tenant Tenant selected during login, when available.
+	 * @param array $context Additional context for the event.
+	 **/
+	public function logLogin(array $user, ?array $tenant = null, array $context = []): void
+		{
+		$context['source'] = 'authentication';
+		$this->logEvent(
+			'auth',
+			'login',
+			'users',
+			$user['id'] ?? null,
+			null,
+			$this->authenticationUserSnapshot($user),
+			$context,
+			$user,
+			$tenant
+		);
+		}
+
+	/**
+	 * Persists a logout event in manager_main.logs.
+	 * @param array $user Authenticated user payload.
+	 * @param array|null $tenant Tenant selected during logout, when available.
+	 * @param array $context Additional context for the event.
+	 **/
+	public function logLogout(array $user, ?array $tenant = null, array $context = []): void
+		{
+		$context['source'] = 'authentication';
+		$this->logEvent(
+			'auth',
+			'logout',
+			'users',
+			$user['id'] ?? null,
+			$this->authenticationUserSnapshot($user),
+			null,
+			$context,
+			$user,
+			$tenant
+		);
+		}
+
+	/**
 	 * Writes a normalized audit row to manager_main.logs.
 	 * @param string $module Source module name.
 	 * @param string $action Event action.
@@ -75,17 +119,26 @@ class AuditLogService
 		$entityId,
 		$beforeData,
 		$afterData,
-		array $context = []
+		array $context = [],
+		?array $actor = null,
+		?array $tenantOverride = null
 	): void
 		{
-		$tenant = TenantContext::tenant();
-		$user = $_SESSION['manager']['user'] ?? [];
+		$tenant = $tenantOverride ?? TenantContext::tenant();
+		$user = $actor ?? ($_SESSION['manager']['user'] ?? []);
+
+		if ($this->shouldSkipActor($user))
+			{
+			return;
+			}
+
 		$now = date('Y-m-d H:i:s');
 		$beforePayload = $this->normalizeValue($beforeData);
 		$afterPayload = $this->normalizeValue($afterData);
 		$changedFields = $this->buildChangedFields($beforePayload, $afterPayload);
 		$contextPayload = $this->buildContextPayload($context);
 		$logsTable = sprintf('`%s`.`logs`', Database::getManagerDatabaseName());
+		$tenantDatabase = $tenantOverride !== null ? $this->databaseNameFromTenant($tenantOverride) : TenantContext::databaseName();
 
 		$stmt = $this->db->prepare("
 			INSERT INTO {$logsTable}
@@ -101,7 +154,7 @@ class AuditLogService
 		$stmt->execute([
 			'event_uuid' => $this->generateUuidV4(),
 			'tenant_id' => isset($tenant['id']) ? (int) $tenant['id'] : null,
-			'tenant_database' => TenantContext::databaseName(),
+			'tenant_database' => $tenantDatabase,
 			'tenant_name_snapshot' => $this->truncate((string) ($tenant['name'] ?? ''), 160),
 			'module' => trim($module),
 			'action' => $action,
@@ -122,6 +175,48 @@ class AuditLogService
 			'created' => $now,
 			'modified' => $now,
 		]);
+		}
+
+	/**
+	 * Returns whether the current actor should be excluded from central audit storage.
+	 * @param array $user Authenticated user payload.
+	 * @return bool
+	 **/
+	private function shouldSkipActor(array $user): bool
+		{
+		return (($user['type'] ?? '') === 'root');
+		}
+
+	/**
+	 * Builds the user payload used by authentication events.
+	 * @param array $user Raw authenticated user data.
+	 * @return array
+	 **/
+	private function authenticationUserSnapshot(array $user): array
+		{
+		return [
+			'id' => isset($user['id']) ? (int) $user['id'] : null,
+			'username' => $user['username'] ?? null,
+			'email' => $user['email'] ?? null,
+			'type' => $user['type'] ?? null,
+			'name' => $user['name'] ?? null,
+			'tenant_id' => isset($user['tenant_id']) ? (int) $user['tenant_id'] : null,
+		];
+		}
+
+	/**
+	 * Resolves the database name from an explicit tenant payload.
+	 * @param array $tenant Tenant payload.
+	 * @return string|null
+	 **/
+	private function databaseNameFromTenant(array $tenant): ?string
+		{
+		if (empty($tenant['database_number']))
+			{
+			return null;
+			}
+
+		return TenantContext::DATABASE_PREFIX . str_pad((string) $tenant['database_number'], 4, '0', STR_PAD_LEFT);
 		}
 
 	/**
