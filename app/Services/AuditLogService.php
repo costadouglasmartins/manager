@@ -103,6 +103,18 @@ class AuditLogService
 		}
 
 	/**
+	 * Persists a listing or filtered search event in manager_main.logs.
+	 * @param string $module Source module name.
+	 * @param string $entityName Main entity/table name.
+	 * @param array $context Additional context for the listing event.
+	 **/
+	public function logList(string $module, string $entityName, array $context = []): void
+		{
+		$context['source'] = 'listing';
+		$this->logEvent($module, 'list', $entityName, null, null, null, $context);
+		}
+
+	/**
 	 * Writes a normalized audit row to manager_main.logs.
 	 * @param string $module Source module name.
 	 * @param string $action Event action.
