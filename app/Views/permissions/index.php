@@ -132,11 +132,29 @@ if (isset($_GET['created']))
   <form method="POST" action="<?= url('permission/saveUser'); ?>">
     <input type="hidden" name="user_id" value="<?= (int) $selectedUserId; ?>">
 
+    <div class="card mb-3">
+      <div class="card-header d-flex align-items-center justify-content-between">
+        <span class="fw-semibold">Todas as permissões</span>
+        <div class="form-check form-switch m-0">
+          <input class="form-check-input" type="checkbox" id="permToggleAll" title="Marcar/desmarcar todas as permissões">
+          <label class="form-check-label small text-muted" for="permToggleAll">Todas</label>
+        </div>
+      </div>
+    </div>
+
     <div class="row g-3 mb-3">
+    <?php $groupIndex = 0; ?>
     <?php foreach ($groups as $groupName => $items): ?>
+      <?php $groupIndex++; ?>
       <div class="col-12 col-md-6 col-xl-4">
         <div class="card h-100">
-          <div class="card-header fw-semibold text-capitalize"><?= htmlspecialchars($groupName); ?></div>
+          <div class="card-header d-flex align-items-center justify-content-between">
+            <span class="fw-semibold text-capitalize"><?= htmlspecialchars($groupName); ?></span>
+            <div class="form-check form-switch m-0">
+              <input class="form-check-input perm-group-toggle" type="checkbox" id="permGroupToggle<?= (int) $groupIndex; ?>" data-group="<?= (int) $groupIndex; ?>" title="Marcar/desmarcar todas deste grupo">
+              <label class="form-check-label small text-muted" for="permGroupToggle<?= (int) $groupIndex; ?>">Todas</label>
+            </div>
+          </div>
           <div class="card-body p-0">
               <table class="table table-sm table-bordered align-middle mb-0">
                 <thead>
@@ -154,7 +172,7 @@ if (isset($_GET['created']))
                     ?>
                     <tr>
                       <td class="text-center">
-                        <input class="form-check-input" type="checkbox" name="permission_ids[]" value="<?= $pid; ?>" <?= ($checked ? 'checked' : ''); ?>>
+                        <input class="form-check-input" type="checkbox" name="permission_ids[]" value="<?= $pid; ?>" data-group="<?= (int) $groupIndex; ?>" <?= ($checked ? 'checked' : ''); ?>>
                       </td>
                       <td style="word-break:break-all"><code><?= htmlspecialchars($p['ability']); ?></code></td>
                       <td class="text-muted small"><?= htmlspecialchars((string) ($p['description'] ?? '')); ?></td>
@@ -196,5 +214,101 @@ if (isset($_GET['created']))
     </div>
 
   </form>
+
+  <script>
+    (function () {
+      var toggleAll = document.getElementById('permToggleAll');
+      var checkboxes = document.querySelectorAll('input[name="permission_ids[]"]');
+      var groupToggles = document.querySelectorAll('.perm-group-toggle');
+
+      function groupCheckboxes(group)
+        {
+        return document.querySelectorAll('input[name="permission_ids[]"][data-group="' + group + '"]');
+        }
+
+      function allCheckedIn(list)
+        {
+        for (var i = 0; i < list.length; i++)
+          {
+          if (!list[i].checked)
+            {
+            return false;
+            }
+          }
+        return list.length > 0;
+        }
+
+      function someCheckedIn(list)
+        {
+        for (var i = 0; i < list.length; i++)
+          {
+          if (list[i].checked)
+            {
+            return true;
+            }
+          }
+        return false;
+        }
+
+      function syncToggle(toggle, list)
+        {
+        var allOn = allCheckedIn(list);
+        toggle.checked = allOn;
+        toggle.indeterminate = (!allOn && someCheckedIn(list));
+        }
+
+      function updateGlobalToggle()
+        {
+        if (toggleAll)
+          {
+          syncToggle(toggleAll, checkboxes);
+          }
+        }
+
+      function updateGroupToggles()
+        {
+        for (var i = 0; i < groupToggles.length; i++)
+          {
+          syncToggle(groupToggles[i], groupCheckboxes(groupToggles[i].getAttribute('data-group')));
+          }
+        }
+
+      function refresh()
+        {
+        updateGlobalToggle();
+        updateGroupToggles();
+        }
+
+      if (toggleAll)
+        {
+        toggleAll.addEventListener('change', function () {
+          for (var i = 0; i < checkboxes.length; i++)
+            {
+            checkboxes[i].checked = this.checked;
+            }
+          refresh();
+        });
+        }
+
+      for (var i = 0; i < groupToggles.length; i++)
+        {
+        groupToggles[i].addEventListener('change', function () {
+          var list = groupCheckboxes(this.getAttribute('data-group'));
+          for (var j = 0; j < list.length; j++)
+            {
+            list[j].checked = this.checked;
+            }
+          refresh();
+        });
+        }
+
+      for (var i = 0; i < checkboxes.length; i++)
+        {
+        checkboxes[i].addEventListener('change', refresh);
+        }
+
+      refresh();
+    }());
+  </script>
 
 <?php endif; ?>

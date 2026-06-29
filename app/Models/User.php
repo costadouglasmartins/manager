@@ -348,6 +348,7 @@ class User extends Model
 		               User.active,
 		               User.person_id,
 		               User.tenant_id,
+		               User.password AS password_hash,
 		               Person.name,
 		               Person.document,
 		               Email.email

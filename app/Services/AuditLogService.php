@@ -139,11 +139,6 @@ class AuditLogService
 		$tenant = $tenantOverride ?? TenantContext::tenant();
 		$user = $actor ?? ($_SESSION['manager']['user'] ?? []);
 
-		if ($this->shouldSkipActor($user))
-			{
-			return;
-			}
-
 		$now = date('Y-m-d H:i:s');
 		$beforePayload = $this->normalizeValue($beforeData);
 		$afterPayload = $this->normalizeValue($afterData);
@@ -187,16 +182,6 @@ class AuditLogService
 			'created' => $now,
 			'modified' => $now,
 		]);
-		}
-
-	/**
-	 * Returns whether the current actor should be excluded from central audit storage.
-	 * @param array $user Authenticated user payload.
-	 * @return bool
-	 **/
-	private function shouldSkipActor(array $user): bool
-		{
-		return (($user['type'] ?? '') === 'root');
 		}
 
 	/**

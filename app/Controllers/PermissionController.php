@@ -72,7 +72,7 @@ class PermissionController extends Controller
 			$this->redirect('permission');
 			}
 
-		$permissionModel->setPermissionsForUser($userId, $permissionIds);
+		$permissionModel->setPermissionsForUser($userId, $permissionIds, $tenantId);
 		Authorization::clearCache();
 
 		$this->redirect('permission?user_id=' . $userId);

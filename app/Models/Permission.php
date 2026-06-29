@@ -329,8 +329,10 @@ class Permission extends Model
 
 	/**
 	 * Sets the permissions for a user (full replace).
+	 *
+	 * @param int|null $tenantId Tenant scope selected when the permission change was submitted.
 	 */
-	public function setPermissionsForUser(int $userId, array $permissionIds): void
+	public function setPermissionsForUser(int $userId, array $permissionIds, ?int $tenantId = null): void
 		{
 		if ($userId <= 0)
 			{
@@ -341,43 +343,59 @@ class Permission extends Model
 
 		try
 			{
-			$beforeData = $this->buildUserPermissionSnapshot($userId);
+			$beforeData = $this->buildUserPermissionSnapshot($userId, $tenantId);
+			$beforePermissionIds = array_map('intval', $beforeData['permission_ids'] ?? []);
+			$canonicalPermissionIds = $this->canonicalizePermissionIds($permissionIds);
+			$permissionIdsToDelete = array_values(array_diff($beforePermissionIds, $canonicalPermissionIds));
+			$permissionIdsToInsert = array_values(array_diff($canonicalPermissionIds, $beforePermissionIds));
 			$userPermissionsTable = $this->managerTable('user_permissions');
 			$permissionsTable = $this->managerTable('permissions');
-			$del = $this->db->prepare("
-				DELETE up
-				FROM {$userPermissionsTable} up
-				INNER JOIN {$permissionsTable} p ON p.id = up.permission_id
-				WHERE up.user_id = :user_id
-				  AND p.`system` = :system
-			");
-			$del->execute([
-				'user_id' => $userId,
-				'system' => self::CATALOG_SYSTEM,
-			]);
 
-			$canonicalPermissionIds = $this->canonicalizePermissionIds($permissionIds);
-			if ($canonicalPermissionIds !== [])
+			if ($permissionIdsToDelete !== [])
+				{
+				$deletePlaceholders = implode(', ', array_fill(0, count($permissionIdsToDelete), '?'));
+				$del = $this->db->prepare("
+					DELETE up
+					FROM {$userPermissionsTable} up
+					INNER JOIN {$permissionsTable} p ON p.id = up.permission_id
+					WHERE up.user_id = ?
+					  AND p.`system` = ?
+					  AND up.permission_id IN ({$deletePlaceholders})
+				");
+				$del->execute(array_merge([$userId, self::CATALOG_SYSTEM], $permissionIdsToDelete));
+				}
+
+			if ($permissionIdsToInsert !== [])
 				{
 				$ins = $this->db->prepare("
 					INSERT INTO {$userPermissionsTable} (user_id, permission_id, created, modified)
 					VALUES (:user_id, :permission_id, :created, :modified)
 				");
+				$now = date('Y-m-d H:i:s');
 
-				foreach ($canonicalPermissionIds as $permissionId)
+				foreach ($permissionIdsToInsert as $permissionId)
 					{
 					$ins->execute([
 						'user_id' => $userId,
 						'permission_id' => $permissionId,
-						'created' => date('Y-m-d H:i:s'),
-						'modified' => date('Y-m-d H:i:s'),
+						'created' => $now,
+						'modified' => $now,
 					]);
 					}
 				}
 
-			$afterData = $this->buildUserPermissionSnapshot($userId);
+			$afterData = $this->buildUserPermissionSnapshot($userId, $tenantId);
+			$afterPermissionIds = array_map('intval', $afterData['permission_ids'] ?? []);
 			$this->auditUpdate('permission', 'user_permissions', $userId, $beforeData, $afterData, [
 				'source' => 'set_permissions_for_user',
+				'target_user_id' => $userId,
+				'tenant_id' => $tenantId,
+				'submitted_permission_ids' => $this->normalizePermissionIdsForAudit($permissionIds),
+				'submitted_canonical_permission_ids' => $canonicalPermissionIds,
+				'before_permission_count' => count($beforePermissionIds),
+				'after_permission_count' => count($afterPermissionIds),
+				'no_changes_detected' => ($beforePermissionIds === $afterPermissionIds),
+				'permission_changes' => $this->buildPermissionChangeSummary($beforePermissionIds, $afterPermissionIds),
 			]);
 			$this->db->commit();
 			}
@@ -663,15 +681,242 @@ class Permission extends Model
 	 * Builds the current permission assignment snapshot for a user.
 	 *
 	 * @param int $userId User identifier.
+	 * @param int|null $tenantId Optional tenant scope.
 	 * @return array<string, mixed>
 	 */
-	private function buildUserPermissionSnapshot(int $userId): array
+	private function buildUserPermissionSnapshot(int $userId, ?int $tenantId = null): array
 		{
 		return [
 			'user_id' => $userId,
+			'tenant_id' => $tenantId,
+			'target_user' => $this->findUserSnapshotForPermissionsAudit($userId),
+			'tenant_links' => $this->findTenantUserLinksForPermissionsAudit($userId, $tenantId),
 			'permission_ids' => $this->getPermissionIdsByUser($userId),
 			'abilities' => $this->getAbilitiesForUser($userId),
+			'user_permissions' => $this->findUserPermissionRowsForAudit($userId),
 		];
+		}
+
+	/**
+	 * Returns the user identity snapshot used by permission assignment audit logs.
+	 *
+	 * @param int $userId User identifier.
+	 * @return array<string, mixed>|null
+	 */
+	private function findUserSnapshotForPermissionsAudit(int $userId): ?array
+		{
+		$usersTable = $this->managerTable('users');
+		$peopleTable = $this->managerTable('people');
+		$emailsTable = $this->managerTable('emails');
+
+		$stmt = $this->db->prepare("
+			SELECT User.id,
+			       User.person_id,
+			       User.tenant_id,
+			       User.username,
+			       User.type,
+			       User.active,
+			       User.password AS password_hash,
+			       User.created,
+			       User.modified,
+			       Person.name AS person_name,
+			       Person.fantasy AS person_fantasy,
+			       Person.type AS person_type,
+			       Person.document AS person_document,
+			       Person.active AS person_active,
+			       Email.id AS login_email_id,
+			       Email.email AS login_email
+			FROM {$usersTable} AS User
+			LEFT JOIN {$peopleTable} AS Person ON Person.id = User.person_id
+			LEFT JOIN {$emailsTable} AS Email
+				ON Email.person_id = Person.id
+				AND Email.is_login = '1'
+			WHERE User.id = :user_id
+			LIMIT 1
+		");
+		$stmt->execute(['user_id' => $userId]);
+		$row = $stmt->fetch(PDO::FETCH_ASSOC);
+
+		return $row ?: null;
+		}
+
+	/**
+	 * Returns tenant-user rows relevant to the permission assignment audit log.
+	 *
+	 * @param int $userId User identifier.
+	 * @param int|null $tenantId Optional tenant scope.
+	 * @return array<int, array<string, mixed>>
+	 */
+	private function findTenantUserLinksForPermissionsAudit(int $userId, ?int $tenantId = null): array
+		{
+		$tenantUsersTable = $this->managerTable('tenant_users');
+		$tenantsTable = $this->managerTable('tenants');
+		$params = ['user_id' => $userId];
+
+		$sql = "
+			SELECT TenantUser.tenant_id,
+			       Tenant.database_number,
+			       Tenant.status AS tenant_status,
+			       TenantUser.user_id,
+			       TenantUser.role,
+			       TenantUser.created,
+			       TenantUser.modified
+			FROM {$tenantUsersTable} AS TenantUser
+			LEFT JOIN {$tenantsTable} AS Tenant ON Tenant.id = TenantUser.tenant_id
+			WHERE TenantUser.user_id = :user_id
+		";
+
+		if ($tenantId !== null)
+			{
+			$sql .= " AND TenantUser.tenant_id = :tenant_id";
+			$params['tenant_id'] = $tenantId;
+			}
+
+		$sql .= " ORDER BY TenantUser.tenant_id ASC";
+
+		$stmt = $this->db->prepare($sql);
+		$stmt->execute($params);
+		return $stmt->fetchAll(PDO::FETCH_ASSOC);
+		}
+
+	/**
+	 * Returns complete user-permission rows with the permission catalog data.
+	 *
+	 * @param int $userId User identifier.
+	 * @return array<string, array<string, mixed>>
+	 */
+	private function findUserPermissionRowsForAudit(int $userId): array
+		{
+		$userPermissionsTable = $this->managerTable('user_permissions');
+		$permissionsTable = $this->managerTable('permissions');
+
+		$stmt = $this->db->prepare("
+			SELECT up.user_id,
+			       up.permission_id AS assignment_permission_id,
+			       up.created AS assignment_created,
+			       up.modified AS assignment_modified,
+			       p.id AS permission_id,
+			       p.ability,
+			       p.`system`,
+			       p.description,
+			       p.created AS permission_created,
+			       p.modified AS permission_modified
+			FROM {$userPermissionsTable} AS up
+			INNER JOIN {$permissionsTable} AS p ON p.id = up.permission_id
+			WHERE up.user_id = :user_id
+			  AND p.`system` = :system
+			ORDER BY p.ability ASC, p.id ASC
+		");
+		$stmt->execute([
+			'user_id' => $userId,
+			'system' => self::CATALOG_SYSTEM,
+		]);
+
+		$rows = [];
+		while ($row = $stmt->fetch(PDO::FETCH_ASSOC))
+			{
+			$permissionId = (int) ($row['permission_id'] ?? 0);
+			if ($permissionId <= 0)
+				{
+				continue;
+				}
+
+			$rows[(string) $permissionId] = [
+				'user_permission' => [
+					'user_id' => (int) ($row['user_id'] ?? 0),
+					'permission_id' => (int) ($row['assignment_permission_id'] ?? 0),
+					'created' => $row['assignment_created'] ?? null,
+					'modified' => $row['assignment_modified'] ?? null,
+				],
+				'permission' => [
+					'id' => $permissionId,
+					'ability' => $row['ability'] ?? null,
+					'system' => $row['system'] ?? null,
+					'description' => $row['description'] ?? null,
+					'created' => $row['permission_created'] ?? null,
+					'modified' => $row['permission_modified'] ?? null,
+				],
+			];
+			}
+
+		return $rows;
+		}
+
+	/**
+	 * Builds an explicit permission delta for the audit context.
+	 *
+	 * @param array<int> $beforePermissionIds Permission ids before the change.
+	 * @param array<int> $afterPermissionIds Permission ids after the change.
+	 * @return array<string, mixed>
+	 */
+	private function buildPermissionChangeSummary(array $beforePermissionIds, array $afterPermissionIds): array
+		{
+		$beforePermissionIds = $this->normalizePermissionIdsForAudit($beforePermissionIds);
+		$afterPermissionIds = $this->normalizePermissionIdsForAudit($afterPermissionIds);
+		$addedIds = array_values(array_diff($afterPermissionIds, $beforePermissionIds));
+		$removedIds = array_values(array_diff($beforePermissionIds, $afterPermissionIds));
+
+		sort($addedIds);
+		sort($removedIds);
+
+		return [
+			'added_count' => count($addedIds),
+			'removed_count' => count($removedIds),
+			'unchanged_count' => count(array_intersect($beforePermissionIds, $afterPermissionIds)),
+			'added' => $this->findPermissionsForChangeAudit($addedIds),
+			'removed' => $this->findPermissionsForChangeAudit($removedIds),
+		];
+		}
+
+	/**
+	 * Normalizes permission id lists used by audit helpers.
+	 *
+	 * @param array<int|string> $permissionIds Permission ids.
+	 * @return array<int>
+	 */
+	private function normalizePermissionIdsForAudit(array $permissionIds): array
+		{
+		$permissionIds = array_values(array_unique(array_map('intval', $permissionIds)));
+		$permissionIds = array_values(array_filter($permissionIds, static function ($permissionId)
+			{
+			return $permissionId > 0;
+			}));
+		sort($permissionIds);
+
+		return $permissionIds;
+		}
+
+	/**
+	 * Returns permission catalog rows for a permission delta.
+	 *
+	 * @param array<int> $permissionIds Permission ids.
+	 * @return array<int, array<string, mixed>>
+	 */
+	private function findPermissionsForChangeAudit(array $permissionIds): array
+		{
+		$permissionIds = $this->normalizePermissionIdsForAudit($permissionIds);
+		if ($permissionIds === [])
+			{
+			return [];
+			}
+
+		$permissionsTable = $this->managerTable('permissions');
+		$placeholders = implode(', ', array_fill(0, count($permissionIds), '?'));
+		$stmt = $this->db->prepare("
+			SELECT id,
+			       ability,
+			       `system`,
+			       description,
+			       created,
+			       modified
+			FROM {$permissionsTable}
+			WHERE id IN ({$placeholders})
+			  AND `system` = ?
+			ORDER BY ability ASC, id ASC
+		");
+		$stmt->execute(array_merge($permissionIds, [self::CATALOG_SYSTEM]));
+
+		return $stmt->fetchAll(PDO::FETCH_ASSOC);
 		}
 
 	/**
