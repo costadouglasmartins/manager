@@ -185,6 +185,7 @@ Exemplo recomendado para comentários de métodos:
 ## Estrutura PHP
 
 - Mantenha actions de controllers enxutas: valide permissões, leia entradas, chame models/services e escolha a resposta.
+- Ao criar novos módulos com listagem, implemente também no controller os métodos de exportação para PDF e Excel, seguindo o padrão `exportPdf()` e `exportExcel()` já suportado pelo projeto.
 - Coloque escritas no banco e fluxos transacionais em models ou services.
 - Reutilize helpers existentes em `app/Helpers` antes de criar novas lógicas de formatação ou parsing.
 - Use `requirePermission()` ou `requireAnyPermission()` em actions que expõem dados protegidos.
