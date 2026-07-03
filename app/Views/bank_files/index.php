@@ -72,6 +72,7 @@ $accountLabel = static function (array $row): string {
 </form>
 
 <div class="d-flex flex-wrap gap-2 mb-3">
+  <?= pdfExportButton('bank_file', $queryFilters); ?>
   <?= excelExportButton('bank_file', $queryFilters); ?>
 </div>
 

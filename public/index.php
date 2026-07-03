@@ -56,6 +56,7 @@ require_once ROOT_PATH . '/app/Core/Model.php';
 require_once ROOT_PATH . '/app/Helpers/Helper.php';
 require_once ROOT_PATH . '/app/Helpers/PaginationHelper.php';
 require_once ROOT_PATH . '/app/Helpers/ExcelExportHelper.php';
+require_once ROOT_PATH . '/app/Helpers/PdfExportHelper.php';
 
 // Autoload dos namespaces
 spl_autoload_register(function ($class) 

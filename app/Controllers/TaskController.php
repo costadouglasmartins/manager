@@ -119,55 +119,7 @@ class TaskController extends TenantAwareController
 	 **/
 	public function exportPdf(): void
 		{
-		$this->requirePermission('task.index');
-
-		$filters = $this->readFilters();
-		$order = $this->readOrder();
-		$task = new Task();
-		$rows = $this->reportRows($task->search($filters, null, 0, $order['sort'], $order['direction']));
-
-		$this->pdfService()->downloadTableReport(
-			'Relatório de tarefas',
-			[
-				'id' => [
-					'label' => 'Código',
-					'align' => 'right',
-					'width' => '7%',
-				],
-				'title' => [
-					'label' => 'Tarefa',
-					'width' => '20%',
-				],
-				'task_category_name' => [
-					'label' => 'Categoria',
-					'width' => '13%',
-				],
-				'status_label' => [
-					'label' => 'Situação',
-					'width' => '13%',
-				],
-				'assignee_names' => [
-					'label' => 'Responsáveis',
-					'width' => '20%',
-				],
-				'third_party_label' => [
-					'label' => 'Terceiro',
-					'width' => '12%',
-				],
-				'total_duration' => [
-					'label' => 'Tempo',
-					'width' => '7%',
-				],
-				'created_label' => [
-					'label' => 'Criada em',
-					'width' => '8%',
-				],
-			],
-			$rows,
-			$this->reportFilters($filters),
-			'tarefas-' . date('Ymd-His') . '.pdf',
-			'landscape'
-		);
+		parent::exportPdf();
 		}
 
 	/**

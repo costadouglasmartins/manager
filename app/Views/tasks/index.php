@@ -136,7 +136,7 @@ $sortIcon = static function (string $column) use ($sort, $direction): string {
 
   <div class="d-flex flex-wrap gap-2 mb-3">
     <?php if (authCan('task.index')): ?>
-      <a href="<?= url('task/exportPdf?' . $queryFilters); ?>" class="btn btn-outline-danger btn-sm"><i class="bi bi-file-earmark-pdf"></i> PDF</a>
+      <?= pdfExportButton('task', $queryFilters, 'PDF'); ?>
       <?= excelExportButton('task', $queryFilters, 'Excel'); ?>
     <?php endif; ?>
   </div>

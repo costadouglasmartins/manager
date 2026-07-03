@@ -48,6 +48,7 @@ $queryFilters = http_build_query([
 </form>
 
 <div class="d-flex flex-wrap gap-2 mb-3">
+  <?= pdfExportButton('email', $queryFilters); ?>
   <?= excelExportButton('email', $queryFilters); ?>
 </div>
 

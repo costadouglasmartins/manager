@@ -108,6 +108,7 @@ $stockClass = static function (array $row): string {
   </form>
 
   <div class="d-flex flex-wrap gap-2 mb-3">
+    <?= pdfExportButton('product', $queryFilters); ?>
     <?= excelExportButton('product', $queryFilters); ?>
   </div>
 

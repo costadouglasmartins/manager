@@ -78,7 +78,7 @@ class App
 			}
 
 		$declaringClass = $reflection->getDeclaringClass()->getName();
-		if ($declaringClass === Controller::class && !in_array($method, ['exportExcel'], true))
+		if ($declaringClass === Controller::class && !in_array($method, ['exportExcel', 'exportPdf'], true))
 			{
 			return false;
 			}

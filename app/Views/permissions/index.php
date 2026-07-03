@@ -71,6 +71,7 @@ $queryFilters = http_build_query([
     Adicionar permissão manualmente
   </button>
 
+  <?= pdfExportButton('permission', $queryFilters, 'Exportar PDF', 'btn btn-outline-danger'); ?>
   <?= excelExportButton('permission', $queryFilters, 'Exportar Excel', 'btn btn-outline-success'); ?>
 </div>
 

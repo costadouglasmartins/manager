@@ -60,6 +60,7 @@ $queryFilters = http_build_query([
   </form>
 
   <div class="d-flex flex-wrap gap-2 mb-3">
+    <?= pdfExportButton('financial_operation_subcategory', $queryFilters); ?>
     <?= excelExportButton('financial_operation_subcategory', $queryFilters); ?>
   </div>
 

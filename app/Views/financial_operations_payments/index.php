@@ -68,6 +68,7 @@ $operationLabel = static function (array $operation) use ($formatMoney): string 
   </form>
 
   <div class="d-flex flex-wrap gap-2 mb-3">
+    <?= pdfExportButton('financial_operation_payment', $queryFilters); ?>
     <?= excelExportButton('financial_operation_payment', $queryFilters); ?>
   </div>
 

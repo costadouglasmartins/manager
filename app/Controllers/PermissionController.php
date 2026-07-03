@@ -7,6 +7,7 @@ use App\Core\Authorization;
 use App\Core\TenantContext;
 use App\Models\Permission;
 use App\Services\RecordListExcelExportService;
+use App\Services\RecordListPdfExportService;
 
 class PermissionController extends Controller
 	{
@@ -17,7 +18,9 @@ class PermissionController extends Controller
 	 */
 	protected $routeAliases = [
 		'export-excel' => 'exportExcel',
+		'export-pdf' => 'exportPdf',
 		'orphaned-export-excel' => 'exportOrphanedExcel',
+		'orphaned-export-pdf' => 'exportOrphanedPdf',
 	];
 
 	/**
@@ -162,6 +165,17 @@ class PermissionController extends Controller
 		$this->currentTenantId();
 
 		$service = new RecordListExcelExportService();
+		$service->stream('permission_orphaned', $_GET);
+		}
+
+	/**
+	 * Downloads orphaned permissions as PDF.
+	 */
+	public function exportOrphanedPdf(): void
+		{
+		$this->currentTenantId();
+
+		$service = new RecordListPdfExportService();
 		$service->stream('permission_orphaned', $_GET);
 		}
 

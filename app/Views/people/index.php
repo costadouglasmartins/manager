@@ -111,6 +111,7 @@ $queryFilters = http_build_query([
 <!-- /Search form -->
 
 <div class="d-flex flex-wrap gap-2 mb-3">
+  <?= pdfExportButton('person', $queryFilters); ?>
   <?= excelExportButton('person', $queryFilters); ?>
 </div>
 

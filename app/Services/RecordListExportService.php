@@ -563,7 +563,14 @@ class RecordListExportService
 			$ids = $this->integerList([$filters['bank_account_id']]);
 			}
 
-		$filters['bank_account_ids'] = $ids;
+		if (count($ids) > 1)
+			{
+			$filters['bank_account_ids'] = $ids;
+			$filters['bank_account_id'] = '';
+			return $filters;
+			}
+
+		$filters['bank_account_ids'] = [];
 		$filters['bank_account_id'] = $ids[0] ?? ($filters['bank_account_id'] ?? '');
 
 		return $filters;

@@ -3,7 +3,9 @@
 namespace App\Core;
 
 use App\Core\Authorization;
+use App\Services\RecordListExportService;
 use App\Services\RecordListExcelExportService;
+use App\Services\RecordListPdfExportService;
 use App\Services\PdfService;
 use App\Services\AuditLogService;
 
@@ -16,6 +18,7 @@ class Controller
 	 */
 	protected $routeAliases = [
 		'export-excel' => 'exportExcel',
+		'export-pdf' => 'exportPdf',
 	];
 
 	/**
@@ -46,6 +49,25 @@ class Controller
 			{
 			http_response_code(404);
 			echo 'Excel export is not configured for this listing.';
+			exit;
+			}
+
+		$this->authorizeListExport($service, $resource);
+		$service->stream($resource, $_GET);
+		}
+
+	/**
+	 * Exports the current controller's filtered record listing to PDF.
+	 */
+	public function exportPdf(): void
+		{
+		$resource = $this->resourceNameFromController();
+		$service = new RecordListPdfExportService();
+
+		if (!$service->supports($resource))
+			{
+			http_response_code(404);
+			echo 'PDF export is not configured for this listing.';
 			exit;
 			}
 
@@ -111,7 +133,7 @@ class Controller
 	/**
 	 * Authorizes list exports using the same access level as the list screen.
 	 */
-	private function authorizeListExport(RecordListExcelExportService $service, string $resource): void
+	private function authorizeListExport(RecordListExportService $service, string $resource): void
 		{
 		if ($service->needsTenant($resource))
 			{

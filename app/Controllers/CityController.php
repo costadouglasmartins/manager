@@ -109,50 +109,7 @@ class CityController extends Controller
 	 */
 	public function exportPdf(): void
 		{
-		$this->requirePermission('city.index');
-
-		$state = new State();
-		$filters = $this->normalizeLocationFilters($this->readFilters(), $state);
-		$city = new City();
-		$country = new Country();
-		$cities = $city->search($filters, null);
-		$selectedCountry = $filters['country_id'] !== ''
-			? $country->find((int) $filters['country_id'])
-			: null;
-		$selectedState = $filters['state_id'] !== ''
-			? $state->find((int) $filters['state_id'])
-			: null;
-
-		$this->pdfService()->downloadTableReport(
-			'Relatório de cidades',
-			[
-				'id' => [
-					'label' => 'Código',
-					'align' => 'right',
-					'width' => '14%',
-				],
-				'name' => [
-					'label' => 'Cidade',
-					'width' => '32%',
-				],
-				'country_name' => [
-					'label' => 'País',
-					'width' => '27%',
-				],
-				'state_name' => [
-					'label' => 'Estado',
-					'width' => '27%',
-				],
-			],
-			$cities,
-			[
-				'Código' => $filters['id'],
-				'Nome' => $filters['name'],
-				'País' => is_array($selectedCountry) ? ($selectedCountry['name'] ?? '') : '',
-				'Estado' => is_array($selectedState) ? ($selectedState['name'] ?? '') : '',
-			],
-			'cidades-' . date('Ymd-His') . '.pdf'
-		);
+		parent::exportPdf();
 		}
 
 	/**

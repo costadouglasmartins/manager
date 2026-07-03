@@ -72,47 +72,7 @@ class TaskCategoryController extends TenantAwareController
 	 **/
 	public function exportPdf(): void
 		{
-		$this->requirePermission('task_category.index');
-
-		$filters = $this->readFilters();
-		$taskCategory = new TaskCategory();
-		$categories = $taskCategory->search($filters, null);
-
-		foreach ($categories as &$category)
-			{
-			$category['active_label'] = ((int) ($category['active'] ?? 0) === 1) ? 'Ativo' : 'Inativo';
-			}
-		unset($category);
-
-		$this->pdfService()->downloadTableReport(
-			'Relatório de categorias de tarefas',
-			[
-				'id' => [
-					'label' => 'Código',
-					'align' => 'right',
-					'width' => '12%',
-				],
-				'name' => [
-					'label' => 'Nome',
-					'width' => '32%',
-				],
-				'description' => [
-					'label' => 'Descrição',
-					'width' => '38%',
-				],
-				'active_label' => [
-					'label' => 'Status',
-					'width' => '18%',
-				],
-			],
-			$categories,
-			[
-				'Código' => $filters['id'],
-				'Nome' => $filters['name'],
-				'Status' => $this->activeLabel($filters['active']),
-			],
-			'categorias-de-tarefas-' . date('Ymd-His') . '.pdf'
-		);
+		parent::exportPdf();
 		}
 
 	/**

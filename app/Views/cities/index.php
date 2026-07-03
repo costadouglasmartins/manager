@@ -12,7 +12,6 @@ $queryFilters = http_build_query([
   'country_id' => $filters['country_id'],
   'state_id' => $filters['state_id'],
 ]);
-$exportPdfUrl = url('city/exportPdf') . ($queryFilters !== '' ? '?' . $queryFilters : '');
 ?>
 <h5>Lista de Cidades</h5>
 
@@ -64,9 +63,7 @@ $exportPdfUrl = url('city/exportPdf') . ($queryFilters !== '' ? '?' . $queryFilt
     <div class="d-flex flex-column gap-2 align-items-center align-items-lg-end">
       <button type="submit" class="btn btn-primary w-100">Pesquisar</button>
       <a href="<?= url('city'); ?>" class="btn btn-secondary w-100">Limpar</a>
-      <a href="<?= htmlspecialchars($exportPdfUrl, ENT_QUOTES, 'UTF-8'); ?>" class="btn btn-outline-danger w-100">
-        <i class="bi bi-file-earmark-pdf me-1"></i>Exportar PDF
-      </a>
+      <?= pdfExportButton('city', $queryFilters, 'Exportar PDF', 'btn btn-outline-danger w-100'); ?>
       <?= excelExportButton('city', $queryFilters, 'Exportar Excel', 'btn btn-outline-success w-100'); ?>
       <?php if (authCan('city.create')): ?>
         <a href="<?= url('city/create'); ?>" class="btn btn-success w-100">Novo(a)</a>
