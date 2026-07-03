@@ -104,6 +104,10 @@ $productLabel = static function (array $product): string {
     </div>
   </form>
 
+  <div class="d-flex flex-wrap gap-2 mb-3">
+    <?= excelExportButton('product_stock_movement', $queryFilters); ?>
+  </div>
+
   <hr>
 
   <div class="table-responsive">

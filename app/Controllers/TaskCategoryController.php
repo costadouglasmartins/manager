@@ -116,28 +116,11 @@ class TaskCategoryController extends TenantAwareController
 		}
 
 	/**
-	 * Downloads all task category records matching the current filters as Excel-compatible CSV.
+	 * Downloads all task category records matching the current filters as XLSX.
 	 **/
 	public function exportExcel(): void
 		{
-		$this->requirePermission('task_category.index');
-
-		$filters = $this->readFilters();
-		$taskCategory = new TaskCategory();
-		$categories = $taskCategory->search($filters, null);
-		$rows = [];
-
-		foreach ($categories as $category)
-			{
-			$rows[] = [
-				'Código' => (string) ($category['id'] ?? ''),
-				'Nome' => (string) ($category['name'] ?? ''),
-				'Descrição' => (string) ($category['description'] ?? ''),
-				'Status' => ((int) ($category['active'] ?? 0) === 1) ? 'Ativo' : 'Inativo',
-			];
-			}
-
-		$this->downloadCsv('categorias-de-tarefas-' . date('Ymd-His') . '.csv', $rows);
+		parent::exportExcel();
 		}
 
 	/**
@@ -260,36 +243,5 @@ class TaskCategoryController extends TenantAwareController
 		return '';
 		}
 
-	/**
-	 * Sends rows as an Excel-compatible CSV download.
-	 **/
-	private function downloadCsv(string $filename, array $rows): void
-		{
-		header('Content-Type: text/csv; charset=UTF-8');
-		header('Content-Disposition: attachment; filename="' . preg_replace('/[^A-Za-z0-9._-]+/', '-', $filename) . '"');
-		echo "\xEF\xBB\xBF";
-
-		$out = fopen('php://output', 'w');
-		if ($out === false)
-			{
-			exit;
-			}
-
-		if ($rows === [])
-			{
-			fputcsv($out, ['Nenhum registro encontrado'], ';');
-			fclose($out);
-			exit;
-			}
-
-		fputcsv($out, array_keys($rows[0]), ';');
-		foreach ($rows as $row)
-			{
-			fputcsv($out, $row, ';');
-			}
-
-		fclose($out);
-		exit;
-		}
 	}
 ?>

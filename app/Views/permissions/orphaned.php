@@ -21,6 +21,9 @@ if (isset($_GET['error']))
 ?>
 <div class="d-flex justify-content-between align-items-center mb-3">
   <h5>Permissões Órfãs</h5>
+  <a href="<?= url('permission/orphaned-export-excel'); ?>" class="btn btn-outline-success">
+    <i class="bi bi-file-earmark-spreadsheet me-1"></i>Exportar Excel
+  </a>
 </div>
 
 <p class="text-muted">

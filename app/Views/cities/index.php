@@ -67,6 +67,7 @@ $exportPdfUrl = url('city/exportPdf') . ($queryFilters !== '' ? '?' . $queryFilt
       <a href="<?= htmlspecialchars($exportPdfUrl, ENT_QUOTES, 'UTF-8'); ?>" class="btn btn-outline-danger w-100">
         <i class="bi bi-file-earmark-pdf me-1"></i>Exportar PDF
       </a>
+      <?= excelExportButton('city', $queryFilters, 'Exportar Excel', 'btn btn-outline-success w-100'); ?>
       <?php if (authCan('city.create')): ?>
         <a href="<?= url('city/create'); ?>" class="btn btn-success w-100">Novo(a)</a>
       <?php endif; ?>

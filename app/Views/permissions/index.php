@@ -36,6 +36,10 @@ if (isset($_GET['created']))
 	{
 	$created = (int) $_GET['created'];
 	}
+
+$queryFilters = http_build_query([
+	'user_id' => (int) ($selectedUserId ?? 0),
+]);
 ?>
 <h5 class="mb-3">Gerenciar permissões (por usuário)</h5>
 
@@ -66,6 +70,8 @@ if (isset($_GET['created']))
   <button class="btn btn-secondary" type="button" data-bs-toggle="collapse" data-bs-target="#addPermCatalog" aria-expanded="false" aria-controls="addPermCatalog">
     Adicionar permissão manualmente
   </button>
+
+  <?= excelExportButton('permission', $queryFilters, 'Exportar Excel', 'btn btn-outline-success'); ?>
 </div>
 
 <div class="collapse mb-4" id="addPermCatalog">

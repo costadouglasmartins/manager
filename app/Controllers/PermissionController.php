@@ -6,9 +6,20 @@ use App\Core\Controller;
 use App\Core\Authorization;
 use App\Core\TenantContext;
 use App\Models\Permission;
+use App\Services\RecordListExcelExportService;
 
 class PermissionController extends Controller
 	{
+	/**
+	 * Route aliases accepted by the permission controller.
+	 *
+	 * @var array<string, string>
+	 */
+	protected $routeAliases = [
+		'export-excel' => 'exportExcel',
+		'orphaned-export-excel' => 'exportOrphanedExcel',
+	];
+
 	/**
 	 * Returns the current tenant id after validating authentication, tenant context, and permission.
 	 */
@@ -141,6 +152,17 @@ class PermissionController extends Controller
 			'stats' => $stats,
 			'title' => 'Permissões Órfãs',
 		]);
+		}
+
+	/**
+	 * Downloads orphaned permissions as XLSX.
+	 */
+	public function exportOrphanedExcel(): void
+		{
+		$this->currentTenantId();
+
+		$service = new RecordListExcelExportService();
+		$service->stream('permission_orphaned', $_GET);
 		}
 
 	/**

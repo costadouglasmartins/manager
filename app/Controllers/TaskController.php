@@ -171,32 +171,11 @@ class TaskController extends TenantAwareController
 		}
 
 	/**
-	 * Downloads all task records matching the current list filters as Excel-compatible CSV.
+	 * Downloads all task records matching the current list filters as XLSX.
 	 **/
 	public function exportExcel(): void
 		{
-		$this->requirePermission('task.index');
-
-		$filters = $this->readFilters();
-		$order = $this->readOrder();
-		$task = new Task();
-		$rows = [];
-
-		foreach ($this->reportRows($task->search($filters, null, 0, $order['sort'], $order['direction'])) as $row)
-			{
-			$rows[] = [
-				'Código' => (string) $row['id'],
-				'Tarefa' => (string) $row['title'],
-				'Categoria' => (string) $row['task_category_name'],
-				'Situação' => (string) $row['status_label'],
-				'Responsáveis' => (string) $row['assignee_names'],
-				'Terceiro' => (string) $row['third_party_label'],
-				'Tempo' => (string) $row['total_duration'],
-				'Criada em' => (string) $row['created_label'],
-			];
-			}
-
-		$this->downloadCsv('tarefas-' . date('Ymd-His') . '.csv', $rows);
+		parent::exportExcel();
 		}
 
 	/**
@@ -504,36 +483,5 @@ class TaskController extends TenantAwareController
 		];
 		}
 
-	/**
-	 * Sends rows as an Excel-compatible CSV download.
-	 **/
-	private function downloadCsv(string $filename, array $rows): void
-		{
-		header('Content-Type: text/csv; charset=UTF-8');
-		header('Content-Disposition: attachment; filename="' . preg_replace('/[^A-Za-z0-9._-]+/', '-', $filename) . '"');
-		echo "\xEF\xBB\xBF";
-
-		$out = fopen('php://output', 'w');
-		if ($out === false)
-			{
-			exit;
-			}
-
-		if ($rows === [])
-			{
-			fputcsv($out, ['Nenhum registro encontrado'], ';');
-			fclose($out);
-			exit;
-			}
-
-		fputcsv($out, array_keys($rows[0]), ';');
-		foreach ($rows as $row)
-			{
-			fputcsv($out, $row, ';');
-			}
-
-		fclose($out);
-		exit;
-		}
 	}
 ?>

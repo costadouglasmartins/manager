@@ -40,6 +40,10 @@ $queryFilters = http_build_query([
 
 </form>
 
+<div class="d-flex flex-wrap gap-2 mb-3">
+  <?= excelExportButton('bank', $queryFilters); ?>
+</div>
+
 <hr>
 
 <div class="table-responsive">

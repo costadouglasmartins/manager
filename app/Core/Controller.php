@@ -3,11 +3,55 @@
 namespace App\Core;
 
 use App\Core\Authorization;
+use App\Services\RecordListExcelExportService;
 use App\Services\PdfService;
 use App\Services\AuditLogService;
 
 class Controller
 	{
+	/**
+	 * Route aliases accepted by the controller.
+	 *
+	 * @var array<string, string>
+	 */
+	protected $routeAliases = [
+		'export-excel' => 'exportExcel',
+	];
+
+	/**
+	 * Resolves a route method alias to the controller method that should run.
+	 *
+	 * @param string $routeMethod Method segment received from the URL.
+	 * @return string Controller method name.
+	 */
+	public function resolveRouteMethod(string $routeMethod): string
+		{
+		if (isset($this->routeAliases[$routeMethod]) && is_string($this->routeAliases[$routeMethod]))
+			{
+			return $this->routeAliases[$routeMethod];
+			}
+
+		return $routeMethod;
+		}
+
+	/**
+	 * Exports the current controller's filtered record listing to Excel.
+	 */
+	public function exportExcel(): void
+		{
+		$resource = $this->resourceNameFromController();
+		$service = new RecordListExcelExportService();
+
+		if (!$service->supports($resource))
+			{
+			http_response_code(404);
+			echo 'Excel export is not configured for this listing.';
+			exit;
+			}
+
+		$this->authorizeListExport($service, $resource);
+		$service->stream($resource, $_GET);
+		}
 
 	/**
 	 * Creates the shared PDF service available to application controllers.
@@ -49,6 +93,33 @@ class Controller
 
 		// Render without the shared layout.
 		echo $content;
+		}
+
+	/**
+	 * Derives the resource key from the concrete controller class.
+	 */
+	private function resourceNameFromController(): string
+		{
+		$parts = explode('\\', static::class);
+		$className = end($parts) ?: '';
+		$baseName = preg_replace('/Controller$/', '', $className) ?: $className;
+		$resource = preg_replace('/(?<!^)[A-Z]/', '_$0', $baseName) ?: $baseName;
+
+		return strtolower($resource);
+		}
+
+	/**
+	 * Authorizes list exports using the same access level as the list screen.
+	 */
+	private function authorizeListExport(RecordListExcelExportService $service, string $resource): void
+		{
+		if ($service->needsTenant($resource))
+			{
+			$this->requireAuth();
+			$this->requireTenant();
+			}
+
+		$this->requirePermission($service->ability($resource));
 		}
 
 	/**

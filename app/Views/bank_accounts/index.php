@@ -67,6 +67,10 @@ $activeLabel = static function ($value): string {
 
 </form>
 
+<div class="d-flex flex-wrap gap-2 mb-3">
+  <?= excelExportButton('bank_account', $queryFilters); ?>
+</div>
+
 <hr>
 
 <div class="table-responsive">

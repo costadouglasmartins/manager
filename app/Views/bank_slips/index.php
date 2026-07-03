@@ -7,6 +7,12 @@ if (!is_array($selectedBankAccountIds))
   $selectedBankAccountIds = [$selectedBankAccountIds];
   }
 $selectedBankAccountIds = array_values(array_unique(array_filter(array_map('intval', $selectedBankAccountIds), static fn ($id) => $id > 0)));
+$queryFilters = http_build_query([
+  'id' => $filters['id'],
+  'document_number' => $filters['document_number'],
+  'bank_account_id' => $filters['bank_account_id'],
+  'status' => $filters['status'],
+]);
 $bankSlipGroups = $bankSlipGroups ?? [];
 $accountLabel = static function (array $account): string {
   $label = trim(($account['bank_name'] ?? '') . ' - ' . ($account['name'] ?? $account['bank_account_name'] ?? ''), ' -');
@@ -67,6 +73,10 @@ $canEditBankSlip = static function (array $bankSlip): bool {
     </div>
   </div>
 </form>
+
+<div class="d-flex flex-wrap gap-2 mb-3">
+  <?= excelExportButton('bank_slip', $queryFilters); ?>
+</div>
 
 <form action="<?= url('bank_slip/generateRemittance'); ?>" method="post" id="bankSlipRemittanceForm">
   <?php if (!empty($bankSlipGroups)): ?>

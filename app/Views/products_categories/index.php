@@ -52,6 +52,10 @@ $queryFilters = http_build_query([
     </div>
   </form>
 
+  <div class="d-flex flex-wrap gap-2 mb-3">
+    <?= excelExportButton('product_category', $queryFilters); ?>
+  </div>
+
   <hr>
 
   <div class="table-responsive">

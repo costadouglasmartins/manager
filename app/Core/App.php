@@ -33,10 +33,14 @@ class App
 			exit;
 			}
 
-		if (isset($url[1]) && method_exists($this->controller, $url[1]))
+		if (isset($url[1]))
 			{
-			$this->method = $url[1];
-			unset($url[1]);
+			$routeMethod = $this->controller->resolveRouteMethod($url[1]);
+			if ($this->isControllerAction($routeMethod))
+				{
+				$this->method = $routeMethod;
+				unset($url[1]);
+				}
 			}
 
 		$this->params = $url ? array_values($url) : [];
@@ -52,6 +56,34 @@ class App
 	private function parseUrl()
 		{
 		return isset($_GET['url']) ? explode('/', filter_var(rtrim($_GET['url'], '/'), FILTER_SANITIZE_URL)) : [];
+		}
+
+	/**
+	 * Determines whether a method can be invoked as a controller action.
+	 *
+	 * @param string $method Method name.
+	 * @return bool
+	 */
+	private function isControllerAction(string $method): bool
+		{
+		if (!method_exists($this->controller, $method))
+			{
+			return false;
+			}
+
+		$reflection = new \ReflectionMethod($this->controller, $method);
+		if (!$reflection->isPublic())
+			{
+			return false;
+			}
+
+		$declaringClass = $reflection->getDeclaringClass()->getName();
+		if ($declaringClass === Controller::class && !in_array($method, ['exportExcel'], true))
+			{
+			return false;
+			}
+
+		return true;
 		}
 	}
 ?>
