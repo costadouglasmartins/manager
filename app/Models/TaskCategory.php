@@ -250,19 +250,9 @@ class TaskCategory extends TenantModel
 
 		return [
 			'name'        => $name,
-			'description' => $this->nullableTrim($data['description'] ?? null),
+			'description' => sanitizeRichText($data['description'] ?? null),
 			'active'      => ((string) ($data['active'] ?? $defaultActive) === '1') ? 1 : 0,
 		];
-		}
-
-	/**
-	 * Returns a trimmed string or null when the value is empty.
-	 * @param mixed $value Raw value.
-	 **/
-	private function nullableTrim($value): ?string
-		{
-		$text = trim((string) $value);
-		return ($text !== '' ? $text : null);
 		}
 	}
 ?>

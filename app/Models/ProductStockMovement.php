@@ -49,7 +49,7 @@ class ProductStockMovement extends TenantModel
 		$unitCost = $this->normalizeNullableDecimal($data['unit_cost'] ?? null);
 		$unitPrice = $this->normalizeNullableDecimal($data['unit_price'] ?? null);
 		$reference = $this->nullableTrim($data['reference'] ?? null);
-		$observations = $this->nullableTrim($data['observations'] ?? null);
+		$observations = sanitizeRichText($data['observations'] ?? null);
 		$movementDate = $this->normalizeDateTime($data['movement_date'] ?? null);
 
 		if ($productId <= 0)
@@ -149,7 +149,7 @@ class ProductStockMovement extends TenantModel
 		$unitCost = $this->normalizeNullableDecimal($data['unit_cost'] ?? null);
 		$unitPrice = $this->normalizeNullableDecimal($data['unit_price'] ?? null);
 		$reference = $this->nullableTrim($data['reference'] ?? null);
-		$observations = $this->nullableTrim($data['observations'] ?? null);
+		$observations = sanitizeRichText($data['observations'] ?? null);
 		$movementDate = $this->normalizeDateTime($data['movement_date'] ?? null);
 
 		if ($movementId <= 0)

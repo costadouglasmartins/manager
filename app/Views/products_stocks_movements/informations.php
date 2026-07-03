@@ -37,6 +37,7 @@ $movementTypeLabel = static function (string $type): string {
 	][$type] ?? $type;
 };
 ?>
+<link rel="stylesheet" href="<?= url('assets/css/rich_text_editor.css?v=1'); ?>">
 <link rel="stylesheet" href="<?= url('assets/css/products_stocks_movements/informations.css?v=1'); ?>">
 
 <div class="store-page">
@@ -92,7 +93,7 @@ $movementTypeLabel = static function (string $type): string {
         </tr>
         <tr>
           <th class="text-muted">Observações</th>
-          <td><?= htmlspecialchars((string) ($movement['observations'] ?? ''), ENT_QUOTES, 'UTF-8'); ?></td>
+          <td><div class="rich-editor-content"><?= (string) ($movement['observations'] ?? ''); ?></div></td>
         </tr>
         <tr>
           <th class="text-muted">Data</th>

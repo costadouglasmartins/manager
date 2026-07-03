@@ -40,7 +40,7 @@ class ProductCategory extends TenantModel
 			");
 			$stmt->execute([
 				'name'        => trim((string) ($data['name'] ?? '')),
-				'description' => $this->nullableTrim($data['description'] ?? null),
+				'description' => sanitizeRichText($data['description'] ?? null),
 				'active'      => ((string) ($data['active'] ?? '1') === '1') ? 1 : 0,
 				'created'     => date('Y-m-d H:i:s'),
 				'modified'    => date('Y-m-d H:i:s'),
@@ -122,7 +122,7 @@ class ProductCategory extends TenantModel
 
 		$stmt->execute([
 			'name'        => trim((string) ($data['name'] ?? '')),
-			'description' => $this->nullableTrim($data['description'] ?? null),
+			'description' => sanitizeRichText($data['description'] ?? null),
 			'active'      => ((string) ($data['active'] ?? '0') === '1') ? 1 : 0,
 			'modified'    => date('Y-m-d H:i:s'),
 			'id'          => (int) $id,
@@ -221,17 +221,6 @@ class ProductCategory extends TenantModel
 			$paramType = is_int($value) ? PDO::PARAM_INT : PDO::PARAM_STR;
 			$stmt->bindValue(':' . $key, $value, $paramType);
 			}
-		}
-
-	/**
-	 * Returns a trimmed string or null when the value is empty.
-	 *
-	 * @param mixed $value Raw value.
-	 */
-	private function nullableTrim($value): ?string
-		{
-		$text = trim((string) $value);
-		return ($text !== '' ? $text : null);
 		}
 	}
 ?>

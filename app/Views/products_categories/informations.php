@@ -16,6 +16,7 @@ $formatDateTime = static function ($value): string {
 		}
 };
 ?>
+<link rel="stylesheet" href="<?= url('assets/css/rich_text_editor.css?v=1'); ?>">
 <link rel="stylesheet" href="<?= url('assets/css/products_categories/informations.css?v=1'); ?>">
 
 <div class="store-page">
@@ -39,7 +40,7 @@ $formatDateTime = static function ($value): string {
         </tr>
         <tr>
           <th class="text-muted">Descrição</th>
-          <td><?= htmlspecialchars((string) ($category['description'] ?? ''), ENT_QUOTES, 'UTF-8'); ?></td>
+          <td><div class="rich-editor-content"><?= (string) ($category['description'] ?? ''); ?></div></td>
         </tr>
         <tr>
           <th class="text-muted">Status</th>

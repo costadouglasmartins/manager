@@ -10,6 +10,7 @@ $queryFilters = http_build_query([
 	'active' => $filters['active'],
 ]);
 ?>
+<link rel="stylesheet" href="<?= url('assets/css/rich_text_editor.css?v=1'); ?>">
 <h5>Lista de Categorias de Tarefas</h5>
 
   <form action="<?= url('task_category'); ?>" class="row g-3 mb-3" method="get">
@@ -70,7 +71,7 @@ $queryFilters = http_build_query([
             <tr>
               <td style="width:1%;"><?= (int) $row['id']; ?></td>
               <td><?= htmlspecialchars($row['name'], ENT_QUOTES, 'UTF-8'); ?></td>
-              <td><?= htmlspecialchars((string) ($row['description'] ?? ''), ENT_QUOTES, 'UTF-8'); ?></td>
+              <td><div class="rich-editor-content"><?= (string) ($row['description'] ?? ''); ?></div></td>
               <td><span class="badge <?= ((int) $row['active'] === 1) ? 'text-bg-success' : 'text-bg-secondary'; ?>"><?= ((int) $row['active'] === 1) ? 'Ativo' : 'Inativo'; ?></span></td>
               <td style="width:1%;" class="text-nowrap text-end">
                 <?php if (authCan('task_category.edit')): ?>
