@@ -1,9 +1,9 @@
 <link rel="stylesheet" href="<?= url('assets/css/financial_operations_categories/edit.css?v=1'); ?>">
 
-<div class="financial-page">
-  <div class="financial-page-header">
+<div class="financial-page app-page">
+  <div class="financial-page-header app-page-header">
     <div>
-      <span class="financial-page-kicker"><i class="bi bi-pencil-square"></i> Categorias</span>
+      <span class="financial-page-kicker app-page-kicker"><i class="bi bi-pencil-square"></i> Categorias</span>
       <h5>Editar categoria de operação financeira</h5>
     </div>
   </div>

@@ -1,9 +1,9 @@
 <link rel="stylesheet" href="<?= url('assets/css/financial_operations_subcategories/create.css?v=1'); ?>">
 
-<div class="financial-page">
-  <div class="financial-page-header">
+<div class="financial-page app-page">
+  <div class="financial-page-header app-page-header">
     <div>
-      <span class="financial-page-kicker"><i class="bi bi-diagram-3"></i> Subcategorias</span>
+      <span class="financial-page-kicker app-page-kicker"><i class="bi bi-diagram-3"></i> Subcategorias</span>
       <h5>Criar subcategoria de operação financeira</h5>
     </div>
   </div>

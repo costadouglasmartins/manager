@@ -55,10 +55,10 @@ $jsonFlags = JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JS
 ?>
 <link rel="stylesheet" href="<?= url('assets/css/people/edit.css?v=1'); ?>">
 
-<div class="person-edit-page">
-  <div class="person-edit-header">
+<div class="person-edit-page app-page">
+  <div class="person-edit-header app-page-header">
     <div>
-      <span class="person-edit-kicker"><i class="bi bi-pencil-square"></i> Pessoas</span>
+      <span class="person-edit-kicker app-page-kicker"><i class="bi bi-pencil-square"></i> Pessoas</span>
       <h5>Editar pessoa</h5>
     </div>
   </div>

@@ -16,7 +16,13 @@ $accountLabel = static function (array $account): string {
 ?>
 <link rel="stylesheet" href="<?= url('assets/css/bank_slips/edit.css?v=1'); ?>">
 
-<h5>Editar boleto #<?= (int) ($bankSlip['id'] ?? 0); ?></h5>
+<div class="app-page">
+  <div class="app-page-header">
+    <div>
+      <span class="app-page-kicker"><i class="bi bi-upc-scan"></i> Boletos</span>
+      <h5>Editar boleto #<?= (int) ($bankSlip['id'] ?? 0); ?></h5>
+    </div>
+  </div>
 
 <?php if (!empty($formError)): ?>
   <div class="alert alert-danger"><?= htmlspecialchars((string) $formError, ENT_QUOTES, 'UTF-8'); ?></div>
@@ -139,5 +145,6 @@ $accountLabel = static function (array $account): string {
     <button class="btn btn-primary" type="submit"><i class="bi bi-check-lg"></i> Salvar</button>
   </div>
 </form>
+</div>
 
 <script src="<?= url('assets/js/bank_slips/edit.js?v=1'); ?>"></script>

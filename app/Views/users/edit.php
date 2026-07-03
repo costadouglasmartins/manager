@@ -1,4 +1,11 @@
-<h5>Editar Usuário</h5>
+<div class="app-page">
+  <div class="app-page-header">
+    <div>
+      <span class="app-page-kicker"><i class="bi bi-person-gear"></i> Usuários</span>
+      <h5>Editar Usuário</h5>
+    </div>
+  </div>
+
 <form method="POST" action="<?= url('/user/update/' . $user['id']); ?>"> 
   <div class="row">
     <div class="mb-2 col-md-6 col-lg-12">
@@ -35,4 +42,5 @@
     <button class="btn btn-primary" type="submit">Salvar</button>
   </div>
 </form>
+</div>
 <!-- /User -->

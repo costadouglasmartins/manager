@@ -1,5 +1,12 @@
 <!-- Endereço -->
-<h5>Editar endereço</h5>
+<div class="app-page">
+  <div class="app-page-header">
+    <div>
+      <span class="app-page-kicker"><i class="bi bi-signpost-split-fill"></i> Endereços</span>
+      <h5>Editar endereço</h5>
+    </div>
+  </div>
+
 <form action="<?= url('address/update/' . $address['id']); ?>" method="POST">
   <div class="row">
 
@@ -44,6 +51,7 @@
     <button class="btn btn-primary" type="submit">Salvar</button>
   </div>
 </form>
+</div>
 <!-- /Endereço -->
 
 <script src="<?= url('assets/js/autocomplete.js?v=2'); ?>"></script>

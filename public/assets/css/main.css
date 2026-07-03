@@ -307,6 +307,41 @@ body.has-view-actions .app-main {
   margin: 0 0 1.5rem;
 }
 
+.app-page {
+  display: grid;
+  gap: 1rem;
+}
+
+.app-page-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1rem;
+  border: 1px solid var(--app-border);
+  border-radius: 8px;
+  background: var(--app-surface);
+  box-shadow: var(--app-shadow-sm);
+}
+
+.app-page-header h5 {
+  margin: 0.25rem 0 0;
+  color: var(--app-text);
+  font-weight: 850;
+  letter-spacing: 0;
+}
+
+.app-page-kicker {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  color: var(--app-accent);
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
 .text-muted,
 .text-body-secondary {
   color: var(--app-muted) !important;
@@ -859,6 +894,11 @@ code {
   .app-content > .d-flex h5,
   .app-content > .row h5 {
     font-size: 1.15rem;
+  }
+
+  .app-page-header {
+    align-items: stretch;
+    flex-direction: column;
   }
 
   .app-content > form.row,

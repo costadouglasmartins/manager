@@ -1,7 +1,13 @@
-<h5>Criar conta bancária</h5>
+<div class="app-page">
+  <div class="app-page-header">
+    <div>
+      <span class="app-page-kicker"><i class="bi bi-wallet2"></i> Contas Bancárias</span>
+      <h5>Criar conta bancária</h5>
+    </div>
+  </div>
 
-<form action="<?= url('bank_account/store'); ?>" method="POST" class="needs-validation" novalidate>
-  <div class="row g-3">
+  <form action="<?= url('bank_account/store'); ?>" method="POST" class="needs-validation" novalidate>
+    <div class="row g-3">
 
     <div class="col-12">
       <h6 class="mb-0">Dados da conta</h6>
@@ -160,5 +166,6 @@
     <button class="btn btn-primary" type="submit">Salvar</button>
   </div>
 </form>
+</div>
 
 <script src="<?= url('assets/js/bank_accounts/create.js?v=5'); ?>"></script>

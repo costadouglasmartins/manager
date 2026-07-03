@@ -20,7 +20,13 @@ $decimalValue = static function (array $data, string $field): string {
 	return number_format((float) $data[$field], 2, ',', '.');
 };
 ?>
-<h5>Editar conta bancária</h5>
+<div class="app-page">
+  <div class="app-page-header">
+    <div>
+      <span class="app-page-kicker"><i class="bi bi-wallet2"></i> Contas Bancárias</span>
+      <h5>Editar conta bancária</h5>
+    </div>
+  </div>
 
 <form action="<?= url('bank_account/update/' . $bankAccount['id']); ?>" method="POST" class="needs-validation" novalidate>
   <div class="row g-3">
@@ -183,5 +189,6 @@ $decimalValue = static function (array $data, string $field): string {
     <button class="btn btn-primary" type="submit">Salvar</button>
   </div>
 </form>
+</div>
 
 <script src="<?= url('assets/js/bank_accounts/edit.js?v=1'); ?>"></script>

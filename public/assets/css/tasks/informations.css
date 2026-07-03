@@ -100,10 +100,27 @@
   margin-bottom: 0.35rem;
 }
 
-.task-comment p {
+.task-comment-editor {
+  min-height: 120px;
+}
+
+.task-comment-content {
   margin: 0;
   color: var(--app-text);
   line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+.task-comment-content p,
+.task-comment-content div {
+  margin-bottom: 0.5rem;
+}
+
+.task-comment-content p:last-child,
+.task-comment-content div:last-child,
+.task-comment-content ul:last-child,
+.task-comment-content ol:last-child {
+  margin-bottom: 0;
 }
 
 @media (max-width: 767.98px) {

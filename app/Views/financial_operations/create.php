@@ -1,9 +1,9 @@
 <link rel="stylesheet" href="<?= url('assets/css/financial_operations/create.css?v=1'); ?>">
 
-<div class="financial-page">
-  <div class="financial-page-header">
+<div class="financial-page app-page">
+  <div class="financial-page-header app-page-header">
     <div>
-      <span class="financial-page-kicker"><i class="bi bi-receipt"></i> Operações</span>
+      <span class="financial-page-kicker app-page-kicker"><i class="bi bi-receipt"></i> Operações</span>
       <h5>Criar operação financeira</h5>
     </div>
   </div>

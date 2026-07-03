@@ -8,10 +8,10 @@ $statusValue = (string) ($taskData['status'] ?? \App\Models\Task::STATUS_OPEN);
 ?>
 <link rel="stylesheet" href="<?= url('assets/css/tasks/create.css?v=2'); ?>">
 
-<div class="task-page">
-  <div class="task-page-header">
+<div class="task-page app-page">
+  <div class="task-page-header app-page-header">
     <div>
-      <span class="task-page-kicker"><i class="bi bi-list-check"></i> Tarefas</span>
+      <span class="task-page-kicker app-page-kicker"><i class="bi bi-list-check"></i> Tarefas</span>
       <h5>Criar tarefa</h5>
     </div>
   </div>

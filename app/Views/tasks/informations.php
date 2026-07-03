@@ -5,8 +5,24 @@ if ($thirdParty === '')
 	{
 	$thirdParty = trim((string) ($task['third_party_name'] ?? ''));
 	}
+
+$commentHtml = static function (?string $comment): string {
+	$sanitized = sanitizeRichText($comment);
+	if ($sanitized === null)
+		{
+		return '';
+		}
+
+	if ($sanitized === strip_tags($sanitized))
+		{
+		return nl2br(htmlspecialchars($sanitized, ENT_QUOTES, 'UTF-8'));
+		}
+
+	return $sanitized;
+};
 ?>
-<link rel="stylesheet" href="<?= url('assets/css/tasks/informations.css?v=1'); ?>">
+<link rel="stylesheet" href="<?= url('assets/css/rich_text_editor.css?v=1'); ?>">
+<link rel="stylesheet" href="<?= url('assets/css/tasks/informations.css?v=2'); ?>">
 
 <div class="task-page">
   <div class="task-page-header">
@@ -114,9 +130,18 @@ if ($thirdParty === '')
   <section class="task-section">
     <h6>Comentários</h6>
     <?php if (authCan('task.commentStore')): ?>
-      <form action="<?= url('task/commentStore/' . (int) $task['id']); ?>" method="POST" class="mb-3">
-        <label class="form-label" for="taskComment">Novo comentário</label>
-        <textarea class="form-control" id="taskComment" name="comment" required rows="3"></textarea>
+      <form action="<?= url('task/commentStore/' . (int) $task['id']); ?>" method="POST" class="mb-3" novalidate>
+        <label class="form-label" for="taskCommentEditor">Novo comentário</label>
+        <div class="rich-editor" data-rich-editor data-rich-editor-required>
+          <div class="rich-editor-toolbar" role="toolbar">
+            <button class="btn btn-outline-secondary btn-sm" data-editor-command="bold" type="button"><i class="bi bi-type-bold"></i></button>
+            <button class="btn btn-outline-secondary btn-sm" data-editor-command="italic" type="button"><i class="bi bi-type-italic"></i></button>
+            <button class="btn btn-outline-secondary btn-sm" data-editor-command="underline" type="button"><i class="bi bi-type-underline"></i></button>
+          </div>
+          <div class="form-control rich-editor-surface task-comment-editor" contenteditable="true" data-rich-editor-surface id="taskCommentEditor"></div>
+          <textarea class="d-none" data-rich-editor-source name="comment"></textarea>
+          <div class="invalid-feedback d-block d-none" data-rich-editor-feedback>Informe o comentário.</div>
+        </div>
         <div class="mt-2 text-end">
           <button class="btn btn-primary" type="submit"><i class="bi bi-chat-left-text"></i> Comentar</button>
         </div>
@@ -131,7 +156,7 @@ if ($thirdParty === '')
               <strong><?= htmlspecialchars((string) ($comment['user_name'] ?? $comment['username'] ?? ''), ENT_QUOTES, 'UTF-8'); ?></strong>
               <small class="text-muted"><?= htmlspecialchars(\App\Models\Task::formatDateTime($comment['created'] ?? ''), ENT_QUOTES, 'UTF-8'); ?></small>
             </div>
-            <p><?= nl2br(htmlspecialchars((string) ($comment['comment'] ?? ''), ENT_QUOTES, 'UTF-8')); ?></p>
+            <div class="task-comment-content"><?= $commentHtml((string) ($comment['comment'] ?? '')); ?></div>
           </article>
         <?php endforeach; ?>
       <?php else: ?>
@@ -148,4 +173,5 @@ if ($thirdParty === '')
   </div>
 </div>
 
+<script src="<?= url('assets/js/rich_text_editor.js?v=1'); ?>"></script>
 <script src="<?= url('assets/js/tasks/informations.js?v=1'); ?>"></script>

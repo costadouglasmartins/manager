@@ -47,10 +47,10 @@ $jsonFlags = JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JS
 ?>
 <link rel="stylesheet" href="<?= url('assets/css/people/create.css?v=1'); ?>">
 
-<div class="person-create-page">
-  <div class="person-create-header">
+<div class="person-create-page app-page">
+  <div class="person-create-header app-page-header">
     <div>
-      <span class="person-create-kicker"><i class="bi bi-person-fill-add"></i> Pessoas</span>
+      <span class="person-create-kicker app-page-kicker"><i class="bi bi-person-fill-add"></i> Pessoas</span>
       <h5>Cadastrar pessoa</h5>
     </div>
   </div>

@@ -18,10 +18,10 @@ $editorHtml = trim(preg_replace('/<([a-z][a-z0-9]*)\b[^>]*>/i', '<$1>', strip_ta
 <link rel="stylesheet" href="<?= url('assets/css/rich_text_editor.css?v=1'); ?>">
 <link rel="stylesheet" href="<?= url('assets/css/products_stocks_movements/create.css?v=1'); ?>">
 
-<div class="store-page">
-  <div class="store-page-header">
+<div class="store-page app-page">
+  <div class="store-page-header app-page-header">
     <div>
-      <span class="store-page-kicker"><i class="bi bi-arrow-left-right"></i> Loja</span>
+      <span class="store-page-kicker app-page-kicker"><i class="bi bi-arrow-left-right"></i> Loja</span>
       <h5>Criar movimentação de estoque</h5>
     </div>
   </div>

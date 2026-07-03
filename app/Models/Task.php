@@ -348,7 +348,7 @@ class Task extends TenantModel
 	 **/
 	public function addComment(int $taskId, int $userId, string $comment): array
 		{
-		$text = trim($comment);
+		$text = $this->sanitizeComment($comment);
 		if ($text === '')
 			{
 			throw new \InvalidArgumentException('Informe o comentário.');
@@ -1050,6 +1050,20 @@ class Task extends TenantModel
 		$description = preg_replace('/javascript\s*:/i', '', $description) ?? '';
 
 		return trim($description);
+		}
+
+	/**
+	 * Sanitizes a task comment submitted by the rich text editor.
+	 **/
+	private function sanitizeComment(string $comment): string
+		{
+		$comment = sanitizeRichText($comment) ?? '';
+		$visibleText = preg_replace('/<br\s*\/?>/i', '', $comment) ?? '';
+		$visibleText = strip_tags($visibleText);
+		$visibleText = html_entity_decode($visibleText, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+		$visibleText = trim(str_replace("\xC2\xA0", ' ', $visibleText));
+
+		return ($visibleText !== '' ? $comment : '');
 		}
 
 	/**

@@ -6,10 +6,10 @@ $editorHtml = trim(preg_replace('/<([a-z][a-z0-9]*)\b[^>]*>/i', '<$1>', strip_ta
 <link rel="stylesheet" href="<?= url('assets/css/rich_text_editor.css?v=1'); ?>">
 <link rel="stylesheet" href="<?= url('assets/css/task_categories/create.css?v=2'); ?>">
 
-<div class="task-page">
-  <div class="task-page-header">
+<div class="task-page app-page">
+  <div class="task-page-header app-page-header">
     <div>
-      <span class="task-page-kicker"><i class="bi bi-tag"></i> Tarefas</span>
+      <span class="task-page-kicker app-page-kicker"><i class="bi bi-tag"></i> Tarefas</span>
       <h5>Criar categoria de tarefa</h5>
     </div>
   </div>

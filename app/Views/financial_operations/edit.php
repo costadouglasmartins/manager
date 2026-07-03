@@ -3,10 +3,10 @@ $amountValue = number_format((float) ($operation['total_amount'] ?? 0), 2, ',', 
 ?>
 <link rel="stylesheet" href="<?= url('assets/css/financial_operations/edit.css?v=1'); ?>">
 
-<div class="financial-page">
-  <div class="financial-page-header">
+<div class="financial-page app-page">
+  <div class="financial-page-header app-page-header">
     <div>
-      <span class="financial-page-kicker"><i class="bi bi-pencil-square"></i> Operações</span>
+      <span class="financial-page-kicker app-page-kicker"><i class="bi bi-pencil-square"></i> Operações</span>
       <h5>Editar operação financeira</h5>
     </div>
   </div>
