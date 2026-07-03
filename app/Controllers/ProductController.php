@@ -5,9 +5,19 @@ namespace App\Controllers;
 use App\Core\TenantAwareController;
 use App\Models\Product;
 use App\Models\ProductCategory;
+use App\Services\ChunkedUploadService;
 
 class ProductController extends TenantAwareController
 	{
+	private const PRODUCT_IMAGE_MAX_FILE_SIZE = 8388608;
+	private const PRODUCT_IMAGE_MAX_CHUNK_SIZE = 1048576;
+
+	protected $routeAliases = [
+		'export-excel' => 'exportExcel',
+		'export-pdf'   => 'exportPdf',
+		'upload-chunk' => 'uploadChunk',
+	];
+
 	/**
 	 * Returns the authenticated manager user id.
 	 */
@@ -97,18 +107,21 @@ class ProductController extends TenantAwareController
 
 		$product = new Product();
 		$category = new ProductCategory();
+		$chunkedUploadService = new ChunkedUploadService();
+		$temporaryImageFiles = [];
 
 		try
 			{
 			$data = $_POST;
 			$data['user_id'] = $this->currentUserId();
-			$product->create($data, $_FILES['images'] ?? []);
-			$this->redirect('product');
+			$imageFiles = $this->imageFilesFromRequest($chunkedUploadService, $temporaryImageFiles);
+			$product->create($data, $imageFiles);
 			}
 		catch (\Throwable $e)
 			{
 			if ($this->wantsJson())
 				{
+				$chunkedUploadService->deleteTemporaryFiles($temporaryImageFiles);
 				$this->json(['error' => $e->getMessage()], 422);
 				}
 
@@ -119,6 +132,35 @@ class ProductController extends TenantAwareController
 				'formData'   => $_POST,
 				'formError'  => $e->getMessage(),
 			]);
+			return;
+			}
+		finally
+			{
+			$chunkedUploadService->deleteTemporaryFiles($temporaryImageFiles);
+			}
+
+		$this->redirect('product');
+		}
+
+	/**
+	 * Receives one chunk of a product image upload.
+	 */
+	public function uploadChunk(): void
+		{
+		$this->requirePermission('product.store');
+
+		try
+			{
+			$service = new ChunkedUploadService();
+			$this->json($service->receiveChunk('products', $_POST, $_FILES, [
+				'max_file_size'      => self::PRODUCT_IMAGE_MAX_FILE_SIZE,
+				'max_chunk_size'     => self::PRODUCT_IMAGE_MAX_CHUNK_SIZE,
+				'allowed_mime_types' => ['image/jpeg', 'image/png', 'image/webp'],
+			]));
+			}
+		catch (\Throwable $e)
+			{
+			$this->json(['error' => $e->getMessage()], 422);
 			}
 		}
 
@@ -269,6 +311,26 @@ class ProductController extends TenantAwareController
 				'formError'   => $e->getMessage(),
 			]);
 			}
+		}
+
+	/**
+	 * Returns product image files from normal uploads or completed chunk tokens.
+	 */
+	private function imageFilesFromRequest(ChunkedUploadService $service, array &$temporaryImageFiles): array
+		{
+		$tokens = $_POST['uploaded_images'] ?? [];
+		if (!is_array($tokens))
+			{
+			$tokens = [$tokens];
+			}
+
+		$temporaryImageFiles = $service->consumeCompletedUploads('products', $tokens);
+		if ($temporaryImageFiles !== [])
+			{
+			return $temporaryImageFiles;
+			}
+
+		return $_FILES['images'] ?? [];
 		}
 	}
 ?>

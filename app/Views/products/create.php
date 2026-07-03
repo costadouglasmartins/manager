@@ -8,7 +8,7 @@ $description = $value('description');
 $editorHtml = trim(preg_replace('/<([a-z][a-z0-9]*)\b[^>]*>/i', '<$1>', strip_tags($description, '<b><strong><i><em><u><br><p><div><ul><ol><li>')) ?? '');
 ?>
 <link rel="stylesheet" href="<?= url('assets/css/rich_text_editor.css?v=1'); ?>">
-<link rel="stylesheet" href="<?= url('assets/css/products/create.css?v=1'); ?>">
+<link rel="stylesheet" href="<?= url('assets/css/products/create.css?v=2'); ?>">
 
 <div class="store-page">
   <div class="store-page-header">
@@ -22,7 +22,7 @@ $editorHtml = trim(preg_replace('/<([a-z][a-z0-9]*)\b[^>]*>/i', '<$1>', strip_ta
     <div class="alert alert-danger"><?= htmlspecialchars($formError, ENT_QUOTES, 'UTF-8'); ?></div>
   <?php endif; ?>
 
-  <form action="<?= url('product/store'); ?>" method="POST" enctype="multipart/form-data" class="needs-validation store-form" novalidate>
+  <form action="<?= url('product/store'); ?>" method="POST" enctype="multipart/form-data" class="needs-validation store-form" data-product-chunk-upload-url="<?= url('product/upload-chunk'); ?>" novalidate>
     <section class="store-section">
       <div class="store-subheader">
         <h6>Dados do produto</h6>
@@ -120,6 +120,16 @@ $editorHtml = trim(preg_replace('/<([a-z][a-z0-9]*)\b[^>]*>/i', '<$1>', strip_ta
 
       <label class="form-label" for="images">Imagens do produto</label>
       <input accept="image/jpeg,image/png,image/webp" class="form-control" data-product-images-input id="images" multiple name="images[]" type="file">
+      <div class="product-upload-progress d-none" data-product-upload-progress>
+        <div class="product-upload-progress-header">
+          <span data-product-upload-status>Preparando upload...</span>
+          <span data-product-upload-details>0 de 0 MB</span>
+        </div>
+        <div class="progress" aria-label="Progresso do upload" aria-valuemax="100" aria-valuemin="0" aria-valuenow="0" role="progressbar">
+          <div class="progress-bar progress-bar-striped progress-bar-animated fw-bold text-white" data-product-upload-progress-bar style="width: 0%;">0%</div>
+        </div>
+      </div>
+      <div class="alert alert-danger d-none" data-product-upload-error></div>
       <div class="product-upload-preview" data-product-upload-preview></div>
     </section>
 
@@ -131,4 +141,4 @@ $editorHtml = trim(preg_replace('/<([a-z][a-z0-9]*)\b[^>]*>/i', '<$1>', strip_ta
 </div>
 
 <script src="<?= url('assets/js/rich_text_editor.js?v=1'); ?>"></script>
-<script src="<?= url('assets/js/products/create.js?v=1'); ?>"></script>
+<script src="<?= url('assets/js/products/create.js?v=2'); ?>"></script>
