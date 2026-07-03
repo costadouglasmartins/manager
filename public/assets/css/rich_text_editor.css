@@ -1,0 +1,26 @@
+.rich-editor {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.rich-editor-toolbar {
+  display: flex;
+  gap: 0.35rem;
+}
+
+.rich-editor-surface {
+  min-height: 160px;
+  overflow: auto;
+  background: var(--app-surface-solid);
+}
+
+.rich-editor-content {
+  color: var(--app-text);
+  line-height: 1.55;
+  overflow-wrap: anywhere;
+}
+
+.rich-editor-content p,
+.rich-editor-content div {
+  margin-bottom: 0.5rem;
+}

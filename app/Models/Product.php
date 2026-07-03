@@ -768,7 +768,7 @@ class Product extends TenantModel
 			'sku'                 => $this->nullableTrim($data['sku'] ?? null),
 			'barcode'             => $this->nullableTrim($data['barcode'] ?? null),
 			'name'                => trim((string) ($data['name'] ?? '')),
-			'description'         => $this->nullableTrim($data['description'] ?? null),
+			'description'         => sanitizeRichText($data['description'] ?? null),
 			'cost_price'          => $this->normalizeDecimal($data['cost_price'] ?? '0'),
 			'sale_price'          => $this->normalizeDecimal($data['sale_price'] ?? '0'),
 			'minimum_stock'       => $this->normalizeQuantity($data['minimum_stock'] ?? '0'),

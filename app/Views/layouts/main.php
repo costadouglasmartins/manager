@@ -33,7 +33,7 @@ $hasTenantContext = class_exists('App\\Core\\TenantContext') && \App\Core\Tenant
   <!-- /Menu -->
 
   <main class="app-main">
-    <div class="container-fluid app-container">
+    <div class="container-fluid app-container mt-3">
       <div class="app-content">
         <?= $content ?>
       </div>

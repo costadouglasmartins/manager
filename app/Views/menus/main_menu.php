@@ -185,20 +185,25 @@
             </a>
             <ul class="dropdown-menu" aria-labelledby="tasksMenu">
               <?php if (authCan('task.create')): ?>
-                <li><a class="dropdown-item" href="<?= url('task/create'); ?>"><i class="bi bi-plus-square me-2"></i>Cadastrar tarefa</a></li>
+                <li><a class="dropdown-item" href="<?= url('task/create'); ?>"><i class="bi bi-plus-square me-2"></i>Cadastrar</a></li>
                 <li><hr class="dropdown-divider" /></li>
               <?php endif; ?>
               <?php if (authCan('task.index')): ?>
-                <li><a class="dropdown-item" href="<?= url('task'); ?>"><i class="bi bi-list-ul me-2"></i>Listar tarefas</a></li>
+                <li><a class="dropdown-item" href="<?= url('task'); ?>"><i class="bi bi-list-ul me-2"></i>Listar</a></li>
                 <li><hr class="dropdown-divider" /></li>
               <?php endif; ?>
-              <?php if (authCan('task_category.create')): ?>
-                <li><a class="dropdown-item" href="<?= url('task_category/create'); ?>"><i class="bi bi-tag me-2"></i>Cadastrar categoria</a></li>
-                <li><hr class="dropdown-divider" /></li>
-              <?php endif; ?>
-              <?php if (authCan('task_category.index')): ?>
-                <li><a class="dropdown-item" href="<?= url('task_category'); ?>"><i class="bi bi-tags me-2"></i>Categorias de tarefas</a></li>
-              <?php endif; ?>
+              <li class="dropdown-submenu">
+                <a class="dropdown-item submenu-toggle" href="#"><i class="bi bi-tags me-2"></i>Categorias</a>
+                <ul class="dropdown-menu">
+                  <?php if (authCan('task_category.create')): ?>
+                    <li><a class="dropdown-item" href="<?= url('task_category/create'); ?>"><i class="bi bi-tag me-2"></i>Cadastrar</a></li>
+                  <?php endif; ?>
+                  <li><hr class="dropdown-divider" /></li>
+                  <?php if (authCan('task_category.index')): ?>
+                    <li><a class="dropdown-item" href="<?= url('task_category'); ?>"><i class="bi bi-list me-2"></i>Listar</a></li>
+                  <?php endif; ?>
+                </ul>
+              </li>
             </ul>
           </li>
           <!-- /Menu tarefas -->
