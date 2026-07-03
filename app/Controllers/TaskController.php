@@ -246,6 +246,65 @@ class TaskController extends TenantAwareController
 		}
 
 	/**
+	 * Deletes an existing task and its associations.
+	 * @param mixed $id Task identifier.
+	 **/
+	public function delete($id): void
+		{
+		$this->requirePermission('task.delete');
+
+		$task = new Task();
+		$category = new TaskCategory();
+
+		try
+			{
+			$task->delete($id);
+			$this->redirect('task');
+			}
+		catch (\Throwable $e)
+			{
+			if ($this->wantsJson())
+				{
+				$this->json(['error' => $e->getMessage()], 422);
+				}
+
+			$filters = $this->readFilters();
+			$order = $this->readOrder();
+			$page = isset($_GET['page']) ? (int) $_GET['page'] : 1;
+			if ($page < 1)
+				{
+				$page = 1;
+				}
+
+			$perPage = 10;
+			$offset = ($page - 1) * $perPage;
+			$tasks = $task->search($filters, $perPage, $offset, $order['sort'], $order['direction']);
+			$total = $task->count($filters);
+			$totalPages = (int) ceil($total / $perPage);
+			if ($totalPages < 1)
+				{
+				$totalPages = 1;
+				}
+
+			http_response_code(422);
+			$this->view('tasks/index', [
+				'tasks'      => $tasks,
+				'categories' => $category->getOptions(false),
+				'people'     => $task->getPersonOptions($this->currentTenantId()),
+				'statuses'   => Task::statuses(),
+				'title'      => 'Tarefas',
+				'filters'    => $filters,
+				'sort'       => $order['sort'],
+				'direction'  => $order['direction'],
+				'page'       => $page,
+				'totalPages' => $totalPages,
+				'total'      => $total,
+				'formError'  => $e->getMessage(),
+			]);
+			}
+		}
+
+	/**
 	 * Displays task details, execution history and comments.
 	 * @param mixed $id Task identifier.
 	 **/

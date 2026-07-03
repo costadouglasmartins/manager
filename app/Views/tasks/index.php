@@ -56,6 +56,10 @@ $sortIcon = static function (string $column) use ($sort, $direction): string {
 ?>
 <h5>Lista de Tarefas</h5>
 
+  <?php if (!empty($formError)): ?>
+    <div class="alert alert-danger"><?= htmlspecialchars((string) $formError, ENT_QUOTES, 'UTF-8'); ?></div>
+  <?php endif; ?>
+
   <form action="<?= url('task'); ?>" class="row g-3 mb-3" method="get">
     <input name="sort" type="hidden" value="<?= htmlspecialchars($sort, ENT_QUOTES, 'UTF-8'); ?>">
     <input name="direction" type="hidden" value="<?= htmlspecialchars($direction, ENT_QUOTES, 'UTF-8'); ?>">
@@ -166,6 +170,20 @@ $sortIcon = static function (string $column) use ($sort, $direction): string {
               <td><?= htmlspecialchars(\App\Models\Task::formatDuration((int) ($row['total_seconds'] ?? 0)), ENT_QUOTES, 'UTF-8'); ?></td>
               <td><?= htmlspecialchars(\App\Models\Task::formatDateTime($row['created'] ?? ''), ENT_QUOTES, 'UTF-8'); ?></td>
               <td style="width:1%;" class="text-nowrap text-end">
+                <?php if (authCan('task.delete')): ?>
+                  <button
+                    type="button"
+                    class="btn btn-danger btn-sm js-task-delete-button"
+                    data-bs-toggle="modal"
+                    data-bs-target="#taskDeleteModal"
+                    data-task-id="<?= (int) $row['id']; ?>"
+                    data-task-title="<?= htmlspecialchars((string) ($row['title'] ?? ''), ENT_QUOTES, 'UTF-8'); ?>"
+                    data-task-delete-url="<?= htmlspecialchars(url('task/delete/' . (int) $row['id'] . ($queryFilters !== '' ? '?' . $queryFilters : '')), ENT_QUOTES, 'UTF-8'); ?>"
+                    aria-label="Excluir tarefa"
+                    title="Excluir">
+                    <i class="bi bi-trash-fill"></i>
+                  </button>
+                <?php endif; ?>
                 <?php if (authCan('task.edit')): ?>
                   <a href="<?= url('task/edit/' . $row['id']); ?>" data-bs-toggle="popover" data-bs-trigger="hover focus" data-bs-content="Editar"><i class="bi bi-pencil-square"></i></a>
                 <?php endif; ?>
@@ -190,4 +208,33 @@ $sortIcon = static function (string $column) use ($sort, $direction): string {
     <?= paginationLinks('task', $page, $totalPages, $queryFilters, 2, 'Anterior', 'Próxima'); ?>
   <?php endif; ?>
 
-<script src="<?= url('assets/js/tasks/index.js?v=1'); ?>"></script>
+<?php if (authCan('task.delete')): ?>
+  <div class="modal fade" id="taskDeleteModal" tabindex="-1" aria-labelledby="taskDeleteModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content border-danger">
+        <form id="taskDeleteForm" method="POST" action="">
+          <div class="modal-header bg-danger text-white">
+            <h5 class="modal-title" id="taskDeleteModalLabel"><i class="bi bi-trash-fill"></i> Confirmar exclusão</h5>
+            <a href="#" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Fechar"></a>
+          </div>
+          <div class="modal-body">
+            <div class="alert alert-danger d-flex gap-2 align-items-start" role="alert">
+              <i class="bi bi-exclamation-triangle-fill"></i>
+              <div>
+                Esta ação excluirá a tarefa <strong id="taskDeleteName" class="text-danger-emphasis">#</strong> e removerá apenas seus vínculos, execuções e comentários.
+              </div>
+            </div>
+            <p class="mb-2">Os cadastros das pessoas vinculadas serão mantidos.</p>
+            <p class="mb-0 text-danger fw-semibold">Essa operação não poderá ser desfeita.</p>
+          </div>
+          <div class="modal-footer">
+            <a href="#" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</a>
+            <button type="submit" class="btn btn-danger"><i class="bi bi-trash-fill"></i> Excluir</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+<?php endif; ?>
+
+<script src="<?= url('assets/js/tasks/index.js?v=2'); ?>"></script>

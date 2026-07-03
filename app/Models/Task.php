@@ -246,6 +246,63 @@ class Task extends TenantModel
 		}
 
 	/**
+	 * Deletes an existing task and its task-owned associations without deleting linked people.
+	 * @param mixed $id Task identifier.
+	 **/
+	public function delete($id): void
+		{
+		$taskId = (int) $id;
+		if ($taskId <= 0)
+			{
+			throw new \InvalidArgumentException('Tarefa inválida.');
+			}
+
+		try
+			{
+			$this->db->beginTransaction();
+
+			$task = $this->findAllByTaskId($taskId);
+			if (empty($task['task']))
+				{
+				throw new \InvalidArgumentException('Tarefa não encontrada.');
+				}
+
+			$stmt = $this->db->prepare("
+				DELETE FROM task_executions
+				WHERE task_assignee_id IN (
+					SELECT id
+					FROM task_assignees
+					WHERE task_id = :task_id
+				)
+			");
+			$stmt->execute(['task_id' => $taskId]);
+
+			$stmt = $this->db->prepare("DELETE FROM task_comments WHERE task_id = :task_id");
+			$stmt->execute(['task_id' => $taskId]);
+
+			$stmt = $this->db->prepare("DELETE FROM task_assignees WHERE task_id = :task_id");
+			$stmt->execute(['task_id' => $taskId]);
+
+			$stmt = $this->db->prepare("DELETE FROM tasks WHERE id = :id");
+			$stmt->execute(['id' => $taskId]);
+
+			$this->auditDelete('task', 'tasks', $taskId, $task, [
+				'affected_tables' => ['tasks', 'task_assignees', 'task_executions', 'task_comments'],
+			]);
+			$this->db->commit();
+			}
+		catch (\Exception $e)
+			{
+			if ($this->db->inTransaction())
+				{
+				$this->db->rollBack();
+				}
+
+			throw $e;
+			}
+		}
+
+	/**
 	 * Finds a task by id.
 	 * @param mixed $id Task identifier.
 	 * @return array|false
