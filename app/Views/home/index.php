@@ -5,6 +5,7 @@ $health = is_array($dashboard['health'] ?? null) ? $dashboard['health'] : [];
 $quickActions = is_array($dashboard['quickActions'] ?? null) ? $dashboard['quickActions'] : [];
 $recentPeople = is_array($dashboard['recentPeople'] ?? null) ? $dashboard['recentPeople'] : [];
 $recentUsers = is_array($dashboard['recentUsers'] ?? null) ? $dashboard['recentUsers'] : [];
+$pendingTasks = is_array($dashboard['pendingTasks'] ?? null) ? $dashboard['pendingTasks'] : [];
 $schemaVersions = is_array($schemaVersions ?? null) ? $schemaVersions : [];
 $latestSchema = is_array($dashboard['latestSchema'] ?? null) ? $dashboard['latestSchema'] : null;
 $currentUser = is_array($currentUser ?? null) ? $currentUser : [];
@@ -77,7 +78,7 @@ $tenantDocument = trim((string) ($tenant['document'] ?? ''));
 $userName = trim((string) ($currentUser['name'] ?? ''));
 ?>
 
-<link rel="stylesheet" href="<?= url('assets/css/home/index.css?v=1'); ?>">
+<link rel="stylesheet" href="<?= url('assets/css/home/index.css?v=2'); ?>">
 
 <div class="dashboard-shell">
 	<?php if (!empty($tenant)): ?>
@@ -135,6 +136,70 @@ $userName = trim((string) ($currentUser['name'] ?? ''));
 					</div>
 				<?php endif; ?>
 			<?php endforeach; ?>
+		</section>
+
+		<section class="dashboard-panel dashboard-task-panel">
+			<div class="dashboard-panel-heading">
+				<div>
+					<span class="dashboard-section-label">Tarefas</span>
+					<h2>Pendentes</h2>
+				</div>
+				<?php if (function_exists('authCan') && authCan('task.index')): ?>
+					<a class="dashboard-panel-link" href="<?= url('task'); ?>">Ver tarefas</a>
+				<?php endif; ?>
+			</div>
+
+			<div class="table-responsive dashboard-table-wrap">
+				<table class="table table-hover dashboard-table dashboard-task-table">
+					<thead>
+						<tr>
+							<th>#</th>
+							<th>Tarefa</th>
+							<th>Situação</th>
+							<th>Responsáveis</th>
+							<th>Tempo</th>
+							<th class="text-end">Execução</th>
+						</tr>
+					</thead>
+					<tbody>
+						<?php if (!empty($pendingTasks)): ?>
+							<?php foreach ($pendingTasks as $taskRow): ?>
+								<tr data-dashboard-task-row="<?= (int) ($taskRow['id'] ?? 0); ?>">
+									<td><?= htmlspecialchars((string) ($taskRow['id'] ?? ''), ENT_QUOTES, 'UTF-8'); ?></td>
+									<td>
+										<strong><?= htmlspecialchars((string) ($taskRow['title'] ?? ''), ENT_QUOTES, 'UTF-8'); ?></strong>
+										<small class="text-muted d-block"><?= htmlspecialchars((string) ($taskRow['task_category_name'] ?? ''), ENT_QUOTES, 'UTF-8'); ?></small>
+									</td>
+									<td><span class="badge <?= htmlspecialchars(\App\Models\Task::statusBadgeClass((string) ($taskRow['status'] ?? '')), ENT_QUOTES, 'UTF-8'); ?>" data-dashboard-task-status="<?= (int) ($taskRow['id'] ?? 0); ?>"><?= htmlspecialchars(\App\Models\Task::statusLabel((string) ($taskRow['status'] ?? '')), ENT_QUOTES, 'UTF-8'); ?></span></td>
+									<td><?= htmlspecialchars((string) ($taskRow['assignee_names'] ?? ''), ENT_QUOTES, 'UTF-8'); ?></td>
+									<td data-dashboard-task-duration="<?= (int) ($taskRow['id'] ?? 0); ?>"><?= htmlspecialchars(\App\Models\Task::formatDuration((int) ($taskRow['total_seconds'] ?? 0)), ENT_QUOTES, 'UTF-8'); ?></td>
+									<td class="text-end">
+										<div class="dashboard-task-actions">
+											<?php foreach (($taskRow['assignees'] ?? []) as $assignee): ?>
+												<?php $isRunning = !empty($assignee['open_execution_id']); ?>
+												<div class="dashboard-task-action" data-task-assignee-row="<?= (int) $assignee['id']; ?>">
+													<span><?= htmlspecialchars((string) ($assignee['person_name'] ?? ''), ENT_QUOTES, 'UTF-8'); ?></span>
+													<small data-assignee-duration="<?= (int) $assignee['id']; ?>"><?= htmlspecialchars(\App\Models\Task::formatDuration((int) ($assignee['total_seconds'] ?? 0)), ENT_QUOTES, 'UTF-8'); ?></small>
+													<?php if (authCan('task.startExecution')): ?>
+														<button class="btn btn-success btn-sm js-task-execution-action" data-action="start" data-endpoint="<?= url('task/startExecution'); ?>" data-task-assignee-id="<?= (int) $assignee['id']; ?>" type="button" <?= $isRunning ? 'disabled' : ''; ?>><i class="bi bi-play-fill"></i></button>
+													<?php endif; ?>
+													<?php if (authCan('task.pauseExecution')): ?>
+														<button class="btn btn-warning btn-sm js-task-execution-action" data-action="pause" data-endpoint="<?= url('task/pauseExecution'); ?>" data-task-assignee-id="<?= (int) $assignee['id']; ?>" type="button" <?= $isRunning ? '' : 'disabled'; ?>><i class="bi bi-pause-fill"></i></button>
+													<?php endif; ?>
+												</div>
+											<?php endforeach; ?>
+										</div>
+									</td>
+								</tr>
+							<?php endforeach; ?>
+						<?php else: ?>
+							<tr>
+								<td colspan="6" class="text-center text-muted py-4">Nenhuma tarefa pendente encontrada.</td>
+							</tr>
+						<?php endif; ?>
+					</tbody>
+				</table>
+			</div>
 		</section>
 
 		<section class="dashboard-grid">
@@ -320,3 +385,5 @@ $userName = trim((string) ($currentUser['name'] ?? ''));
 		</section>
 	<?php endif; ?>
 </div>
+
+<script src="<?= url('assets/js/home/index.js?v=1'); ?>"></script>

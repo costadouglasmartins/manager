@@ -275,6 +275,47 @@ a.dashboard-metric:focus {
   min-width: 680px;
 }
 
+.dashboard-task-table {
+  min-width: 920px;
+}
+
+.dashboard-task-table strong {
+  display: block;
+  color: var(--app-text);
+  overflow-wrap: anywhere;
+}
+
+.dashboard-task-actions {
+  display: grid;
+  min-width: 250px;
+  gap: 0.45rem;
+  justify-items: end;
+}
+
+.dashboard-task-action {
+  display: inline-grid;
+  grid-template-columns: minmax(90px, 1fr) auto auto auto;
+  gap: 0.35rem;
+  align-items: center;
+  max-width: 100%;
+}
+
+.dashboard-task-action span {
+  min-width: 0;
+  color: var(--app-text);
+  font-size: 0.84rem;
+  font-weight: 800;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dashboard-task-action small {
+  color: var(--app-muted);
+  font-size: 0.78rem;
+  white-space: nowrap;
+}
+
 .dashboard-status {
   display: inline-flex;
   min-height: 26px;

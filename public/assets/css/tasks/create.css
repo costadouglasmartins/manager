@@ -1,0 +1,61 @@
+.task-page {
+  display: grid;
+  gap: 1rem;
+}
+
+.task-page-header,
+.task-section {
+  border: 1px solid var(--app-border);
+  border-radius: 8px;
+  background: var(--app-surface);
+  box-shadow: var(--app-shadow-sm);
+}
+
+.task-page-header,
+.task-section {
+  padding: 1rem;
+}
+
+.task-page-header h5,
+.task-section h6 {
+  margin: 0.25rem 0 0;
+  color: var(--app-text);
+  font-weight: 850;
+  letter-spacing: 0;
+}
+
+.task-page-kicker {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  color: var(--app-accent);
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+.task-third-party.is-hidden {
+  display: none;
+}
+
+.task-editor {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.task-editor-toolbar {
+  display: flex;
+  gap: 0.35rem;
+}
+
+.task-editor-surface {
+  min-height: 190px;
+  overflow: auto;
+  background: var(--app-surface-solid);
+}
+
+.autocomplete-results {
+  position: relative;
+  z-index: 1050;
+}

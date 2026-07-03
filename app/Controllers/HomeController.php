@@ -9,6 +9,7 @@ use App\Models\Email;
 use App\Models\Person;
 use App\Models\PhoneNumber;
 use App\Models\SchemaVersion;
+use App\Models\Task;
 use App\Models\Tenant;
 use App\Models\User;
 
@@ -81,6 +82,7 @@ class HomeController extends Controller
 		$phoneNumberModel = new PhoneNumber();
 		$addressModel = new Address();
 		$schemaVersionModel = new SchemaVersion();
+		$taskModel = new Task();
 
 		$peopleTotal = $this->safeInt(function () use ($personModel, $tenantId) {
 			return $personModel->count([], $tenantId);
@@ -115,6 +117,9 @@ class HomeController extends Controller
 		$schemaTotal = $this->safeInt(function () use ($schemaVersionModel) {
 			return $schemaVersionModel->count();
 		});
+		$pendingTasksTotal = $this->safeInt(function () use ($taskModel) {
+			return $taskModel->count(['statuses' => Task::pendingStatuses()]);
+		});
 
 		$schemaVersions = $this->safeArray(function () use ($schemaVersionModel) {
 			return $schemaVersionModel->getLatest(10);
@@ -124,6 +129,16 @@ class HomeController extends Controller
 		});
 		$recentUsers = $this->safeArray(function () use ($userModel, $tenantId) {
 			return $userModel->search([], 5, 0, $tenantId);
+		});
+		$pendingTasks = $this->safeArray(function () use ($taskModel) {
+			$tasks = $taskModel->dashboardTasks(8);
+			foreach ($tasks as &$task)
+				{
+				$task['assignees'] = $taskModel->getAssignees((int) ($task['id'] ?? 0));
+				}
+			unset($task);
+
+			return $tasks;
 		});
 
 		$latestSchema = $schemaVersions[0] ?? null;
@@ -160,6 +175,15 @@ class HomeController extends Controller
 					'tone' => 'indigo',
 					'href' => 'user',
 					'ability' => 'user.index',
+				],
+				[
+					'label' => 'Tarefas',
+					'value' => $pendingTasksTotal,
+					'caption' => 'Abertas, em andamento ou aguardando terceiro',
+					'icon' => 'bi-list-check',
+					'tone' => 'teal',
+					'href' => 'task',
+					'ability' => 'task.index',
 				],
 				[
 					'label' => 'E-mails',
@@ -217,7 +241,9 @@ class HomeController extends Controller
 			],
 			'quickActions' => [
 				['label' => 'Nova pessoa', 'icon' => 'bi-person-fill-add', 'href' => 'person/create', 'ability' => 'person.create', 'variant' => 'primary'],
+				['label' => 'Nova tarefa', 'icon' => 'bi-plus-square', 'href' => 'task/create', 'ability' => 'task.create', 'variant' => 'primary'],
 				['label' => 'Pessoas', 'icon' => 'bi-person-lines-fill', 'href' => 'person', 'ability' => 'person.index', 'variant' => 'secondary'],
+				['label' => 'Tarefas', 'icon' => 'bi-list-check', 'href' => 'task', 'ability' => 'task.index', 'variant' => 'secondary'],
 				['label' => 'Usuários', 'icon' => 'bi-person-badge', 'href' => 'user', 'ability' => 'user.index', 'variant' => 'secondary'],
 				['label' => 'E-mails', 'icon' => 'bi-envelope-paper', 'href' => 'email', 'ability' => 'email.index', 'variant' => 'secondary'],
 				['label' => 'Telefones', 'icon' => 'bi-telephone', 'href' => 'phone_number', 'ability' => 'phone_number.index', 'variant' => 'secondary'],
@@ -225,6 +251,7 @@ class HomeController extends Controller
 			],
 			'recentPeople' => $recentPeople,
 			'recentUsers' => $recentUsers,
+			'pendingTasks' => $pendingTasks,
 			'schemaVersions' => $schemaVersions,
 			'schemaTotal' => $schemaTotal,
 			'latestSchema' => $latestSchema,
@@ -243,6 +270,7 @@ class HomeController extends Controller
 			'quickActions' => [],
 			'recentPeople' => [],
 			'recentUsers' => [],
+			'pendingTasks' => [],
 			'schemaVersions' => [],
 			'schemaTotal' => 0,
 			'latestSchema' => null,

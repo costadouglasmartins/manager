@@ -177,6 +177,32 @@
           </ul>
         </li>
         <!-- /Menu financeiro -->
+        <?php if (authCan('task.index') || authCan('task.create') || authCan('task_category.index') || authCan('task_category.create')): ?>
+          <!-- Menu tarefas -->
+          <li class="nav-item dropdown">
+            <a class="nav-link dropdown-toggle" href="#" id="tasksMenu" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+              <i class="bi bi-list-check me-1"></i> Tarefas
+            </a>
+            <ul class="dropdown-menu" aria-labelledby="tasksMenu">
+              <?php if (authCan('task.create')): ?>
+                <li><a class="dropdown-item" href="<?= url('task/create'); ?>"><i class="bi bi-plus-square me-2"></i>Cadastrar tarefa</a></li>
+                <li><hr class="dropdown-divider" /></li>
+              <?php endif; ?>
+              <?php if (authCan('task.index')): ?>
+                <li><a class="dropdown-item" href="<?= url('task'); ?>"><i class="bi bi-list-ul me-2"></i>Listar tarefas</a></li>
+                <li><hr class="dropdown-divider" /></li>
+              <?php endif; ?>
+              <?php if (authCan('task_category.create')): ?>
+                <li><a class="dropdown-item" href="<?= url('task_category/create'); ?>"><i class="bi bi-tag me-2"></i>Cadastrar categoria</a></li>
+                <li><hr class="dropdown-divider" /></li>
+              <?php endif; ?>
+              <?php if (authCan('task_category.index')): ?>
+                <li><a class="dropdown-item" href="<?= url('task_category'); ?>"><i class="bi bi-tags me-2"></i>Categorias de tarefas</a></li>
+              <?php endif; ?>
+            </ul>
+          </li>
+          <!-- /Menu tarefas -->
+        <?php endif; ?>
         <!-- Menu loja -->
         <li class="nav-item dropdown">
           <a class="nav-link dropdown-toggle" href="#" id="storeMenu" role="button" data-bs-toggle="dropdown" aria-expanded="false">

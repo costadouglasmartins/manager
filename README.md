@@ -68,6 +68,8 @@ Crie ou restaure o banco principal `manager_main` e os bancos de tenants no form
 
 Para o módulo de loja, execute `app/Database/store_schema.sql` em cada banco tenant que deve possuir produtos, imagens e movimentações de estoque.
 
+Para o módulo de tarefas, execute `app/Database/tasks_schema.sql` em cada banco tenant que deve possuir tarefas, categorias, responsáveis, execuções e comentários.
+
 ### Nginx
 
 O Nginx deve apontar a raiz para `/var/www/html`, mantendo as URLs públicas usadas no Docker:
@@ -211,7 +213,7 @@ Exemplo recomendado para comentários de métodos:
 
 ## Regras para SQL
 
-- Use nomes de tabelas em inglês e no plural; quando o nome for composto, todas as palavras que formam o nome da tabela devem estar no plural, como `products_categories`, `products_images` e `products_stocks_movements`.
+- Use nomes de tabelas em inglês e no plural. Quando o nome tiver uma única palavra, essa palavra deve ficar no plural. Quando o nome for composto, separe cada palavra com underline (`_`) e mantenha no plural somente as palavras subsequentes à primeira(que deve ser no singular), como `product_categories`, `product_images` e `product_stocks_movements`.
 - Sempre use prepared statements e placeholders nomeados para valores dinâmicos.
 - Não concatene entradas do usuário diretamente em strings SQL.
 - Use listas explícitas de colunas; evite `SELECT *` em queries usadas por telas ou APIs.
