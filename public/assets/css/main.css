@@ -342,6 +342,14 @@ body.has-view-actions .app-main {
   text-transform: uppercase;
 }
 
+.app-section {
+  padding: 1rem;
+  border: 1px solid var(--app-border);
+  border-radius: 8px;
+  background: var(--app-surface);
+  box-shadow: var(--app-shadow-sm);
+}
+
 .text-muted,
 .text-body-secondary {
   color: var(--app-muted) !important;

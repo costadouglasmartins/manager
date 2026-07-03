@@ -28,7 +28,9 @@ $accountLabel = static function (array $account): string {
   <div class="alert alert-danger"><?= htmlspecialchars((string) $formError, ENT_QUOTES, 'UTF-8'); ?></div>
 <?php endif; ?>
 
-<form action="<?= url('bank_slip/update/' . (int) ($bankSlip['id'] ?? 0)); ?>" method="post" class="row g-3 needs-validation" novalidate>
+<form action="<?= url('bank_slip/update/' . (int) ($bankSlip['id'] ?? 0)); ?>" method="post" class="needs-validation" novalidate>
+  <section class="app-section">
+    <div class="row g-3">
   <div class="col-md-6">
     <label class="form-label" for="bank_account_id">Conta bancária</label>
     <select id="bank_account_id" name="bank_account_id" class="form-select" required>
@@ -140,7 +142,9 @@ $accountLabel = static function (array $account): string {
     <div class="invalid-feedback">Informe o CEP.</div>
   </div>
 
-  <div class="col-12 form-actions">
+    </div>
+  </section>
+  <div class="form-actions">
     <a href="<?= url('bank_slip'); ?>" class="btn btn-secondary"><i class="bi bi-arrow-left"></i> Cancelar</a>
     <button class="btn btn-primary" type="submit"><i class="bi bi-check-lg"></i> Salvar</button>
   </div>

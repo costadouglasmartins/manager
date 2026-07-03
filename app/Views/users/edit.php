@@ -7,7 +7,8 @@
   </div>
 
 <form method="POST" action="<?= url('/user/update/' . $user['id']); ?>"> 
-  <div class="row">
+  <section class="app-section">
+    <div class="row g-3">
     <div class="mb-2 col-md-6 col-lg-12">
       <label class="form-label" for="username">Usuário(a):</label>
       <input autocomplete="off" class="form-control" type="text" id="username" name="username" value="<?= $user['username']; ?>" readonly="readonly" required="required" value="<?= $user['username']; ?>">
@@ -37,9 +38,11 @@
         <option value="0" <?= ($user['active'] === 0 ? 'selected="selected"' : ''); ?>>Inativo</option>
       </select>
     </div>
-  </div>
+    </div>
+  </section>
   <div class="form-actions">
-    <button class="btn btn-primary" type="submit">Salvar</button>
+    <a href="<?= url('user'); ?>" class="btn btn-secondary"><i class="bi bi-arrow-left"></i> Cancelar</a>
+    <button class="btn btn-primary" type="submit"><i class="bi bi-check-lg"></i> Salvar</button>
   </div>
 </form>
 </div>

@@ -38,7 +38,7 @@ $amountValue = number_format((float) ($operation['total_amount'] ?? 0), 2, ',', 
     </section>
 
     <div class="form-actions">
-      <a href="<?= url('financial_operation'); ?>" class="btn btn-secondary">Cancelar</a>
+      <a href="<?= url('financial_operation'); ?>" class="btn btn-secondary"><i class="bi bi-arrow-left"></i> Cancelar</a>
       <button class="btn btn-primary" type="submit"><i class="bi bi-check-lg"></i> Salvar</button>
     </div>
   </form>

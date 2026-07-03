@@ -8,7 +8,8 @@
   </div>
 
   <form action="<?= url('address/store/'); ?>" method="POST">
-    <div class="row">
+    <section class="app-section">
+      <div class="row g-3">
 
       <div class="mb-2 col-md-6 col-lg-4">
         <label class="form-label" for="zip_code">CEP</label>
@@ -45,10 +46,11 @@
         <ul id="neighborhoodResults" class="list-group mt-1 w-100" style="overflow:auto; max-height:240px; position:absolute; z-index:1050;"></ul>
       </div>
 
-    </div>
-    <br>
+      </div>
+    </section>
     <div class="form-actions">
-      <button class="btn btn-primary" type="submit">Salvar</button>
+      <a href="<?= url('address'); ?>" class="btn btn-secondary"><i class="bi bi-arrow-left"></i> Cancelar</a>
+      <button class="btn btn-primary" type="submit"><i class="bi bi-check-lg"></i> Salvar</button>
     </div>
   </form>
 </div>

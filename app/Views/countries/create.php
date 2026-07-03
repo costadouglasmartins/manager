@@ -8,21 +8,24 @@
   </div>
 
   <form action="<?= url('country/store/'); ?>" method="POST">
-    <div class="row">
+    <section class="app-section">
+      <div class="row g-3">
 
-      <div class="mb-2 col-md-6 col-lg-12">
-        <label class="form-label" for="name">Nome</label>
-        <input autocomplete="off" class="form-control" id="name" name="name" maxlength="255" type="text">
+        <div class="col-md-6 col-lg-12">
+          <label class="form-label" for="name">Nome</label>
+          <input autocomplete="off" class="form-control" id="name" name="name" maxlength="255" type="text">
+        </div>
+
+        <div class="col-md-6 col-lg-12">
+          <label class="form-label" for="acronym">Sigla</label>
+          <input autocomplete="off" class="form-control" id="acronym" name="acronym" maxlength="5" type="text">
+        </div>
+
       </div>
-
-      <div class="mb-2 col-md-6 col-lg-12">
-        <label class="form-label" for="acronym">Sigla</label>
-        <input autocomplete="off" class="form-control" id="acronym" name="acronym" maxlength="5" type="text">
-      </div>
-
-    </div>
+    </section>
     <div class="form-actions">
-      <button class="btn btn-primary" type="submit">Salvar</button>
+      <a href="<?= url('country'); ?>" class="btn btn-secondary"><i class="bi bi-arrow-left"></i> Cancelar</a>
+      <button class="btn btn-primary" type="submit"><i class="bi bi-check-lg"></i> Salvar</button>
     </div>
   </form>
 </div>

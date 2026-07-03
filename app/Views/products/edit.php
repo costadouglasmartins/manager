@@ -150,7 +150,7 @@ $editorHtml = trim(preg_replace('/<([a-z][a-z0-9]*)\b[^>]*>/i', '<$1>', strip_ta
     </section>
 
     <div class="form-actions">
-      <a href="<?= url('product'); ?>" class="btn btn-secondary">Cancelar</a>
+      <a href="<?= url('product'); ?>" class="btn btn-secondary"><i class="bi bi-arrow-left"></i> Cancelar</a>
       <button class="btn btn-primary" type="submit"><i class="bi bi-check-lg"></i> Salvar</button>
     </div>
   </form>

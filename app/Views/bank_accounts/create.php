@@ -7,7 +7,8 @@
   </div>
 
   <form action="<?= url('bank_account/store'); ?>" method="POST" class="needs-validation" novalidate>
-    <div class="row g-3">
+    <section class="app-section">
+      <div class="row g-3">
 
     <div class="col-12">
       <h6 class="mb-0">Dados da conta</h6>
@@ -161,11 +162,13 @@
       </select>
     </div>
 
-  </div>
-  <div class="form-actions">
-    <button class="btn btn-primary" type="submit">Salvar</button>
-  </div>
-</form>
+      </div>
+    </section>
+    <div class="form-actions">
+      <a href="<?= url('bank_account'); ?>" class="btn btn-secondary"><i class="bi bi-arrow-left"></i> Cancelar</a>
+      <button class="btn btn-primary" type="submit"><i class="bi bi-check-lg"></i> Salvar</button>
+    </div>
+  </form>
 </div>
 
 <script src="<?= url('assets/js/bank_accounts/create.js?v=5'); ?>"></script>

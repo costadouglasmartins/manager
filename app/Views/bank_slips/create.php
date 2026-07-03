@@ -8,7 +8,9 @@
     </div>
   </div>
 
-  <form action="<?= url('bank_slip/store'); ?>" method="post" class="row g-3">
+  <form action="<?= url('bank_slip/store'); ?>" method="post" class="needs-validation" novalidate>
+    <section class="app-section">
+      <div class="row g-3">
     <div class="col-md-6">
       <label class="form-label">Conta bancária</label>
       <select name="bank_account_id" class="form-select" required>
@@ -34,7 +36,9 @@
     <div class="col-md-3"><label class="form-label">Cidade</label><input type="text" name="payer_city" class="form-control" required></div>
     <div class="col-md-2"><label class="form-label">UF</label><input type="text" name="payer_state" maxlength="2" class="form-control" required></div>
     <div class="col-md-3"><label class="form-label">CEP</label><input type="text" name="payer_zip_code" class="form-control" required></div>
-    <div class="col-12 form-actions">
+      </div>
+    </section>
+    <div class="form-actions">
       <a href="<?= url('bank_slip'); ?>" class="btn btn-secondary"><i class="bi bi-arrow-left"></i> Cancelar</a>
       <button class="btn btn-primary" type="submit"><i class="bi bi-check-lg"></i> Salvar</button>
     </div>
