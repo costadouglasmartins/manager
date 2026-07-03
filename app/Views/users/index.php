@@ -119,19 +119,22 @@ $queryFilters = http_build_query([
 
 <div class="table-responsive">
   <table class="table table-striped table-hover">
-    <tr>
-      <th style="width: 1%;">#</th>
-      <th>Usuário</th>
-      <th>Tipo</th>
-      <th style="width: 1%;" class="text-nowrap text-end">Ações</th>
-    </tr>
+    <thead>
+      <tr>
+        <th>#</th>
+        <th>Usuário</th>
+        <th>Tipo</th>
+        <th class="text-end">Ações</th>
+      </tr>
+    </thead>
+    <tbody>
 		<?php if (!empty($users)): ?>
 			<?php foreach ($users as $user): ?>
 				<tr>
-					<td><?= $user['id'] ?></td>
+					<td style="width:1%;"><?= $user['id'] ?></td>
 					<td><?= $user['username'] ?></td>
-          <td><?= $user['type']; ?></td>
-					<td class="text-nowrap text-end">
+					<td><?= $user['type']; ?></td>
+					<td style="width:1%;" class="text-nowrap text-end">
 						<?php if (authCan('user.edit')): ?>
 							<a href="<?= url('user/edit/' . $user['id']); ?>" data-bs-toggle="popover" data-bs-trigger="hover focus" data-bs-content="Editar"><i class="bi bi-pencil-square"></i></a>
 						<?php endif; ?>
@@ -143,9 +146,10 @@ $queryFilters = http_build_query([
 			<?php endforeach; ?>
 		<?php else: ?>
 			<tr>
-				<td colspan="4">Nenhum registro encontrado.</td>
+				<td colspan="4" class="text-center">Nenhum registro encontrado.</td>
 			</tr>
 		<?php endif; ?>
+    </tbody>
   </table>
 </div>
 

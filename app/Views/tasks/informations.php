@@ -140,7 +140,7 @@ if ($thirdParty === '')
     </div>
   </section>
 
-  <div class="view-actions">
+  <div class="form-actions">
     <a href="<?= url('task'); ?>" class="btn btn-secondary"><i class="bi bi-arrow-left"></i> Voltar</a>
     <?php if (authCan('task.edit')): ?>
       <a href="<?= url('task/edit/' . (int) $task['id']); ?>" class="btn btn-primary"><i class="bi bi-pencil-square"></i> Editar</a>

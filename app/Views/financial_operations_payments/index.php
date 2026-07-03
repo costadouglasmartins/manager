@@ -18,15 +18,7 @@ $operationLabel = static function (array $operation) use ($formatMoney): string 
 	return '#' . (int) $operation['id'] . ' - ' . trim((string) ($operation['financial_operation_category_name'] ?? '')) . ' - ' . $formatMoney($operation['total_amount'] ?? 0);
 };
 ?>
-<link rel="stylesheet" href="<?= url('assets/css/financial_operations_payments/index.css?v=1'); ?>">
-
-<div class="financial-page">
-  <div class="financial-page-header">
-    <div>
-      <span class="financial-page-kicker"><i class="bi bi-cash-stack"></i> Financeiro</span>
-      <h5>Lista de pagamentos de operações financeiras</h5>
-    </div>
-  </div>
+<h5>Lista de pagamentos de operações financeiras</h5>
 
   <form action="<?= url('financial_operation_payment'); ?>" class="row g-3 mb-3" method="get">
 
@@ -75,7 +67,7 @@ $operationLabel = static function (array $operation) use ($formatMoney): string 
   <hr>
 
   <div class="table-responsive">
-    <table class="table table-striped table-hover align-middle">
+    <table class="table table-striped table-hover">
       <thead>
         <tr>
           <th>#</th>
@@ -121,6 +113,5 @@ $operationLabel = static function (array $operation) use ($formatMoney): string 
   <?php if ($totalPages > 1): ?>
     <?= paginationLinks('financial_operation_payment', $page, $totalPages, $queryFilters, 2, 'Anterior', 'Próxima'); ?>
   <?php endif; ?>
-</div>
 
 <script src="<?= url('assets/js/financial_operations_payments/index.js?v=1'); ?>"></script>

@@ -1,5 +1,8 @@
 <?php
 $filters = $filters ?? ['id' => '', 'bank_account_id' => '', 'bank_account_ids' => [], 'status' => '', 'document_number' => ''];
+$page = $page ?? 1;
+$totalPages = $totalPages ?? 1;
+$total = $total ?? 0;
 $statuses = \App\Models\BankSlip::STATUSES;
 $selectedBankAccountIds = $filters['bank_account_ids'] ?? [];
 if (!is_array($selectedBankAccountIds))
@@ -33,15 +36,15 @@ $canEditBankSlip = static function (array $bankSlip): bool {
 ?>
 <link rel="stylesheet" href="<?= url('assets/css/bank_slips/index.css?v=8'); ?>">
 
-<h5>Boletos bancários</h5>
+<h5>Lista de Boletos Bancários</h5>
 
 <?php if (!empty($formError)): ?>
   <div class="alert alert-danger"><?= htmlspecialchars((string) $formError, ENT_QUOTES, 'UTF-8'); ?></div>
 <?php endif; ?>
 
-<form action="<?= url('bank_slip'); ?>" method="get" class="row g-2 mb-3" id="bankSlipFilterForm">
+<form action="<?= url('bank_slip'); ?>" method="get" class="row g-3 mb-3" id="bankSlipFilterForm">
   <div class="col-12 col-lg-9">
-    <div class="row g-2">
+    <div class="row g-3">
       <div class="col-12 col-md-2"><input type="text" name="id" class="form-control" placeholder="Código" value="<?= htmlspecialchars($filters['id'], ENT_QUOTES, 'UTF-8'); ?>"></div>
       <div class="col-12 col-md-3"><input type="text" name="document_number" class="form-control" placeholder="Seu número" value="<?= htmlspecialchars($filters['document_number'], ENT_QUOTES, 'UTF-8'); ?>"></div>
       <div class="col-12 col-md-4">
@@ -65,10 +68,11 @@ $canEditBankSlip = static function (array $bankSlip): bool {
     </div>
   </div>
   <div class="col-12 col-lg-3">
-    <div class="d-flex flex-column gap-2 align-items-stretch align-items-lg-end">
-      <button class="btn btn-primary w-100" type="submit"><i class="bi bi-search"></i> Pesquisar</button>
+    <div class="d-flex flex-column gap-2 align-items-center align-items-lg-end">
+      <button class="btn btn-primary w-100" type="submit">Pesquisar</button>
+      <a href="<?= url('bank_slip'); ?>" class="btn btn-secondary w-100">Limpar</a>
       <?php if (authCan('bank_slip.create')): ?>
-        <a class="btn btn-success w-100" href="<?= url('bank_slip/create'); ?>"><i class="bi bi-plus-lg"></i> Novo boleto</a>
+        <a class="btn btn-success w-100" href="<?= url('bank_slip/create'); ?>">Novo(a)</a>
       <?php endif; ?>
     </div>
   </div>
@@ -78,6 +82,8 @@ $canEditBankSlip = static function (array $bankSlip): bool {
   <?= pdfExportButton('bank_slip', $queryFilters); ?>
   <?= excelExportButton('bank_slip', $queryFilters); ?>
 </div>
+
+<hr>
 
 <form action="<?= url('bank_slip/generateRemittance'); ?>" method="post" id="bankSlipRemittanceForm">
   <?php if (!empty($bankSlipGroups)): ?>
@@ -95,7 +101,7 @@ $canEditBankSlip = static function (array $bankSlip): bool {
         </div>
 
         <div class="table-responsive bank-slip-account-table">
-          <table class="table table-striped align-middle">
+          <table class="table table-striped table-hover">
             <thead>
               <tr>
                 <th>
@@ -200,9 +206,15 @@ $canEditBankSlip = static function (array $bankSlip): bool {
       </section>
     <?php endforeach; ?>
   <?php else: ?>
-    <div class="bank-slip-empty-state">Nenhum boleto encontrado.</div>
+    <div class="bank-slip-empty-state">Nenhum registro encontrado.</div>
   <?php endif; ?>
 </form>
+
+<p class="text-muted"><?= $total ?> registro(s) encontrado(s)</p>
+
+<?php if ($totalPages > 1): ?>
+  <?= paginationLinks('bank_slip', $page, $totalPages, $queryFilters, 2, 'Anterior', 'Próxima') ?>
+<?php endif; ?>
 
 <?php if (authCan('bank_slip.delete')): ?>
   <div class="modal fade" id="bankSlipDeleteModal" tabindex="-1" aria-labelledby="bankSlipDeleteModalLabel" aria-hidden="true">

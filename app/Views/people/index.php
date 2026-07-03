@@ -119,14 +119,17 @@ $queryFilters = http_build_query([
 
 <div class="table-responsive">
   <table class="table table-striped table-hover">
-    <tr>
-      <th>#</th>
-      <th>Nome</th>
-      <th>Documento</th>
-      <th>Data de nascimento</td>
-      <th>Tipo</th>
-      <th>Ações</th>
-    </tr>
+    <thead>
+      <tr>
+        <th>#</th>
+        <th>Nome</th>
+        <th>Documento</th>
+        <th>Data de nascimento</th>
+        <th>Tipo</th>
+        <th class="text-end">Ações</th>
+      </tr>
+    </thead>
+    <tbody>
 		<?php if (!empty($people)): ?>
 			<?php foreach ($people as $person): ?>
 				<tr>
@@ -150,6 +153,7 @@ $queryFilters = http_build_query([
 				<td colspan="6" class="text-center">Nenhum registro encontrado.</td>
 			</tr>
 		<?php endif; ?>
+    </tbody>
 	</table>
 </div>
 

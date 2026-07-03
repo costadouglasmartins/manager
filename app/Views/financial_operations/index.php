@@ -14,15 +14,7 @@ $formatMoney = static function ($value): string {
 	return 'R$ ' . number_format((float) $value, 2, ',', '.');
 };
 ?>
-<link rel="stylesheet" href="<?= url('assets/css/financial_operations/index.css?v=1'); ?>">
-
-<div class="financial-page">
-  <div class="financial-page-header">
-    <div>
-      <span class="financial-page-kicker"><i class="bi bi-receipt"></i> Financeiro</span>
-      <h5>Lista de Operações Financeiras</h5>
-    </div>
-  </div>
+<h5>Lista de Operações Financeiras</h5>
 
   <form action="<?= url('financial_operation'); ?>" class="row g-3 mb-3" method="get">
 
@@ -71,7 +63,7 @@ $formatMoney = static function ($value): string {
   <hr>
 
   <div class="table-responsive">
-    <table class="table table-striped table-hover align-middle">
+    <table class="table table-striped table-hover">
       <thead>
         <tr>
           <th>#</th>
@@ -113,6 +105,5 @@ $formatMoney = static function ($value): string {
   <?php if ($totalPages > 1): ?>
     <?= paginationLinks('financial_operation', $page, $totalPages, $queryFilters, 2, 'Anterior', 'Próxima'); ?>
   <?php endif; ?>
-</div>
 
 <script src="<?= url('assets/js/financial_operations/index.js?v=1'); ?>"></script>

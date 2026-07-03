@@ -10,15 +10,7 @@ $queryFilters = http_build_query([
 	'active' => $filters['active'],
 ]);
 ?>
-<link rel="stylesheet" href="<?= url('assets/css/task_categories/index.css?v=1'); ?>">
-
-<div class="task-page">
-  <div class="task-page-header">
-    <div>
-      <span class="task-page-kicker"><i class="bi bi-tags"></i> Tarefas</span>
-      <h5>Categorias de tarefas</h5>
-    </div>
-  </div>
+<h5>Lista de Categorias de Tarefas</h5>
 
   <form action="<?= url('task_category'); ?>" class="row g-3 mb-3" method="get">
     <div class="col-12 col-lg-9">
@@ -43,10 +35,10 @@ $queryFilters = http_build_query([
 
     <div class="col-12 col-lg-3">
       <div class="d-flex flex-column gap-2 align-items-center align-items-lg-end">
-        <button type="submit" class="btn btn-primary w-100"><i class="bi bi-search"></i> Pesquisar</button>
-        <a href="<?= url('task_category'); ?>" class="btn btn-secondary w-100"><i class="bi bi-eraser"></i> Limpar</a>
+        <button type="submit" class="btn btn-primary w-100">Pesquisar</button>
+        <a href="<?= url('task_category'); ?>" class="btn btn-secondary w-100">Limpar</a>
         <?php if (authCan('task_category.create')): ?>
-          <a href="<?= url('task_category/create'); ?>" class="btn btn-success w-100"><i class="bi bi-plus-lg"></i> Novo(a)</a>
+          <a href="<?= url('task_category/create'); ?>" class="btn btn-success w-100">Novo(a)</a>
         <?php endif; ?>
       </div>
     </div>
@@ -54,13 +46,15 @@ $queryFilters = http_build_query([
 
   <div class="d-flex flex-wrap gap-2 mb-3">
     <?php if (authCan('task_category.index')): ?>
-      <?= pdfExportButton('task_category', $queryFilters, 'PDF'); ?>
-      <?= excelExportButton('task_category', $queryFilters, 'Excel'); ?>
+      <?= pdfExportButton('task_category', $queryFilters); ?>
+      <?= excelExportButton('task_category', $queryFilters); ?>
     <?php endif; ?>
   </div>
 
+  <hr>
+
   <div class="table-responsive">
-    <table class="table table-striped table-hover align-middle">
+    <table class="table table-striped table-hover">
       <thead>
         <tr>
           <th>#</th>
@@ -102,6 +96,5 @@ $queryFilters = http_build_query([
   <?php if ($totalPages > 1): ?>
     <?= paginationLinks('task_category', $page, $totalPages, $queryFilters, 2, 'Anterior', 'Próxima'); ?>
   <?php endif; ?>
-</div>
 
 <script src="<?= url('assets/js/task_categories/index.js?v=1'); ?>"></script>

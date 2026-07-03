@@ -54,15 +54,7 @@ $sortIcon = static function (string $column) use ($sort, $direction): string {
 	return $direction === 'asc' ? 'bi-sort-up' : 'bi-sort-down';
 };
 ?>
-<link rel="stylesheet" href="<?= url('assets/css/tasks/index.css?v=1'); ?>">
-
-<div class="task-page">
-  <div class="task-page-header">
-    <div>
-      <span class="task-page-kicker"><i class="bi bi-list-check"></i> Tarefas</span>
-      <h5>Lista de tarefas</h5>
-    </div>
-  </div>
+<h5>Lista de Tarefas</h5>
 
   <form action="<?= url('task'); ?>" class="row g-3 mb-3" method="get">
     <input name="sort" type="hidden" value="<?= htmlspecialchars($sort, ENT_QUOTES, 'UTF-8'); ?>">
@@ -125,10 +117,10 @@ $sortIcon = static function (string $column) use ($sort, $direction): string {
 
     <div class="col-12 col-lg-3">
       <div class="d-flex flex-column gap-2 align-items-center align-items-lg-end">
-        <button type="submit" class="btn btn-primary w-100"><i class="bi bi-search"></i> Pesquisar</button>
-        <a href="<?= url('task'); ?>" class="btn btn-secondary w-100"><i class="bi bi-eraser"></i> Limpar</a>
+        <button type="submit" class="btn btn-primary w-100">Pesquisar</button>
+        <a href="<?= url('task'); ?>" class="btn btn-secondary w-100">Limpar</a>
         <?php if (authCan('task.create')): ?>
-          <a href="<?= url('task/create'); ?>" class="btn btn-success w-100"><i class="bi bi-plus-lg"></i> Novo(a)</a>
+          <a href="<?= url('task/create'); ?>" class="btn btn-success w-100">Novo(a)</a>
         <?php endif; ?>
       </div>
     </div>
@@ -136,22 +128,24 @@ $sortIcon = static function (string $column) use ($sort, $direction): string {
 
   <div class="d-flex flex-wrap gap-2 mb-3">
     <?php if (authCan('task.index')): ?>
-      <?= pdfExportButton('task', $queryFilters, 'PDF'); ?>
-      <?= excelExportButton('task', $queryFilters, 'Excel'); ?>
+      <?= pdfExportButton('task', $queryFilters); ?>
+      <?= excelExportButton('task', $queryFilters); ?>
     <?php endif; ?>
   </div>
 
+  <hr>
+
   <div class="table-responsive">
-    <table class="table table-striped table-hover align-middle">
+    <table class="table table-striped table-hover">
       <thead>
         <tr>
-          <th><a class="task-sort-link" href="<?= $sortUrl('id'); ?>"># <i class="bi <?= htmlspecialchars($sortIcon('id'), ENT_QUOTES, 'UTF-8'); ?>"></i></a></th>
-          <th><a class="task-sort-link" href="<?= $sortUrl('title'); ?>">Tarefa <i class="bi <?= htmlspecialchars($sortIcon('title'), ENT_QUOTES, 'UTF-8'); ?>"></i></a></th>
-          <th><a class="task-sort-link" href="<?= $sortUrl('category'); ?>">Categoria <i class="bi <?= htmlspecialchars($sortIcon('category'), ENT_QUOTES, 'UTF-8'); ?>"></i></a></th>
-          <th><a class="task-sort-link" href="<?= $sortUrl('status'); ?>">Situação <i class="bi <?= htmlspecialchars($sortIcon('status'), ENT_QUOTES, 'UTF-8'); ?>"></i></a></th>
+          <th><a class="sort-link" href="<?= $sortUrl('id'); ?>"># <i class="bi <?= htmlspecialchars($sortIcon('id'), ENT_QUOTES, 'UTF-8'); ?>"></i></a></th>
+          <th><a class="sort-link" href="<?= $sortUrl('title'); ?>">Tarefa <i class="bi <?= htmlspecialchars($sortIcon('title'), ENT_QUOTES, 'UTF-8'); ?>"></i></a></th>
+          <th><a class="sort-link" href="<?= $sortUrl('category'); ?>">Categoria <i class="bi <?= htmlspecialchars($sortIcon('category'), ENT_QUOTES, 'UTF-8'); ?>"></i></a></th>
+          <th><a class="sort-link" href="<?= $sortUrl('status'); ?>">Situação <i class="bi <?= htmlspecialchars($sortIcon('status'), ENT_QUOTES, 'UTF-8'); ?>"></i></a></th>
           <th>Responsáveis</th>
           <th>Tempo</th>
-          <th><a class="task-sort-link" href="<?= $sortUrl('created'); ?>">Criada em <i class="bi <?= htmlspecialchars($sortIcon('created'), ENT_QUOTES, 'UTF-8'); ?>"></i></a></th>
+          <th><a class="sort-link" href="<?= $sortUrl('created'); ?>">Criada em <i class="bi <?= htmlspecialchars($sortIcon('created'), ENT_QUOTES, 'UTF-8'); ?>"></i></a></th>
           <th class="text-end">Ações</th>
         </tr>
       </thead>
@@ -195,6 +189,5 @@ $sortIcon = static function (string $column) use ($sort, $direction): string {
   <?php if ($totalPages > 1): ?>
     <?= paginationLinks('task', $page, $totalPages, $queryFilters, 2, 'Anterior', 'Próxima'); ?>
   <?php endif; ?>
-</div>
 
 <script src="<?= url('assets/js/tasks/index.js?v=1'); ?>"></script>

@@ -15,7 +15,7 @@
   <tr><th>Endereço</th><td><?= htmlspecialchars((string) ($bankSlip['payer_street'] ?? ''), ENT_QUOTES, 'UTF-8'); ?></td></tr>
 </table>
 
-<div class="view-actions">
+<div class="form-actions">
   <a href="<?= url('bank_slip'); ?>" class="btn btn-secondary"><i class="bi bi-arrow-left"></i> Voltar</a>
   <?php if (authCan('bank_slip.edit') && (string) ($bankSlip['status'] ?? '') === 'DRAFT'): ?>
     <a href="<?= url('bank_slip/edit/' . (int) ($bankSlip['id'] ?? 0)); ?>" class="btn btn-primary"><i class="bi bi-pencil-square"></i> Editar</a>

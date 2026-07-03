@@ -9,15 +9,7 @@ $queryFilters = http_build_query([
 	'name' => $filters['name'],
 ]);
 ?>
-<link rel="stylesheet" href="<?= url('assets/css/financial_operations_categories/index.css?v=1'); ?>">
-
-<div class="financial-page">
-  <div class="financial-page-header">
-    <div>
-      <span class="financial-page-kicker"><i class="bi bi-tags"></i> Financeiro</span>
-      <h5>Lista de categorias de operações financeiras</h5>
-    </div>
-  </div>
+<h5>Lista de categorias de operações financeiras</h5>
 
   <form action="<?= url('financial_operation_category'); ?>" class="row g-3 mb-3" method="get">
 
@@ -55,7 +47,7 @@ $queryFilters = http_build_query([
   <hr>
 
   <div class="table-responsive">
-    <table class="table table-striped table-hover align-middle">
+    <table class="table table-striped table-hover">
       <thead>
         <tr>
           <th>#</th>
@@ -93,6 +85,5 @@ $queryFilters = http_build_query([
   <?php if ($totalPages > 1): ?>
     <?= paginationLinks('financial_operation_category', $page, $totalPages, $queryFilters, 2, 'Anterior', 'Próxima'); ?>
   <?php endif; ?>
-</div>
 
 <script src="<?= url('assets/js/financial_operations_categories/index.js?v=1'); ?>"></script>

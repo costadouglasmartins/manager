@@ -37,15 +37,9 @@ $stockClass = static function (array $row): string {
 	return 'stock-badge stock-badge-ok';
 };
 ?>
-<link rel="stylesheet" href="<?= url('assets/css/products/index.css?v=1'); ?>">
+<link rel="stylesheet" href="<?= url('assets/css/products/index.css?v=2'); ?>">
 
-<div class="store-page">
-  <div class="store-page-header">
-    <div>
-      <span class="store-page-kicker"><i class="bi bi-box-seam"></i> Loja</span>
-      <h5>Produtos</h5>
-    </div>
-  </div>
+<h5>Lista de Produtos</h5>
 
   <?php if (!empty($formError)): ?>
     <div class="alert alert-danger"><?= htmlspecialchars((string) $formError, ENT_QUOTES, 'UTF-8'); ?></div>
@@ -115,7 +109,7 @@ $stockClass = static function (array $row): string {
   <hr>
 
   <div class="table-responsive">
-    <table class="table table-striped table-hover align-middle">
+    <table class="table table-striped table-hover">
       <thead>
         <tr>
           <th>Imagem</th>
@@ -194,7 +188,6 @@ $stockClass = static function (array $row): string {
   <?php if ($totalPages > 1): ?>
     <?= paginationLinks('product', $page, $totalPages, $queryFilters, 2, 'Anterior', 'Próxima'); ?>
   <?php endif; ?>
-</div>
 
 <?php if (authCan('product.delete')): ?>
   <div class="modal fade" id="productDeleteModal" tabindex="-1" aria-labelledby="productDeleteModalLabel" aria-hidden="true">

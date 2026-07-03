@@ -33,9 +33,7 @@ $accountLabel = static function (array $row): string {
 	return implode(' - ', $parts);
 };
 ?>
-<link rel="stylesheet" href="<?= url('assets/css/bank_files/index.css?v=1'); ?>">
-
-<h5>Remessas</h5>
+<h5>Lista de Remessas</h5>
 
 <?php if (!empty($formError)): ?>
   <div class="alert alert-danger"><?= htmlspecialchars((string) $formError, ENT_QUOTES, 'UTF-8'); ?></div>
@@ -79,7 +77,7 @@ $accountLabel = static function (array $row): string {
 <hr>
 
 <div class="table-responsive">
-  <table class="table table-striped table-hover align-middle">
+  <table class="table table-striped table-hover">
     <thead>
       <tr>
         <th>#</th>

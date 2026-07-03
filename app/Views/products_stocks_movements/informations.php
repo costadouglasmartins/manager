@@ -106,7 +106,7 @@ $movementTypeLabel = static function (string $type): string {
     </table>
   </div>
 
-  <div class="view-actions">
+  <div class="form-actions">
     <a href="<?= url('product_stock_movement'); ?>" class="btn btn-secondary"><i class="bi bi-arrow-left"></i> Voltar</a>
   </div>
 </div>

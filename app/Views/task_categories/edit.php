@@ -3,7 +3,7 @@ $formData = $formData ?? [];
 $category = $category ?? [];
 $activeValue = (string) ($formData['active'] ?? ($category['active'] ?? '1'));
 ?>
-<link rel="stylesheet" href="<?= url('assets/css/task_categories/edit.css?v=1'); ?>">
+<link rel="stylesheet" href="<?= url('assets/css/task_categories/edit.css?v=2'); ?>">
 
 <div class="task-page">
   <div class="task-page-header">
@@ -41,7 +41,7 @@ $activeValue = (string) ($formData['active'] ?? ($category['active'] ?? '1'));
       </div>
     </section>
 
-    <div class="view-actions">
+    <div class="form-actions">
       <a href="<?= url('task_category'); ?>" class="btn btn-secondary"><i class="bi bi-arrow-left"></i> Cancelar</a>
       <button class="btn btn-primary" type="submit"><i class="bi bi-check-lg"></i> Salvar</button>
     </div>

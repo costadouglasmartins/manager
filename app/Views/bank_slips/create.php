@@ -28,7 +28,7 @@
   <div class="col-md-3"><label class="form-label">Cidade</label><input type="text" name="payer_city" class="form-control" required></div>
   <div class="col-md-2"><label class="form-label">UF</label><input type="text" name="payer_state" maxlength="2" class="form-control" required></div>
   <div class="col-md-3"><label class="form-label">CEP</label><input type="text" name="payer_zip_code" class="form-control" required></div>
-  <div class="col-12 d-flex gap-2 justify-content-end mt-3">
+  <div class="col-12 form-actions">
     <a href="<?= url('bank_slip'); ?>" class="btn btn-secondary"><i class="bi bi-arrow-left"></i> Cancelar</a>
     <button class="btn btn-primary" type="submit"><i class="bi bi-check-lg"></i> Salvar</button>
   </div>

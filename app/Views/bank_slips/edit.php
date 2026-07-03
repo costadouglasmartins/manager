@@ -134,7 +134,7 @@ $accountLabel = static function (array $account): string {
     <div class="invalid-feedback">Informe o CEP.</div>
   </div>
 
-  <div class="col-12 d-flex gap-2 justify-content-end mt-3">
+  <div class="col-12 form-actions">
     <a href="<?= url('bank_slip'); ?>" class="btn btn-secondary"><i class="bi bi-arrow-left"></i> Cancelar</a>
     <button class="btn btn-primary" type="submit"><i class="bi bi-check-lg"></i> Salvar</button>
   </div>

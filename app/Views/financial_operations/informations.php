@@ -112,7 +112,7 @@ $balance = (float) ($operation['total_amount'] ?? 0) - $paidTotal;
     </table>
   </div>
 
-  <div class="view-actions">
+  <div class="form-actions">
     <a href="<?= url('financial_operation'); ?>" class="btn btn-secondary"><i class="bi bi-arrow-left"></i> Voltar</a>
     <?php if (authCan('financial_operation_payment.create')): ?>
       <a href="<?= url('financial_operation_payment/create?financial_operation_id=' . (int) $operation['id']); ?>" class="btn btn-outline-primary"><i class="bi bi-plus-lg"></i> Novo pagamento</a>

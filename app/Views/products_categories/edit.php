@@ -32,7 +32,7 @@
       </div>
     </section>
 
-    <div class="store-actions d-flex gap-2 justify-content-end mt-3">
+    <div class="form-actions">
       <a href="<?= url('product_category'); ?>" class="btn btn-secondary">Cancelar</a>
       <button class="btn btn-primary" type="submit"><i class="bi bi-check-lg"></i> Salvar</button>
     </div>

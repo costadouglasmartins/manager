@@ -25,7 +25,7 @@ $fileContent = $fileContent ?? '';
   <p class="text-muted">Não foi possível carregar o conteúdo desta remessa.</p>
 <?php endif; ?>
 
-<div class="view-actions">
+<div class="form-actions">
   <a href="<?= url('bank_file'); ?>" class="btn btn-secondary"><i class="bi bi-arrow-left"></i> Voltar</a>
   <?php if (authCan('bank_slip.generateRemittance') && strtoupper((string) ($bankFile['file_type'] ?? '')) === 'REMITTANCE'): ?>
     <a href="<?= url('bank_slip/downloadRemittance/' . (int) ($bankFile['id'] ?? 0)); ?>" class="btn btn-primary"><i class="bi bi-file-arrow-down"></i> Baixar remessa</a>

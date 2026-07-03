@@ -1,7 +1,7 @@
 <?php
 $formData = $formData ?? [];
 ?>
-<link rel="stylesheet" href="<?= url('assets/css/task_categories/create.css?v=1'); ?>">
+<link rel="stylesheet" href="<?= url('assets/css/task_categories/create.css?v=2'); ?>">
 
 <div class="task-page">
   <div class="task-page-header">
@@ -39,7 +39,7 @@ $formData = $formData ?? [];
       </div>
     </section>
 
-    <div class="view-actions">
+    <div class="form-actions">
       <a href="<?= url('task_category'); ?>" class="btn btn-secondary"><i class="bi bi-arrow-left"></i> Cancelar</a>
       <button class="btn btn-primary" type="submit"><i class="bi bi-check-lg"></i> Salvar</button>
     </div>

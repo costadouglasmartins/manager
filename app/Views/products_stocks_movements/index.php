@@ -46,15 +46,7 @@ $productLabel = static function (array $product): string {
 	return ($sku !== '' ? $sku . ' - ' : '') . $name;
 };
 ?>
-<link rel="stylesheet" href="<?= url('assets/css/products_stocks_movements/index.css?v=1'); ?>">
-
-<div class="store-page">
-  <div class="store-page-header">
-    <div>
-      <span class="store-page-kicker"><i class="bi bi-arrow-left-right"></i> Loja</span>
-      <h5>Movimentações de estoque</h5>
-    </div>
-  </div>
+<h5>Lista de Movimentações de Estoque</h5>
 
   <?php if (!empty($formError)): ?>
     <div class="alert alert-danger"><?= htmlspecialchars((string) $formError, ENT_QUOTES, 'UTF-8'); ?></div>
@@ -112,7 +104,7 @@ $productLabel = static function (array $product): string {
   <hr>
 
   <div class="table-responsive">
-    <table class="table table-striped table-hover align-middle">
+    <table class="table table-striped table-hover">
       <thead>
         <tr>
           <th>#</th>
@@ -177,7 +169,6 @@ $productLabel = static function (array $product): string {
   <?php if ($totalPages > 1): ?>
     <?= paginationLinks('product_stock_movement', $page, $totalPages, $queryFilters, 2, 'Anterior', 'Próxima'); ?>
   <?php endif; ?>
-</div>
 
 <?php if (authCan('product_stock_movement.delete')): ?>
   <div class="modal fade" id="productStockMovementDeleteModal" tabindex="-1" aria-labelledby="productStockMovementDeleteModalLabel" aria-hidden="true">

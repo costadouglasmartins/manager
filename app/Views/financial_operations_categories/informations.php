@@ -49,7 +49,7 @@ $formatDateTime = static function ($value): string {
     </table>
   </div>
 
-  <div class="view-actions">
+  <div class="form-actions">
     <a href="<?= url('financial_operation_category'); ?>" class="btn btn-secondary"><i class="bi bi-arrow-left"></i> Voltar</a>
   </div>
 </div>

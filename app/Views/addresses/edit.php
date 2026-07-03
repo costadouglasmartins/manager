@@ -40,7 +40,7 @@
 
   </div>
   <br>
-  <div class="d-flex flex-column gap-2 align-items-center align-items-lg-end mt-3">
+  <div class="form-actions">
     <button class="btn btn-primary" type="submit">Salvar</button>
   </div>
 </form>

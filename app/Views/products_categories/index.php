@@ -10,15 +10,7 @@ $queryFilters = http_build_query([
 	'active' => $filters['active'],
 ]);
 ?>
-<link rel="stylesheet" href="<?= url('assets/css/products_categories/index.css?v=1'); ?>">
-
-<div class="store-page">
-  <div class="store-page-header">
-    <div>
-      <span class="store-page-kicker"><i class="bi bi-tags"></i> Loja</span>
-      <h5>Categorias de produtos</h5>
-    </div>
-  </div>
+<h5>Lista de Categorias de Produtos</h5>
 
   <form action="<?= url('product_category'); ?>" class="row g-3 mb-3" method="get">
     <div class="col-12 col-lg-9">
@@ -60,7 +52,7 @@ $queryFilters = http_build_query([
   <hr>
 
   <div class="table-responsive">
-    <table class="table table-striped table-hover align-middle">
+    <table class="table table-striped table-hover">
       <thead>
         <tr>
           <th>#</th>
@@ -102,6 +94,5 @@ $queryFilters = http_build_query([
   <?php if ($totalPages > 1): ?>
     <?= paginationLinks('product_category', $page, $totalPages, $queryFilters, 2, 'Anterior', 'Próxima'); ?>
   <?php endif; ?>
-</div>
 
 <script src="<?= url('assets/js/products_categories/index.js?v=1'); ?>"></script>
