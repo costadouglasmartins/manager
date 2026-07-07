@@ -853,6 +853,42 @@ code {
   font-weight: 850;
 }
 
+.list-export-dropdown {
+  max-width: 100%;
+}
+
+.list-export-menu {
+  min-width: 250px;
+  max-width: min(320px, calc(100vw - 1.5rem));
+  padding: 0.65rem;
+}
+
+.list-export-menu-title {
+  margin-bottom: 0.45rem;
+  color: var(--app-muted);
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.list-export-columns {
+  max-height: 260px;
+  overflow-y: auto;
+}
+
+.list-export-column {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  border-radius: 6px;
+  white-space: normal;
+}
+
+.list-export-column .form-check-input {
+  flex: 0 0 auto;
+  margin: 0;
+}
+
 @media (max-width: 991.98px) {
   .app-navbar .navbar-collapse {
     margin-top: 0.65rem;

@@ -55,6 +55,7 @@ require_once ROOT_PATH . '/app/Core/AuditsChanges.php';
 require_once ROOT_PATH . '/app/Core/Model.php';
 require_once ROOT_PATH . '/app/Helpers/Helper.php';
 require_once ROOT_PATH . '/app/Helpers/PaginationHelper.php';
+require_once ROOT_PATH . '/app/Helpers/ListExportHelper.php';
 require_once ROOT_PATH . '/app/Helpers/ExcelExportHelper.php';
 require_once ROOT_PATH . '/app/Helpers/PdfExportHelper.php';
 require_once ROOT_PATH . '/app/Helpers/RichTextHelper.php';

@@ -51,6 +51,137 @@ document.querySelectorAll(".table-responsive").forEach((tableWrapper) => {
     }
 })();
 
+(() => {
+  const exportDropdowns = document.querySelectorAll("[data-list-export-dropdown]");
+
+  if (!exportDropdowns.length)
+    {
+    return;
+    }
+
+  const modalId = "listExportWarningModal";
+  const warningMessage = "Selecione pelo menos uma coluna para exportar.";
+
+  function ensureWarningModal()
+    {
+    let modalElement = document.getElementById(modalId);
+    if (modalElement)
+      {
+      return modalElement;
+      }
+
+    modalElement = document.createElement("div");
+    modalElement.className = "modal fade";
+    modalElement.id = modalId;
+    modalElement.tabIndex = -1;
+    modalElement.setAttribute("aria-labelledby", `${modalId}Label`);
+    modalElement.setAttribute("aria-hidden", "true");
+    modalElement.innerHTML = `
+      <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title" id="${modalId}Label">Exportação</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+          </div>
+          <div class="modal-body" data-list-export-warning-message></div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-primary" data-bs-dismiss="modal">Entendi</button>
+          </div>
+        </div>
+      </div>
+    `;
+
+    document.body.appendChild(modalElement);
+    return modalElement;
+    }
+
+  function showWarningModal()
+    {
+    const modalElement = ensureWarningModal();
+    const messageElement = modalElement.querySelector("[data-list-export-warning-message]");
+    if (messageElement)
+      {
+      messageElement.textContent = warningMessage;
+      }
+
+    if (window.bootstrap && window.bootstrap.Modal)
+      {
+      window.bootstrap.Modal.getOrCreateInstance(modalElement).show();
+      return;
+      }
+
+    alert(warningMessage);
+    }
+
+  function checkedColumns(dropdown)
+    {
+    return [...dropdown.querySelectorAll(".js-list-export-column:checked")];
+    }
+
+  function setColumns(dropdown, checked)
+    {
+    dropdown.querySelectorAll(".js-list-export-column").forEach((input) => {
+      input.checked = checked;
+    });
+    }
+
+  function exportUrl(baseUrl, selectedColumns)
+    {
+    const url = new URL(baseUrl, window.location.href);
+
+    Array.from(url.searchParams.keys()).forEach((key) => {
+      if (/^export_columns(?:\[.*\])?$/.test(key))
+        {
+        url.searchParams.delete(key);
+        }
+    });
+
+    selectedColumns.forEach((input) => {
+      url.searchParams.append("export_columns[]", input.value);
+    });
+
+    return url.toString();
+    }
+
+  exportDropdowns.forEach((dropdown) => {
+    dropdown.addEventListener("click", (event) => {
+      const target = event.target instanceof Element ? event.target : null;
+      if (!target)
+        {
+        return;
+        }
+
+      if (target.closest(".js-list-export-select-all"))
+        {
+        setColumns(dropdown, true);
+        return;
+        }
+
+      if (target.closest(".js-list-export-clear"))
+        {
+        setColumns(dropdown, false);
+        return;
+        }
+
+      const submit = target.closest(".js-list-export-submit");
+      if (!submit)
+        {
+        return;
+        }
+
+      const selectedColumns = checkedColumns(dropdown);
+      if (!selectedColumns.length)
+        {
+        event.preventDefault();
+        showWarningModal();
+        return;
+        }
+
+      submit.href = exportUrl(submit.dataset.listExportUrl || submit.href, selectedColumns);
+    });
+  });
+})();
+
 /**
  * Applies a mask to CPF and CNPJ values, including alphanumeric CNPJ.
  * @param {String} value 

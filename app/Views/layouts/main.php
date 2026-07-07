@@ -18,7 +18,7 @@ $hasTenantContext = class_exists('App\\Core\\TenantContext') && \App\Core\Tenant
   </script>
   <link rel="stylesheet" href="<?= url('assets/css/bootstrap.min.css'); ?>">
   <link rel="stylesheet" href="<?= url('assets/images/bootstrap-icons.min.css'); ?>">
-  <link rel="stylesheet" href="<?= url('assets/css/main.css?v=12'); ?>">
+  <link rel="stylesheet" href="<?= url('assets/css/main.css?v=13'); ?>">
   <link rel="stylesheet" href="<?= url('assets/css/menu.css?v=3'); ?>">
   <link rel="apple-touch-icon" sizes="180x180" href="<?= url('assets/images/apple-touch-icon.png'); ?>">
   <link rel="icon" type="image/png" sizes="32x32" href="<?= url('assets/images/favicon-32x32.png'); ?>">
@@ -42,7 +42,7 @@ $hasTenantContext = class_exists('App\\Core\\TenantContext') && \App\Core\Tenant
   
   <script src="<?= url('assets/js/bootstrap.bundle.min.js'); ?>"></script>
   <script src="<?= url('assets/js/menu.js?v=3'); ?>"></script>
-  <script src="<?= url('assets/js/main.js?v=4'); ?>"></script>
+  <script src="<?= url('assets/js/main.js?v=5'); ?>"></script>
   <script src="<?= url('assets/js/helper.js?v=1'); ?>"></script>
   <?php if ($isAuthenticated && $hasTenantContext): ?>
     <?php require __DIR__ . '/../support_chats/widget.php'; ?>

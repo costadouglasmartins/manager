@@ -20,7 +20,7 @@ if (!function_exists('pdfExportUrl'))
 			parse_str($queryString, $params);
 			}
 
-		unset($params['page'], $params['url'], $params['format']);
+		unset($params['page'], $params['url'], $params['format'], $params['export_columns']);
 
 		$path = trim($route, '/') . '/export-pdf';
 		$query = http_build_query($params);
@@ -48,6 +48,11 @@ if (!function_exists('pdfExportButton'))
 	): string
 		{
 		$href = pdfExportUrl($route, $queryString);
+
+		if (function_exists('listExportDropdownButton'))
+			{
+			return listExportDropdownButton($route, $href, 'pdf', $label, $class, 'bi bi-file-earmark-pdf');
+			}
 
 		return '<a href="' . htmlspecialchars($href, ENT_QUOTES, 'UTF-8') . '" class="' . htmlspecialchars($class, ENT_QUOTES, 'UTF-8') . '">' .
 			'<i class="bi bi-file-earmark-pdf me-1" aria-hidden="true"></i>' .

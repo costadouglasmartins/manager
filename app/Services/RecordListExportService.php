@@ -68,6 +68,28 @@ class RecordListExportService
 		}
 
 	/**
+	 * Returns the columns available for the resource export picker.
+	 *
+	 * @param string $resource Resource key.
+	 * @return array<int, array{key: string, label: string}>
+	 */
+	public function exportColumns(string $resource): array
+		{
+		$definition = $this->definition($resource);
+		$columns = [];
+
+		foreach (($definition['columns'] ?? []) as $index => $column)
+			{
+			$columns[] = [
+				'key' => (string) $index,
+				'label' => (string) ($column['label'] ?? ('Coluna ' . ((int) $index + 1))),
+			];
+			}
+
+		return $columns;
+		}
+
+	/**
 	 * Builds the shared export payload used by concrete export formats.
 	 *
 	 * @param string $resource Resource key derived from the controller route.
@@ -77,6 +99,7 @@ class RecordListExportService
 	protected function buildExportPayload(string $resource, array $query = []): array
 		{
 		$definition = $this->definition($resource);
+		$definition['columns'] = $this->selectedColumns($definition['columns'] ?? [], $query);
 		$filters = $this->extractFilters($query, $definition['filters'] ?? []);
 		if (!empty($definition['normalizeFilters']) && is_callable($definition['normalizeFilters']))
 			{
@@ -437,6 +460,49 @@ class RecordListExportService
 			}
 
 		return $args;
+		}
+
+	/**
+	 * Keeps only columns requested by the export UI, preserving definition order.
+	 *
+	 * @param array<int, array<string, mixed>> $columns Configured export columns.
+	 * @param array<string, mixed> $query Request query.
+	 * @return array<int, array<string, mixed>>
+	 */
+	private function selectedColumns(array $columns, array $query): array
+		{
+		if (!array_key_exists('export_columns', $query))
+			{
+			return $columns;
+			}
+
+		$selected = $query['export_columns'];
+		if (!is_array($selected))
+			{
+			$selected = [$selected];
+			}
+
+		$selected = array_values(array_unique(array_filter(
+			array_map(static fn ($key): string => trim((string) $key), $selected),
+			static fn (string $key): bool => $key !== ''
+		)));
+
+		if (empty($selected))
+			{
+			return $columns;
+			}
+
+		$selectedLookup = array_fill_keys($selected, true);
+		$filteredColumns = [];
+		foreach ($columns as $index => $column)
+			{
+			if (isset($selectedLookup[(string) $index]))
+				{
+				$filteredColumns[] = $column;
+				}
+			}
+
+		return !empty($filteredColumns) ? $filteredColumns : $columns;
 		}
 
 	/**
