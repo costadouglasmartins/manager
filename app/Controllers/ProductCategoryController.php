@@ -8,6 +8,18 @@ use App\Models\ProductCategory;
 class ProductCategoryController extends TenantAwareController
 	{
 	/**
+	 * Reads product category list filters from the current request.
+	 */
+	private function readFilters(): array
+		{
+		return [
+			'id'     => isset($_GET['id']) ? trim($_GET['id']) : '',
+			'name'   => isset($_GET['name']) ? trim($_GET['name']) : '',
+			'active' => isset($_GET['active']) ? trim($_GET['active']) : '',
+		];
+		}
+
+	/**
 	 * Lists product categories with filters and pagination.
 	 */
 	public function index(): void
@@ -15,11 +27,7 @@ class ProductCategoryController extends TenantAwareController
 		$this->requirePermission('product_category.index');
 
 		$productCategory = new ProductCategory();
-		$filters = [
-			'id'     => isset($_GET['id']) ? trim($_GET['id']) : '',
-			'name'   => isset($_GET['name']) ? trim($_GET['name']) : '',
-			'active' => isset($_GET['active']) ? trim($_GET['active']) : '',
-		];
+		$filters = $this->readFilters();
 
 		$page = isset($_GET['page']) ? (int) $_GET['page'] : 1;
 		if ($page < 1)
@@ -136,6 +144,59 @@ class ProductCategoryController extends TenantAwareController
 			'title'    => 'Informações da categoria de produto',
 			'category' => $data['product_category'],
 		]);
+		}
+
+	/**
+	 * Deletes an existing product category.
+	 *
+	 * @param mixed $id Category identifier.
+	 */
+	public function delete($id): void
+		{
+		$this->requirePermission('product_category.delete');
+
+		$productCategory = new ProductCategory();
+
+		try
+			{
+			$productCategory->delete($id);
+			$this->redirect('product_category');
+			}
+		catch (\Throwable $e)
+			{
+			if ($this->wantsJson())
+				{
+				$this->json(['error' => $e->getMessage()], 422);
+				}
+
+			$filters = $this->readFilters();
+			$page = isset($_GET['page']) ? (int) $_GET['page'] : 1;
+			if ($page < 1)
+				{
+				$page = 1;
+				}
+
+			$perPage = 10;
+			$offset = ($page - 1) * $perPage;
+			$categories = $productCategory->search($filters, $perPage, $offset);
+			$total = $productCategory->count($filters);
+			$totalPages = (int) ceil($total / $perPage);
+			if ($totalPages < 1)
+				{
+				$totalPages = 1;
+				}
+
+			http_response_code(422);
+			$this->view('products_categories/index', [
+				'categories' => $categories,
+				'title'      => 'Categorias de produtos',
+				'filters'    => $filters,
+				'page'       => $page,
+				'totalPages' => $totalPages,
+				'total'      => $total,
+				'formError'  => $e->getMessage(),
+			]);
+			}
 		}
 	}
 ?>

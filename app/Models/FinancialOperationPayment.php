@@ -109,6 +109,51 @@ class FinancialOperationPayment extends TenantModel
 		}
 
 	/**
+	 * Deletes an existing financial operation payment when no bank slip depends on it.
+	 *
+	 * @param mixed $id Payment identifier.
+	 */
+	public function delete($id): void
+		{
+		$paymentId = (int) $id;
+		if ($paymentId <= 0)
+			{
+			throw new \InvalidArgumentException('Pagamento financeiro inválido.');
+			}
+
+		try
+			{
+			$this->db->beginTransaction();
+
+			$payment = $this->find($paymentId);
+			if (!$payment)
+				{
+				throw new \InvalidArgumentException('Pagamento financeiro não encontrado.');
+				}
+
+			if ($this->hasLinkedBankSlips($paymentId))
+				{
+				throw new \RuntimeException('Não é possível excluir o pagamento financeiro porque existem boletos vinculados.');
+				}
+
+			$stmt = $this->db->prepare("DELETE FROM financial_operations_payments WHERE id = :id");
+			$stmt->execute(['id' => $paymentId]);
+
+			$this->auditDelete('financial_operation_payment', 'financial_operations_payments', $paymentId, $payment);
+			$this->db->commit();
+			}
+		catch (\Exception $e)
+			{
+			if ($this->db->inTransaction())
+				{
+				$this->db->rollBack();
+				}
+
+			throw $e;
+			}
+		}
+
+	/**
 	 * Searches payments using the provided filters and pagination.
 	 */
 	public function search(array $filters = [], int $limit = 10, int $offset = 0): array
@@ -207,6 +252,21 @@ class FinancialOperationPayment extends TenantModel
 	public function findAllByFinancialOperationPaymentId($id): array
 		{
 		return ['financial_operation_payment' => $this->find($id)];
+		}
+
+	/**
+	 * Checks whether the payment is linked to any bank slip.
+	 */
+	private function hasLinkedBankSlips(int $paymentId): bool
+		{
+		$stmt = $this->db->prepare("
+			SELECT COUNT(*)
+			FROM bank_slips
+			WHERE financial_operation_payment_id = :financial_operation_payment_id
+		");
+		$stmt->execute(['financial_operation_payment_id' => $paymentId]);
+
+		return (int) $stmt->fetchColumn() > 0;
 		}
 
 	/**

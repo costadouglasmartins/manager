@@ -129,6 +129,60 @@ class FinancialOperation extends TenantModel
 		}
 
 	/**
+	 * Deletes an existing financial operation and its payments when no bank slips depend on them.
+	 *
+	 * @param mixed $id Operation identifier.
+	 */
+	public function delete($id): void
+		{
+		$operationId = (int) $id;
+		if ($operationId <= 0)
+			{
+			throw new \InvalidArgumentException('Operação financeira inválida.');
+			}
+
+		try
+			{
+			$this->db->beginTransaction();
+
+			$operation = $this->findAllByFinancialOperationId($operationId);
+			if (empty($operation['financial_operation']))
+				{
+				throw new \InvalidArgumentException('Operação financeira não encontrada.');
+				}
+
+			if ($this->hasLinkedBankSlips($operationId))
+				{
+				throw new \RuntimeException('Não é possível excluir a operação financeira porque existem boletos vinculados aos seus pagamentos.');
+				}
+
+			$deletePayments = $this->db->prepare("
+				DELETE FROM financial_operations_payments
+				WHERE financial_operation_id = :financial_operation_id
+			");
+			$deletePayments->execute(['financial_operation_id' => $operationId]);
+
+			$stmt = $this->db->prepare("DELETE FROM financial_operations WHERE id = :id");
+			$stmt->execute(['id' => $operationId]);
+
+			$this->auditDelete('financial_operation', 'financial_operations', $operationId, $operation, [
+				'affected_tables' => ['financial_operations', 'financial_operations_payments'],
+				'deleted_payments_count' => (int) $deletePayments->rowCount(),
+			]);
+			$this->db->commit();
+			}
+		catch (\Exception $e)
+			{
+			if ($this->db->inTransaction())
+				{
+				$this->db->rollBack();
+				}
+
+			throw $e;
+			}
+		}
+
+	/**
 	 * Creates or updates the financial value represented by one spreadsheet cell.
 	 */
 	public function saveSpreadsheetCell(array $data): array
@@ -874,6 +928,22 @@ class FinancialOperation extends TenantModel
 			'financial_operation' => $this->find($id),
 			'payments'           => $this->getPayments($id),
 		];
+		}
+
+	/**
+	 * Checks whether any operation payment is linked to a bank slip.
+	 */
+	private function hasLinkedBankSlips(int $operationId): bool
+		{
+		$stmt = $this->db->prepare("
+			SELECT COUNT(*)
+			FROM bank_slips AS BankSlip
+			INNER JOIN financial_operations_payments AS FinancialOperationPayment ON FinancialOperationPayment.id = BankSlip.financial_operation_payment_id
+			WHERE FinancialOperationPayment.financial_operation_id = :financial_operation_id
+		");
+		$stmt->execute(['financial_operation_id' => $operationId]);
+
+		return (int) $stmt->fetchColumn() > 0;
 		}
 
 	/**

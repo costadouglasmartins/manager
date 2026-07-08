@@ -9,6 +9,18 @@ use App\Models\FinancialOperationSubcategory;
 class FinancialOperationSubcategoryController extends TenantAwareController
 	{
 	/**
+	 * Reads financial operation subcategory list filters from the current request.
+	 */
+	private function readFilters(): array
+		{
+		return [
+			'id'                              => isset($_GET['id']) ? trim($_GET['id']) : '',
+			'financial_operation_category_id' => isset($_GET['financial_operation_category_id']) ? trim($_GET['financial_operation_category_id']) : '',
+			'name'                            => isset($_GET['name']) ? trim($_GET['name']) : '',
+		];
+		}
+
+	/**
 	 * Lists financial operation subcategories with filters and pagination.
 	 */
 	public function index(): void
@@ -17,11 +29,7 @@ class FinancialOperationSubcategoryController extends TenantAwareController
 
 		$subcategory = new FinancialOperationSubcategory();
 		$category = new FinancialOperationCategory();
-		$filters = [
-			'id'                              => isset($_GET['id']) ? trim($_GET['id']) : '',
-			'financial_operation_category_id' => isset($_GET['financial_operation_category_id']) ? trim($_GET['financial_operation_category_id']) : '',
-			'name'                            => isset($_GET['name']) ? trim($_GET['name']) : '',
-		];
+		$filters = $this->readFilters();
 
 		$page = isset($_GET['page']) ? (int) $_GET['page'] : 1;
 		if ($page < 1)
@@ -146,6 +154,61 @@ class FinancialOperationSubcategoryController extends TenantAwareController
 			'title'       => 'Informações sobre a subcategoria financeira',
 			'subcategory' => $data['financial_operation_subcategory'],
 		]);
+		}
+
+	/**
+	 * Deletes an existing financial operation subcategory.
+	 *
+	 * @param mixed $id Subcategory identifier.
+	 */
+	public function delete($id): void
+		{
+		$this->requirePermission('financial_operation_subcategory.delete');
+
+		$subcategory = new FinancialOperationSubcategory();
+		$category = new FinancialOperationCategory();
+
+		try
+			{
+			$subcategory->delete($id);
+			$this->redirect('financial_operation_subcategory');
+			}
+		catch (\Throwable $e)
+			{
+			if ($this->wantsJson())
+				{
+				$this->json(['error' => $e->getMessage()], 422);
+				}
+
+			$filters = $this->readFilters();
+			$page = isset($_GET['page']) ? (int) $_GET['page'] : 1;
+			if ($page < 1)
+				{
+				$page = 1;
+				}
+
+			$perPage = 10;
+			$offset = ($page - 1) * $perPage;
+			$subcategories = $subcategory->search($filters, $perPage, $offset);
+			$total = $subcategory->count($filters);
+			$totalPages = (int) ceil($total / $perPage);
+			if ($totalPages < 1)
+				{
+				$totalPages = 1;
+				}
+
+			http_response_code(422);
+			$this->view('financial_operations_subcategories/index', [
+				'subcategories' => $subcategories,
+				'categories'    => $category->getOptions(),
+				'title'         => 'Lista de subcategorias de operações financeiras',
+				'filters'       => $filters,
+				'page'          => $page,
+				'totalPages'    => $totalPages,
+				'total'         => $total,
+				'formError'     => $e->getMessage(),
+			]);
+			}
 		}
 	}
 ?>

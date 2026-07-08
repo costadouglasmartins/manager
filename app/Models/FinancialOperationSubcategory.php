@@ -120,6 +120,60 @@ class FinancialOperationSubcategory extends TenantModel
 		}
 
 	/**
+	 * Deletes an existing financial operation subcategory and keeps linked operations without a subcategory.
+	 *
+	 * @param mixed $id Subcategory identifier.
+	 */
+	public function delete($id): void
+		{
+		$subcategoryId = (int) $id;
+		if ($subcategoryId <= 0)
+			{
+			throw new \InvalidArgumentException('Subcategoria financeira inválida.');
+			}
+
+		try
+			{
+			$this->db->beginTransaction();
+
+			$subcategory = $this->find($subcategoryId);
+			if (!$subcategory)
+				{
+				throw new \InvalidArgumentException('Subcategoria financeira não encontrada.');
+				}
+
+			$unlinkOperations = $this->db->prepare("
+				UPDATE financial_operations
+				SET financial_operation_subcategory_id = NULL,
+				    modified = :modified
+				WHERE financial_operation_subcategory_id = :financial_operation_subcategory_id
+			");
+			$unlinkOperations->execute([
+				'modified'                           => date('Y-m-d H:i:s'),
+				'financial_operation_subcategory_id' => $subcategoryId,
+			]);
+
+			$stmt = $this->db->prepare("DELETE FROM financial_operations_subcategories WHERE id = :id");
+			$stmt->execute(['id' => $subcategoryId]);
+
+			$this->auditDelete('financial_operation_subcategory', 'financial_operations_subcategories', $subcategoryId, $subcategory, [
+				'affected_tables' => ['financial_operations_subcategories', 'financial_operations'],
+				'unlinked_operations_count' => (int) $unlinkOperations->rowCount(),
+			]);
+			$this->db->commit();
+			}
+		catch (\Exception $e)
+			{
+			if ($this->db->inTransaction())
+				{
+				$this->db->rollBack();
+				}
+
+			throw $e;
+			}
+		}
+
+	/**
 	 * Searches subcategories using the provided filters and pagination.
 	 */
 	public function search(array $filters = [], int $limit = 10, int $offset = 0): array

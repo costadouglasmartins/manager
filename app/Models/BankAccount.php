@@ -159,6 +159,56 @@ class BankAccount extends TenantModel
 		}
 
 	/**
+	 * Deletes an existing bank account when it has no dependent bank records.
+	 *
+	 * @param mixed $id Bank account identifier.
+	 */
+	public function delete($id): void
+		{
+		$bankAccountId = (int) $id;
+		if ($bankAccountId <= 0)
+			{
+			throw new \InvalidArgumentException('Conta bancária inválida.');
+			}
+
+		try
+			{
+			$this->db->beginTransaction();
+
+			$bankAccount = $this->find($bankAccountId);
+			if (!$bankAccount)
+				{
+				throw new \InvalidArgumentException('Conta bancária não encontrada.');
+				}
+
+			if ($this->hasBankSlips($bankAccountId))
+				{
+				throw new \RuntimeException('Não é possível excluir a conta bancária porque existem boletos vinculados.');
+				}
+
+			if ($this->hasBankFiles($bankAccountId))
+				{
+				throw new \RuntimeException('Não é possível excluir a conta bancária porque existem arquivos bancários vinculados.');
+				}
+
+			$stmt = $this->db->prepare("DELETE FROM bank_accounts WHERE id = :id");
+			$stmt->execute(['id' => $bankAccountId]);
+
+			$this->auditDelete('bank_account', 'bank_accounts', $bankAccountId, $bankAccount);
+			$this->db->commit();
+			}
+		catch (\Exception $e)
+			{
+			if ($this->db->inTransaction())
+				{
+				$this->db->rollBack();
+				}
+
+			throw $e;
+			}
+		}
+
+	/**
 	 * Searches bank accounts using the provided filters and pagination.
 	 */
 	public function search(array $filters = [], int $limit = 10, int $offset = 0): array
@@ -293,6 +343,36 @@ class BankAccount extends TenantModel
 	public function findAllByBankAccountId($id): array
 		{
 		return ['bank_account' => $this->find($id)];
+		}
+
+	/**
+	 * Checks whether a bank account has linked bank slips.
+	 */
+	private function hasBankSlips(int $bankAccountId): bool
+		{
+		$stmt = $this->db->prepare("
+			SELECT COUNT(*)
+			FROM bank_slips
+			WHERE bank_account_id = :bank_account_id
+		");
+		$stmt->execute(['bank_account_id' => $bankAccountId]);
+
+		return (int) $stmt->fetchColumn() > 0;
+		}
+
+	/**
+	 * Checks whether a bank account has linked bank files.
+	 */
+	private function hasBankFiles(int $bankAccountId): bool
+		{
+		$stmt = $this->db->prepare("
+			SELECT COUNT(*)
+			FROM bank_files
+			WHERE bank_account_id = :bank_account_id
+		");
+		$stmt->execute(['bank_account_id' => $bankAccountId]);
+
+		return (int) $stmt->fetchColumn() > 0;
 		}
 
 	/**

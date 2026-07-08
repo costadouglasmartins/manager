@@ -133,6 +133,60 @@ class ProductCategory extends TenantModel
 		}
 
 	/**
+	 * Deletes an existing product category and keeps linked products without a category.
+	 *
+	 * @param mixed $id Category identifier.
+	 */
+	public function delete($id): void
+		{
+		$categoryId = (int) $id;
+		if ($categoryId <= 0)
+			{
+			throw new \InvalidArgumentException('Categoria de produto inválida.');
+			}
+
+		try
+			{
+			$this->db->beginTransaction();
+
+			$category = $this->find($categoryId);
+			if (!$category)
+				{
+				throw new \InvalidArgumentException('Categoria de produto não encontrada.');
+				}
+
+			$unlinkProducts = $this->db->prepare("
+				UPDATE products
+				SET product_category_id = NULL,
+				    modified = :modified
+				WHERE product_category_id = :product_category_id
+			");
+			$unlinkProducts->execute([
+				'modified'            => date('Y-m-d H:i:s'),
+				'product_category_id' => $categoryId,
+			]);
+
+			$stmt = $this->db->prepare("DELETE FROM products_categories WHERE id = :id");
+			$stmt->execute(['id' => $categoryId]);
+
+			$this->auditDelete('product_category', 'products_categories', $categoryId, $category, [
+				'affected_tables' => ['products_categories', 'products'],
+				'unlinked_products_count' => (int) $unlinkProducts->rowCount(),
+			]);
+			$this->db->commit();
+			}
+		catch (\Exception $e)
+			{
+			if ($this->db->inTransaction())
+				{
+				$this->db->rollBack();
+				}
+
+			throw $e;
+			}
+		}
+
+	/**
 	 * Searches product categories using filters and pagination.
 	 */
 	public function search(array $filters = [], int $limit = 10, int $offset = 0): array

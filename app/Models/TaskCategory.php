@@ -136,6 +136,59 @@ class TaskCategory extends TenantModel
 		}
 
 	/**
+	 * Deletes an existing task category and keeps linked tasks without a category.
+	 * @param mixed $id Category identifier.
+	 **/
+	public function delete($id): void
+		{
+		$categoryId = (int) $id;
+		if ($categoryId <= 0)
+			{
+			throw new \InvalidArgumentException('Categoria de tarefa inválida.');
+			}
+
+		try
+			{
+			$this->db->beginTransaction();
+
+			$category = $this->find($categoryId);
+			if (!$category)
+				{
+				throw new \InvalidArgumentException('Categoria de tarefa não encontrada.');
+				}
+
+			$unlinkTasks = $this->db->prepare("
+				UPDATE tasks
+				SET task_category_id = NULL,
+				    modified = :modified
+				WHERE task_category_id = :task_category_id
+			");
+			$unlinkTasks->execute([
+				'modified'         => date('Y-m-d H:i:s'),
+				'task_category_id' => $categoryId,
+			]);
+
+			$stmt = $this->db->prepare("DELETE FROM task_categories WHERE id = :id");
+			$stmt->execute(['id' => $categoryId]);
+
+			$this->auditDelete('task_category', 'task_categories', $categoryId, $category, [
+				'affected_tables' => ['task_categories', 'tasks'],
+				'unlinked_tasks_count' => (int) $unlinkTasks->rowCount(),
+			]);
+			$this->db->commit();
+			}
+		catch (\Exception $e)
+			{
+			if ($this->db->inTransaction())
+				{
+				$this->db->rollBack();
+				}
+
+			throw $e;
+			}
+		}
+
+	/**
 	 * Searches task categories using filters and pagination.
 	 **/
 	public function search(array $filters = [], ?int $limit = 10, int $offset = 0): array

@@ -9,6 +9,18 @@ use App\Models\FinancialOperationPayment;
 class FinancialOperationPaymentController extends TenantAwareController
 	{
 	/**
+	 * Reads financial operation payment list filters from the current request.
+	 */
+	private function readFilters(): array
+		{
+		return [
+			'id'                     => isset($_GET['id']) ? trim($_GET['id']) : '',
+			'financial_operation_id' => isset($_GET['financial_operation_id']) ? trim($_GET['financial_operation_id']) : '',
+			'value'                  => isset($_GET['value']) ? trim($_GET['value']) : '',
+		];
+		}
+
+	/**
 	 * Lists financial operation payments with filters and pagination.
 	 */
 	public function index(): void
@@ -17,11 +29,7 @@ class FinancialOperationPaymentController extends TenantAwareController
 
 		$payment = new FinancialOperationPayment();
 		$operation = new FinancialOperation();
-		$filters = [
-			'id'                     => isset($_GET['id']) ? trim($_GET['id']) : '',
-			'financial_operation_id' => isset($_GET['financial_operation_id']) ? trim($_GET['financial_operation_id']) : '',
-			'value'                  => isset($_GET['value']) ? trim($_GET['value']) : '',
-		];
+		$filters = $this->readFilters();
 
 		$page = isset($_GET['page']) ? (int) $_GET['page'] : 1;
 		if ($page < 1)
@@ -148,6 +156,61 @@ class FinancialOperationPaymentController extends TenantAwareController
 			'title'   => 'Informações sobre o pagamento financeiro',
 			'payment' => $data['financial_operation_payment'],
 		]);
+		}
+
+	/**
+	 * Deletes an existing financial operation payment.
+	 *
+	 * @param mixed $id Payment identifier.
+	 */
+	public function delete($id): void
+		{
+		$this->requirePermission('financial_operation_payment.delete');
+
+		$payment = new FinancialOperationPayment();
+		$operation = new FinancialOperation();
+
+		try
+			{
+			$payment->delete($id);
+			$this->redirect('financial_operation_payment');
+			}
+		catch (\Throwable $e)
+			{
+			if ($this->wantsJson())
+				{
+				$this->json(['error' => $e->getMessage()], 422);
+				}
+
+			$filters = $this->readFilters();
+			$page = isset($_GET['page']) ? (int) $_GET['page'] : 1;
+			if ($page < 1)
+				{
+				$page = 1;
+				}
+
+			$perPage = 10;
+			$offset = ($page - 1) * $perPage;
+			$payments = $payment->search($filters, $perPage, $offset);
+			$total = $payment->count($filters);
+			$totalPages = (int) ceil($total / $perPage);
+			if ($totalPages < 1)
+				{
+				$totalPages = 1;
+				}
+
+			http_response_code(422);
+			$this->view('financial_operations_payments/index', [
+				'payments'   => $payments,
+				'operations' => $operation->getOptions(),
+				'title'      => 'Lista de pagamentos de operações financeiras',
+				'filters'    => $filters,
+				'page'       => $page,
+				'totalPages' => $totalPages,
+				'total'      => $total,
+				'formError'  => $e->getMessage(),
+			]);
+			}
 		}
 	}
 ?>

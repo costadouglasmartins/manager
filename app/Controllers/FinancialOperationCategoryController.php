@@ -8,6 +8,17 @@ use App\Models\FinancialOperationCategory;
 class FinancialOperationCategoryController extends TenantAwareController
 	{
 	/**
+	 * Reads financial operation category list filters from the current request.
+	 */
+	private function readFilters(): array
+		{
+		return [
+			'id'   => isset($_GET['id']) ? trim($_GET['id']) : '',
+			'name' => isset($_GET['name']) ? trim($_GET['name']) : '',
+		];
+		}
+
+	/**
 	 * Lists financial operation categories with filters and pagination.
 	 */
 	public function index(): void
@@ -15,10 +26,7 @@ class FinancialOperationCategoryController extends TenantAwareController
 		$this->requirePermission('financial_operation_category.index');
 
 		$category = new FinancialOperationCategory();
-		$filters = [
-			'id'   => isset($_GET['id']) ? trim($_GET['id']) : '',
-			'name' => isset($_GET['name']) ? trim($_GET['name']) : '',
-		];
+		$filters = $this->readFilters();
 
 		$page = isset($_GET['page']) ? (int) $_GET['page'] : 1;
 		if ($page < 1)
@@ -135,6 +143,59 @@ class FinancialOperationCategoryController extends TenantAwareController
 			'title'    => 'Informações sobre a categoria da operação financeira',
 			'category' => $data['financial_operation_category'],
 		]);
+		}
+
+	/**
+	 * Deletes an existing financial operation category.
+	 *
+	 * @param mixed $id Category identifier.
+	 */
+	public function delete($id): void
+		{
+		$this->requirePermission('financial_operation_category.delete');
+
+		$category = new FinancialOperationCategory();
+
+		try
+			{
+			$category->delete($id);
+			$this->redirect('financial_operation_category');
+			}
+		catch (\Throwable $e)
+			{
+			if ($this->wantsJson())
+				{
+				$this->json(['error' => $e->getMessage()], 422);
+				}
+
+			$filters = $this->readFilters();
+			$page = isset($_GET['page']) ? (int) $_GET['page'] : 1;
+			if ($page < 1)
+				{
+				$page = 1;
+				}
+
+			$perPage = 10;
+			$offset = ($page - 1) * $perPage;
+			$categories = $category->search($filters, $perPage, $offset);
+			$total = $category->count($filters);
+			$totalPages = (int) ceil($total / $perPage);
+			if ($totalPages < 1)
+				{
+				$totalPages = 1;
+				}
+
+			http_response_code(422);
+			$this->view('financial_operations_categories/index', [
+				'categories' => $categories,
+				'title'      => 'Lista de categorias de operações financeiras',
+				'filters'    => $filters,
+				'page'       => $page,
+				'totalPages' => $totalPages,
+				'total'      => $total,
+				'formError'  => $e->getMessage(),
+			]);
+			}
 		}
 	}
 ?>

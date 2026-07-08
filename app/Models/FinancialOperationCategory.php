@@ -113,6 +113,56 @@ class FinancialOperationCategory extends TenantModel
 		}
 
 	/**
+	 * Deletes an existing financial operation category when it has no dependent records.
+	 *
+	 * @param mixed $id Category identifier.
+	 */
+	public function delete($id): void
+		{
+		$categoryId = (int) $id;
+		if ($categoryId <= 0)
+			{
+			throw new \InvalidArgumentException('Categoria financeira inválida.');
+			}
+
+		try
+			{
+			$this->db->beginTransaction();
+
+			$category = $this->find($categoryId);
+			if (!$category)
+				{
+				throw new \InvalidArgumentException('Categoria financeira não encontrada.');
+				}
+
+			if ($this->hasOperations($categoryId))
+				{
+				throw new \RuntimeException('Não é possível excluir a categoria financeira porque existem operações vinculadas.');
+				}
+
+			if ($this->hasSubcategories($categoryId))
+				{
+				throw new \RuntimeException('Não é possível excluir a categoria financeira porque existem subcategorias vinculadas.');
+				}
+
+			$stmt = $this->db->prepare("DELETE FROM financial_operations_categories WHERE id = :id");
+			$stmt->execute(['id' => $categoryId]);
+
+			$this->auditDelete('financial_operation_category', 'financial_operations_categories', $categoryId, $category);
+			$this->db->commit();
+			}
+		catch (\Exception $e)
+			{
+			if ($this->db->inTransaction())
+				{
+				$this->db->rollBack();
+				}
+
+			throw $e;
+			}
+		}
+
+	/**
 	 * Searches categories using the provided filters and pagination.
 	 */
 	public function search(array $filters = [], int $limit = 10, int $offset = 0): array
@@ -197,6 +247,36 @@ class FinancialOperationCategory extends TenantModel
 	public function findAllByFinancialOperationCategoryId($id): array
 		{
 		return ['financial_operation_category' => $this->find($id)];
+		}
+
+	/**
+	 * Checks whether the category has linked financial operations.
+	 */
+	private function hasOperations(int $categoryId): bool
+		{
+		$stmt = $this->db->prepare("
+			SELECT COUNT(*)
+			FROM financial_operations
+			WHERE financial_operation_category_id = :financial_operation_category_id
+		");
+		$stmt->execute(['financial_operation_category_id' => $categoryId]);
+
+		return (int) $stmt->fetchColumn() > 0;
+		}
+
+	/**
+	 * Checks whether the category has linked financial subcategories.
+	 */
+	private function hasSubcategories(int $categoryId): bool
+		{
+		$stmt = $this->db->prepare("
+			SELECT COUNT(*)
+			FROM financial_operations_subcategories
+			WHERE financial_operation_category_id = :financial_operation_category_id
+		");
+		$stmt->execute(['financial_operation_category_id' => $categoryId]);
+
+		return (int) $stmt->fetchColumn() > 0;
 		}
 	}
 ?>

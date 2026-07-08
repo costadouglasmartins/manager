@@ -186,6 +186,58 @@ class TaskCategoryController extends TenantAwareController
 		}
 
 	/**
+	 * Deletes an existing task category.
+	 * @param mixed $id Category identifier.
+	 **/
+	public function delete($id): void
+		{
+		$this->requirePermission('task_category.delete');
+
+		$taskCategory = new TaskCategory();
+
+		try
+			{
+			$taskCategory->delete($id);
+			$this->redirect('task_category');
+			}
+		catch (\Throwable $e)
+			{
+			if ($this->wantsJson())
+				{
+				$this->json(['error' => $e->getMessage()], 422);
+				}
+
+			$filters = $this->readFilters();
+			$page = isset($_GET['page']) ? (int) $_GET['page'] : 1;
+			if ($page < 1)
+				{
+				$page = 1;
+				}
+
+			$perPage = 10;
+			$offset = ($page - 1) * $perPage;
+			$categories = $taskCategory->search($filters, $perPage, $offset);
+			$total = $taskCategory->count($filters);
+			$totalPages = (int) ceil($total / $perPage);
+			if ($totalPages < 1)
+				{
+				$totalPages = 1;
+				}
+
+			http_response_code(422);
+			$this->view('task_categories/index', [
+				'categories' => $categories,
+				'title'      => 'Categorias de tarefas',
+				'filters'    => $filters,
+				'page'       => $page,
+				'totalPages' => $totalPages,
+				'total'      => $total,
+				'formError'  => $e->getMessage(),
+			]);
+			}
+		}
+
+	/**
 	 * Converts an active filter value to a label.
 	 **/
 	private function activeLabel(string $active): string

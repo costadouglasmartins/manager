@@ -13,6 +13,10 @@ $queryFilters = http_build_query([
 <link rel="stylesheet" href="<?= url('assets/css/rich_text_editor.css?v=1'); ?>">
 <h5>Lista de Categorias de Tarefas</h5>
 
+  <?php if (!empty($formError)): ?>
+    <div class="alert alert-danger"><?= htmlspecialchars((string) $formError, ENT_QUOTES, 'UTF-8'); ?></div>
+  <?php endif; ?>
+
   <form action="<?= url('task_category'); ?>" class="row g-3 mb-3" method="get">
     <div class="col-12 col-lg-9">
       <div class="row g-3">
@@ -74,6 +78,22 @@ $queryFilters = http_build_query([
               <td><div class="rich-editor-content"><?= (string) ($row['description'] ?? ''); ?></div></td>
               <td><span class="badge <?= ((int) $row['active'] === 1) ? 'text-bg-success' : 'text-bg-secondary'; ?>"><?= ((int) $row['active'] === 1) ? 'Ativo' : 'Inativo'; ?></span></td>
               <td style="width:1%;" class="text-nowrap text-end">
+                <?php if (authCan('task_category.delete')): ?>
+                  <a href="#"
+                     class="js-record-delete-link text-danger"
+                     data-bs-toggle="modal"
+                     data-bs-target="#recordDeleteModal"
+                     data-record-id="<?= (int) $row['id']; ?>"
+                     data-record-name="<?= htmlspecialchars((string) $row['name'], ENT_QUOTES, 'UTF-8'); ?>"
+                     data-record-delete-description="a categoria"
+                     data-record-delete-url="<?= url('task_category/delete/' . (int) $row['id']); ?>"
+                     data-bs-content="Excluir"
+                     data-bs-trigger="hover focus"
+                     role="button"
+                     aria-label="Excluir categoria de tarefa">
+                    <i class="bi bi-trash"></i>
+                  </a>
+                <?php endif; ?>
                 <?php if (authCan('task_category.edit')): ?>
                   <a href="<?= url('task_category/edit/' . $row['id']); ?>" data-bs-toggle="popover" data-bs-trigger="hover focus" data-bs-content="Editar"><i class="bi bi-pencil-square"></i></a>
                 <?php endif; ?>
@@ -98,4 +118,9 @@ $queryFilters = http_build_query([
     <?= paginationLinks('task_category', $page, $totalPages, $queryFilters, 2, 'Anterior', 'Próxima'); ?>
   <?php endif; ?>
 
+<?php if (authCan('task_category.delete')): ?>
+  <?php require __DIR__ . '/../shared/delete_modal.php'; ?>
+<?php endif; ?>
+
+<script src="<?= url('assets/js/shared/delete_modal.js?v=1'); ?>"></script>
 <script src="<?= url('assets/js/task_categories/index.js?v=1'); ?>"></script>

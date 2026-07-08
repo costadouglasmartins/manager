@@ -10,6 +10,18 @@ use App\Models\FinancialOperationCategory;
 class FinancialOperationController extends TenantAwareController
 	{
 	/**
+	 * Reads financial operation list filters from the current request.
+	 */
+	private function readFilters(): array
+		{
+		return [
+			'id'                              => isset($_GET['id']) ? trim($_GET['id']) : '',
+			'financial_operation_category_id' => isset($_GET['financial_operation_category_id']) ? trim($_GET['financial_operation_category_id']) : '',
+			'total_amount'                    => isset($_GET['total_amount']) ? trim($_GET['total_amount']) : '',
+		];
+		}
+
+	/**
 	 * Lists financial operations with filters and pagination.
 	 */
 	public function index(): void
@@ -18,11 +30,7 @@ class FinancialOperationController extends TenantAwareController
 
 		$operation = new FinancialOperation();
 		$category = new FinancialOperationCategory();
-		$filters = [
-			'id'                              => isset($_GET['id']) ? trim($_GET['id']) : '',
-			'financial_operation_category_id' => isset($_GET['financial_operation_category_id']) ? trim($_GET['financial_operation_category_id']) : '',
-			'total_amount'                    => isset($_GET['total_amount']) ? trim($_GET['total_amount']) : '',
-		];
+		$filters = $this->readFilters();
 
 		$page = isset($_GET['page']) ? (int) $_GET['page'] : 1;
 		if ($page < 1)
@@ -208,6 +216,61 @@ class FinancialOperationController extends TenantAwareController
 			'operation' => $data['financial_operation'],
 			'payments'  => $data['payments'],
 		]);
+		}
+
+	/**
+	 * Deletes an existing financial operation.
+	 *
+	 * @param mixed $id Operation identifier.
+	 */
+	public function delete($id): void
+		{
+		$this->requirePermission('financial_operation.delete');
+
+		$operation = new FinancialOperation();
+		$category = new FinancialOperationCategory();
+
+		try
+			{
+			$operation->delete($id);
+			$this->redirect('financial_operation');
+			}
+		catch (\Throwable $e)
+			{
+			if ($this->wantsJson())
+				{
+				$this->json(['error' => $e->getMessage()], 422);
+				}
+
+			$filters = $this->readFilters();
+			$page = isset($_GET['page']) ? (int) $_GET['page'] : 1;
+			if ($page < 1)
+				{
+				$page = 1;
+				}
+
+			$perPage = 10;
+			$offset = ($page - 1) * $perPage;
+			$operations = $operation->search($filters, $perPage, $offset);
+			$total = $operation->count($filters);
+			$totalPages = (int) ceil($total / $perPage);
+			if ($totalPages < 1)
+				{
+				$totalPages = 1;
+				}
+
+			http_response_code(422);
+			$this->view('financial_operations/index', [
+				'operations' => $operations,
+				'categories' => $category->getOptions(),
+				'title'      => 'Lista de operações financeiras',
+				'filters'    => $filters,
+				'page'       => $page,
+				'totalPages' => $totalPages,
+				'total'      => $total,
+				'formError'  => $e->getMessage(),
+			]);
+			}
 		}
 	}
 ?>

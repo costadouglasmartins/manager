@@ -31,14 +31,11 @@ class BankAccountController extends TenantAwareController
 	];
 
 	/**
-	 * Lists bank accounts with filters and pagination.
+	 * Reads bank account list filters from the current request.
 	 */
-	public function index(): void
+	private function readFilters(): array
 		{
-		$this->requirePermission('bank_account.index');
-
-		$bankAccount = new BankAccount();
-		$filters = [
+		return [
 			'id'      => isset($_GET['id']) ? trim($_GET['id']) : '',
 			'bank_id' => isset($_GET['bank_id']) ? trim($_GET['bank_id']) : '',
 			'name'    => isset($_GET['name']) ? trim($_GET['name']) : '',
@@ -46,6 +43,17 @@ class BankAccountController extends TenantAwareController
 			'account' => isset($_GET['account']) ? trim($_GET['account']) : '',
 			'active'  => isset($_GET['active']) ? trim($_GET['active']) : '',
 		];
+		}
+
+	/**
+	 * Lists bank accounts with filters and pagination.
+	 */
+	public function index(): void
+		{
+		$this->requirePermission('bank_account.index');
+
+		$bankAccount = new BankAccount();
+		$filters = $this->readFilters();
 
 		$page = isset($_GET['page']) ? (int) $_GET['page'] : 1;
 		if ($page < 1)
@@ -169,6 +177,59 @@ class BankAccountController extends TenantAwareController
 			'title'       => 'Informações sobre a conta bancária',
 			'bankAccount' => $data['bank_account'],
 		]);
+		}
+
+	/**
+	 * Deletes an existing bank account.
+	 *
+	 * @param mixed $id Bank account identifier.
+	 */
+	public function delete($id): void
+		{
+		$this->requirePermission('bank_account.delete');
+
+		$bankAccount = new BankAccount();
+
+		try
+			{
+			$bankAccount->delete($id);
+			$this->redirect('bank_account');
+			}
+		catch (\Throwable $e)
+			{
+			if ($this->wantsJson())
+				{
+				$this->json(['error' => $e->getMessage()], 422);
+				}
+
+			$filters = $this->readFilters();
+			$page = isset($_GET['page']) ? (int) $_GET['page'] : 1;
+			if ($page < 1)
+				{
+				$page = 1;
+				}
+
+			$perPage = 10;
+			$offset = ($page - 1) * $perPage;
+			$bankAccounts = $bankAccount->search($filters, $perPage, $offset);
+			$total = $bankAccount->count($filters);
+			$totalPages = (int) ceil($total / $perPage);
+			if ($totalPages < 1)
+				{
+				$totalPages = 1;
+				}
+
+			http_response_code(422);
+			$this->view('bank_accounts/index', [
+				'bankAccounts' => $bankAccounts,
+				'title'        => 'Lista de contas bancárias',
+				'filters'      => $filters,
+				'page'         => $page,
+				'totalPages'   => $totalPages,
+				'total'        => $total,
+				'formError'    => $e->getMessage(),
+			]);
+			}
 		}
 
 	/**
