@@ -45,6 +45,17 @@
     return payload.data || {};
     }
 
+  function getTaskRunningCount(task)
+    {
+    const openCount = Number.parseInt(task.open_execution_count, 10);
+    if (Number.isFinite(openCount))
+      {
+      return openCount;
+      }
+
+    return Number.parseInt(task.has_open_execution, 10) > 0 ? 1 : 0;
+    }
+
   function updateTaskRow(data)
     {
     const task = data.task || {};
@@ -54,7 +65,14 @@
 
     if (taskDuration)
       {
-      taskDuration.textContent = data.total_duration || '';
+      if (window.TaskDurationTimer)
+        {
+        window.TaskDurationTimer.setDuration(taskDuration, task.total_seconds || 0, getTaskRunningCount(task));
+        }
+      else
+        {
+        taskDuration.textContent = data.total_duration || '';
+        }
       }
 
     if (taskStatus)
@@ -86,7 +104,14 @@
 
           if (assigneeDuration)
             {
-            assigneeDuration.textContent = data.assignee_duration || '';
+            if (window.TaskDurationTimer && data.assignee)
+              {
+              window.TaskDurationTimer.setDuration(assigneeDuration, data.assignee.total_seconds || 0, data.is_running ? 1 : 0);
+              }
+            else
+              {
+              assigneeDuration.textContent = data.assignee_duration || '';
+              }
             }
 
           setButtons(row, !!data.is_running);

@@ -119,7 +119,17 @@ class Task extends TenantModel
 		              	INNER JOIN task_executions AS OpenTaskExecution ON OpenTaskExecution.task_assignee_id = OpenTaskAssignee.id
 		              	WHERE OpenTaskAssignee.task_id = Task.id
 		              	  AND OpenTaskExecution.paused_at IS NULL
-		              ) AS has_open_execution
+		              ) AS has_open_execution,
+		              COALESCE(
+		              	(
+		              		SELECT COUNT(*)
+		              		FROM task_assignees AS OpenCountTaskAssignee
+		              		INNER JOIN task_executions AS OpenCountTaskExecution ON OpenCountTaskExecution.task_assignee_id = OpenCountTaskAssignee.id
+		              		WHERE OpenCountTaskAssignee.task_id = Task.id
+		              		  AND OpenCountTaskExecution.paused_at IS NULL
+		              	),
+		              	0
+		              ) AS open_execution_count
 		       FROM tasks AS Task
 		       LEFT JOIN task_categories AS TaskCategory ON TaskCategory.id = Task.task_category_id
 		       LEFT JOIN {$peopleTable} AS ThirdPartyPerson ON ThirdPartyPerson.id = Task.third_party_person_id";

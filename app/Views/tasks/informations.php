@@ -51,7 +51,7 @@ $commentHtml = static function (?string $comment): string {
           </tr>
           <tr>
             <th class="text-muted">Tempo total</th>
-            <td data-task-total-duration="<?= (int) ($task['id'] ?? 0); ?>"><?= htmlspecialchars(\App\Models\Task::formatDuration((int) ($task['total_seconds'] ?? 0)), ENT_QUOTES, 'UTF-8'); ?></td>
+            <td data-task-total-duration="<?= (int) ($task['id'] ?? 0); ?>" data-task-duration-seconds="<?= (int) ($task['total_seconds'] ?? 0); ?>" data-task-duration-running-count="<?= (int) ($task['open_execution_count'] ?? (!empty($task['has_open_execution']) ? 1 : 0)); ?>"><?= htmlspecialchars(\App\Models\Task::formatDuration((int) ($task['total_seconds'] ?? 0)), ENT_QUOTES, 'UTF-8'); ?></td>
           </tr>
           <tr>
             <th class="text-muted">Criada em</th>
@@ -79,7 +79,7 @@ $commentHtml = static function (?string $comment): string {
         <div class="task-assignee-row" data-task-assignee-row="<?= (int) $assignee['id']; ?>">
           <div>
             <strong><?= htmlspecialchars((string) ($assignee['person_name'] ?? ''), ENT_QUOTES, 'UTF-8'); ?></strong>
-            <small class="text-muted" data-assignee-duration="<?= (int) $assignee['id']; ?>"><?= htmlspecialchars(\App\Models\Task::formatDuration((int) ($assignee['total_seconds'] ?? 0)), ENT_QUOTES, 'UTF-8'); ?></small>
+            <small class="text-muted" data-assignee-duration="<?= (int) $assignee['id']; ?>" data-task-duration-seconds="<?= (int) ($assignee['total_seconds'] ?? 0); ?>" data-task-duration-running-count="<?= $isRunning ? 1 : 0; ?>"><?= htmlspecialchars(\App\Models\Task::formatDuration((int) ($assignee['total_seconds'] ?? 0)), ENT_QUOTES, 'UTF-8'); ?></small>
           </div>
           <div class="task-assignee-actions">
             <span class="badge <?= $isRunning ? 'text-bg-warning' : 'text-bg-secondary'; ?>" data-assignee-running-label="<?= (int) $assignee['id']; ?>"><?= $isRunning ? 'Em execução' : 'Pausada'; ?></span>
@@ -174,4 +174,5 @@ $commentHtml = static function (?string $comment): string {
 </div>
 
 <script src="<?= url('assets/js/rich_text_editor.js?v=1'); ?>"></script>
-<script src="<?= url('assets/js/tasks/informations.js?v=1'); ?>"></script>
+<script src="<?= url('assets/js/tasks/duration_timer.js?v=1'); ?>"></script>
+<script src="<?= url('assets/js/tasks/informations.js?v=2'); ?>"></script>

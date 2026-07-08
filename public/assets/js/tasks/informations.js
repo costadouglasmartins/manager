@@ -27,7 +27,6 @@
   async function sendAction(button)
     {
     const taskAssigneeId = button.getAttribute('data-task-assignee-id') || '';
-    const action = button.getAttribute('data-action') || '';
     const endpoint = button.getAttribute('data-endpoint') || '';
     const body = new URLSearchParams();
     body.set('task_assignee_id', taskAssigneeId);
@@ -54,6 +53,17 @@
     return payload.data || {};
     }
 
+  function getTaskRunningCount(task)
+    {
+    const openCount = Number.parseInt(task.open_execution_count, 10);
+    if (Number.isFinite(openCount))
+      {
+      return openCount;
+      }
+
+    return Number.parseInt(task.has_open_execution, 10) > 0 ? 1 : 0;
+    }
+
   function initExecutionActions()
     {
     document.querySelectorAll('.js-task-execution-action').forEach((button) =>
@@ -78,12 +88,26 @@
 
           if (assigneeDuration)
             {
-            assigneeDuration.textContent = data.assignee_duration || '';
+            if (window.TaskDurationTimer && data.assignee)
+              {
+              window.TaskDurationTimer.setDuration(assigneeDuration, data.assignee.total_seconds || 0, data.is_running ? 1 : 0);
+              }
+            else
+              {
+              assigneeDuration.textContent = data.assignee_duration || '';
+              }
             }
 
           if (totalDuration)
             {
-            totalDuration.textContent = data.total_duration || '';
+            if (window.TaskDurationTimer && data.task)
+              {
+              window.TaskDurationTimer.setDuration(totalDuration, data.task.total_seconds || 0, getTaskRunningCount(data.task));
+              }
+            else
+              {
+              totalDuration.textContent = data.total_duration || '';
+              }
             }
 
           setButtons(row, !!data.is_running);

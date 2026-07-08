@@ -167,7 +167,7 @@ $sortIcon = static function (string $column) use ($sort, $direction): string {
               <td><?= htmlspecialchars((string) ($row['task_category_name'] ?? ''), ENT_QUOTES, 'UTF-8'); ?></td>
               <td><span class="badge <?= htmlspecialchars(\App\Models\Task::statusBadgeClass((string) ($row['status'] ?? '')), ENT_QUOTES, 'UTF-8'); ?>"><?= htmlspecialchars(\App\Models\Task::statusLabel((string) ($row['status'] ?? '')), ENT_QUOTES, 'UTF-8'); ?></span></td>
               <td><?= htmlspecialchars((string) ($row['assignee_names'] ?? ''), ENT_QUOTES, 'UTF-8'); ?></td>
-              <td><?= htmlspecialchars(\App\Models\Task::formatDuration((int) ($row['total_seconds'] ?? 0)), ENT_QUOTES, 'UTF-8'); ?></td>
+              <td data-task-duration-seconds="<?= (int) ($row['total_seconds'] ?? 0); ?>" data-task-duration-running-count="<?= (int) ($row['open_execution_count'] ?? (!empty($row['has_open_execution']) ? 1 : 0)); ?>"><?= htmlspecialchars(\App\Models\Task::formatDuration((int) ($row['total_seconds'] ?? 0)), ENT_QUOTES, 'UTF-8'); ?></td>
               <td><?= htmlspecialchars(\App\Models\Task::formatDateTime($row['created'] ?? ''), ENT_QUOTES, 'UTF-8'); ?></td>
               <td style="width:1%;" class="text-nowrap text-end">
                 <?php if (authCan('task.delete')): ?>
@@ -237,4 +237,5 @@ $sortIcon = static function (string $column) use ($sort, $direction): string {
   </div>
 <?php endif; ?>
 
-<script src="<?= url('assets/js/tasks/index.js?v=2'); ?>"></script>
+<script src="<?= url('assets/js/tasks/duration_timer.js?v=1'); ?>"></script>
+<script src="<?= url('assets/js/tasks/index.js?v=3'); ?>"></script>

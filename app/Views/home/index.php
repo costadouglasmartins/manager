@@ -172,14 +172,14 @@ $userName = trim((string) ($currentUser['name'] ?? ''));
 									</td>
 									<td><span class="badge <?= htmlspecialchars(\App\Models\Task::statusBadgeClass((string) ($taskRow['status'] ?? '')), ENT_QUOTES, 'UTF-8'); ?>" data-dashboard-task-status="<?= (int) ($taskRow['id'] ?? 0); ?>"><?= htmlspecialchars(\App\Models\Task::statusLabel((string) ($taskRow['status'] ?? '')), ENT_QUOTES, 'UTF-8'); ?></span></td>
 									<td><?= htmlspecialchars((string) ($taskRow['assignee_names'] ?? ''), ENT_QUOTES, 'UTF-8'); ?></td>
-									<td data-dashboard-task-duration="<?= (int) ($taskRow['id'] ?? 0); ?>"><?= htmlspecialchars(\App\Models\Task::formatDuration((int) ($taskRow['total_seconds'] ?? 0)), ENT_QUOTES, 'UTF-8'); ?></td>
+									<td data-dashboard-task-duration="<?= (int) ($taskRow['id'] ?? 0); ?>" data-task-duration-seconds="<?= (int) ($taskRow['total_seconds'] ?? 0); ?>" data-task-duration-running-count="<?= (int) ($taskRow['open_execution_count'] ?? (!empty($taskRow['has_open_execution']) ? 1 : 0)); ?>"><?= htmlspecialchars(\App\Models\Task::formatDuration((int) ($taskRow['total_seconds'] ?? 0)), ENT_QUOTES, 'UTF-8'); ?></td>
 									<td class="text-end">
 										<div class="dashboard-task-actions">
 											<?php foreach (($taskRow['assignees'] ?? []) as $assignee): ?>
 												<?php $isRunning = !empty($assignee['open_execution_id']); ?>
 												<div class="dashboard-task-action" data-task-assignee-row="<?= (int) $assignee['id']; ?>">
 													<span><?= htmlspecialchars((string) ($assignee['person_name'] ?? ''), ENT_QUOTES, 'UTF-8'); ?></span>
-													<small data-assignee-duration="<?= (int) $assignee['id']; ?>"><?= htmlspecialchars(\App\Models\Task::formatDuration((int) ($assignee['total_seconds'] ?? 0)), ENT_QUOTES, 'UTF-8'); ?></small>
+													<small data-assignee-duration="<?= (int) $assignee['id']; ?>" data-task-duration-seconds="<?= (int) ($assignee['total_seconds'] ?? 0); ?>" data-task-duration-running-count="<?= $isRunning ? 1 : 0; ?>"><?= htmlspecialchars(\App\Models\Task::formatDuration((int) ($assignee['total_seconds'] ?? 0)), ENT_QUOTES, 'UTF-8'); ?></small>
 													<?php if (authCan('task.startExecution')): ?>
 														<button class="btn btn-success btn-sm js-task-execution-action" data-action="start" data-endpoint="<?= url('task/startExecution'); ?>" data-task-assignee-id="<?= (int) $assignee['id']; ?>" type="button" <?= $isRunning ? 'disabled' : ''; ?>><i class="bi bi-play-fill"></i></button>
 													<?php endif; ?>
@@ -386,4 +386,5 @@ $userName = trim((string) ($currentUser['name'] ?? ''));
 	<?php endif; ?>
 </div>
 
-<script src="<?= url('assets/js/home/index.js?v=1'); ?>"></script>
+<script src="<?= url('assets/js/tasks/duration_timer.js?v=1'); ?>"></script>
+<script src="<?= url('assets/js/home/index.js?v=2'); ?>"></script>
