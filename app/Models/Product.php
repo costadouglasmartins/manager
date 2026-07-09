@@ -32,8 +32,8 @@ class Product extends TenantModel
 		              ProductImage.file_path AS main_image_file_path,
 		              ProductImage.thumb_path AS main_image_thumb_path
 		       FROM products AS Product
-		       LEFT JOIN products_categories AS ProductCategory ON ProductCategory.id = Product.product_category_id
-		       LEFT JOIN products_images AS ProductImage ON ProductImage.product_id = Product.id
+		       LEFT JOIN product_categories AS ProductCategory ON ProductCategory.id = Product.product_category_id
+		       LEFT JOIN product_images AS ProductImage ON ProductImage.product_id = Product.id
 		                                           AND ProductImage.is_main = 1";
 		}
 
@@ -109,7 +109,7 @@ class Product extends TenantModel
 
 			$productSnapshot = $this->findAllByProductId($productId);
 			$this->auditCreate('product', 'products', $productId, $productSnapshot, [
-				'affected_tables' => ['products', 'products_images', 'products_stocks_movements'],
+				'affected_tables' => ['products', 'product_images', 'product_stocks_movements'],
 			]);
 
 			$this->db->commit();
@@ -215,7 +215,7 @@ class Product extends TenantModel
 			$this->ensureMainImage($productId);
 			$afterData = $this->findAllByProductId($productId);
 			$this->auditUpdate('product', 'products', $productId, $beforeData, $afterData, [
-				'affected_tables' => ['products', 'products_images'],
+				'affected_tables' => ['products', 'product_images'],
 			]);
 			$this->db->commit();
 			}
@@ -269,7 +269,7 @@ class Product extends TenantModel
 			$stmt = $this->db->prepare("DELETE FROM products WHERE id = :id");
 			$stmt->execute(['id' => $productId]);
 			$this->auditDelete('product', 'products', $productId, $product, [
-				'affected_tables' => ['products', 'products_images'],
+				'affected_tables' => ['products', 'product_images'],
 			]);
 
 			$this->db->commit();
@@ -320,7 +320,7 @@ class Product extends TenantModel
 		{
 		$sql = "SELECT COUNT(*) AS total
 		        FROM products AS Product
-		        LEFT JOIN products_categories AS ProductCategory ON ProductCategory.id = Product.product_category_id
+		        LEFT JOIN product_categories AS ProductCategory ON ProductCategory.id = Product.product_category_id
 		        WHERE 1 = 1";
 		$params = [];
 
@@ -394,7 +394,7 @@ class Product extends TenantModel
 			       ProductImage.is_main,
 			       ProductImage.created,
 			       ProductImage.modified
-			FROM products_images AS ProductImage
+			FROM product_images AS ProductImage
 			WHERE ProductImage.product_id = :product_id
 			ORDER BY ProductImage.is_main DESC,
 			         ProductImage.position ASC,
@@ -425,7 +425,7 @@ class Product extends TenantModel
 			       ProductStockMovement.movement_date,
 			       ProductStockMovement.created,
 			       ProductStockMovement.modified
-			FROM products_stocks_movements AS ProductStockMovement
+			FROM product_stocks_movements AS ProductStockMovement
 			WHERE ProductStockMovement.product_id = :product_id
 			ORDER BY ProductStockMovement.movement_date DESC,
 			         ProductStockMovement.id DESC
@@ -506,7 +506,7 @@ class Product extends TenantModel
 		{
 		$stmt = $this->db->prepare("
 			SELECT 1
-			FROM products_stocks_movements AS ProductStockMovement
+			FROM product_stocks_movements AS ProductStockMovement
 			WHERE ProductStockMovement.product_id = :product_id
 			LIMIT 1
 		");
@@ -546,7 +546,7 @@ class Product extends TenantModel
 
 		$nextPosition = $this->nextImagePosition($productId);
 		$stmt = $this->db->prepare("
-			INSERT INTO products_images
+			INSERT INTO product_images
 			    (`product_id`, `original_name`, `file_path`, `thumb_path`, `mime_type`,
 			     `file_size`, `width`, `height`, `position`, `is_main`, `created`, `modified`)
 			VALUES
@@ -590,7 +590,7 @@ class Product extends TenantModel
 	): void
 		{
 		$stmt = $this->db->prepare("
-			INSERT INTO products_stocks_movements
+			INSERT INTO product_stocks_movements
 			    (`product_id`, `movement_type`, `quantity`, `previous_quantity`, `new_quantity`,
 			     `unit_cost`, `unit_price`, `reference`, `observations`, `movement_date`, `created`, `modified`)
 			VALUES
@@ -638,7 +638,7 @@ class Product extends TenantModel
 		{
 		$stmt = $this->db->prepare("
 			SELECT COALESCE(MAX(ProductImage.position), -1) + 1 AS next_position
-			FROM products_images AS ProductImage
+			FROM product_images AS ProductImage
 			WHERE ProductImage.product_id = :product_id
 		");
 		$stmt->execute(['product_id' => $productId]);
@@ -656,7 +656,7 @@ class Product extends TenantModel
 			SELECT ProductImage.id,
 			       ProductImage.file_path,
 			       ProductImage.thumb_path
-			FROM products_images AS ProductImage
+			FROM product_images AS ProductImage
 			WHERE ProductImage.id = :id
 			  AND ProductImage.product_id = :product_id
 		");
@@ -683,7 +683,7 @@ class Product extends TenantModel
 	private function deleteImageRows(int $productId, array $imageIds): void
 		{
 		$stmt = $this->db->prepare("
-			DELETE FROM products_images
+			DELETE FROM product_images
 			WHERE id = :id
 			  AND product_id = :product_id
 		");
@@ -704,7 +704,7 @@ class Product extends TenantModel
 		{
 		$stmt = $this->db->prepare("
 			SELECT ProductImage.id
-			FROM products_images AS ProductImage
+			FROM product_images AS ProductImage
 			WHERE ProductImage.product_id = :product_id
 			ORDER BY ProductImage.is_main DESC,
 			         ProductImage.position ASC,
@@ -726,7 +726,7 @@ class Product extends TenantModel
 	private function setMainImage(int $productId, int $imageId): void
 		{
 		$stmt = $this->db->prepare("
-			UPDATE products_images
+			UPDATE product_images
 			SET is_main = CASE WHEN id = :image_id THEN 1 ELSE 0 END,
 			    modified = :modified
 			WHERE product_id = :product_id
@@ -745,7 +745,7 @@ class Product extends TenantModel
 		{
 		$stmt = $this->db->prepare("
 			SELECT 1
-			FROM products_images AS ProductImage
+			FROM product_images AS ProductImage
 			WHERE ProductImage.id = :id
 			  AND ProductImage.product_id = :product_id
 			LIMIT 1

@@ -192,4 +192,4 @@ $productLabel = static function (array $product): string {
   </div>
 <?php endif; ?>
 
-<script src="<?= url('assets/js/products_stocks_movements/index.js?v=2'); ?>"></script>
+<script src="<?= url('assets/js/product_stocks_movements/index.js?v=2'); ?>"></script>

@@ -16,7 +16,7 @@ $observations = $value('observations');
 $editorHtml = trim(preg_replace('/<([a-z][a-z0-9]*)\b[^>]*>/i', '<$1>', strip_tags($observations, '<b><strong><i><em><u><br><p><div><ul><ol><li>')) ?? '');
 ?>
 <link rel="stylesheet" href="<?= url('assets/css/rich_text_editor.css?v=1'); ?>">
-<link rel="stylesheet" href="<?= url('assets/css/products_stocks_movements/create.css?v=1'); ?>">
+<link rel="stylesheet" href="<?= url('assets/css/product_stocks_movements/create.css?v=1'); ?>">
 
 <div class="store-page app-page">
   <div class="store-page-header app-page-header">
@@ -104,4 +104,4 @@ $editorHtml = trim(preg_replace('/<([a-z][a-z0-9]*)\b[^>]*>/i', '<$1>', strip_ta
 </div>
 
 <script src="<?= url('assets/js/rich_text_editor.js?v=1'); ?>"></script>
-<script src="<?= url('assets/js/products_stocks_movements/create.js?v=1'); ?>"></script>
+<script src="<?= url('assets/js/product_stocks_movements/create.js?v=1'); ?>"></script>

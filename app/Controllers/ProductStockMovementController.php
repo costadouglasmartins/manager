@@ -53,7 +53,7 @@ class ProductStockMovementController extends TenantAwareController
 			]);
 			}
 
-		$this->view('products_stocks_movements/index', [
+		$this->view('product_stocks_movements/index', [
 			'movements'  => $movements,
 			'products'   => $product->getOptions(false),
 			'title'      => 'Movimentações de estoque',
@@ -72,7 +72,7 @@ class ProductStockMovementController extends TenantAwareController
 		$this->requirePermission('product_stock_movement.create');
 
 		$product = new Product();
-		$this->view('products_stocks_movements/create', [
+		$this->view('product_stocks_movements/create', [
 			'title'    => 'Nova movimentação de estoque',
 			'products' => $product->getOptions(),
 		]);
@@ -101,7 +101,7 @@ class ProductStockMovementController extends TenantAwareController
 				}
 
 			http_response_code(422);
-			$this->view('products_stocks_movements/create', [
+			$this->view('product_stocks_movements/create', [
 				'title'     => 'Nova movimentação de estoque',
 				'products'  => $product->getOptions(),
 				'formData'  => $_POST,
@@ -128,7 +128,7 @@ class ProductStockMovementController extends TenantAwareController
 			$this->redirect('product_stock_movement');
 			}
 
-		$this->view('products_stocks_movements/edit', [
+		$this->view('product_stocks_movements/edit', [
 			'title'    => 'Editar movimentação de estoque',
 			'movement' => $data,
 			'products' => $product->getOptions(),
@@ -167,7 +167,7 @@ class ProductStockMovementController extends TenantAwareController
 
 			$formData = array_merge($movementData, $_POST);
 			http_response_code(422);
-			$this->view('products_stocks_movements/edit', [
+			$this->view('product_stocks_movements/edit', [
 				'title'     => 'Editar movimentação de estoque',
 				'movement'  => $formData,
 				'products'  => $product->getOptions(),
@@ -192,7 +192,7 @@ class ProductStockMovementController extends TenantAwareController
 			$this->redirect('product_stock_movement');
 			}
 
-		$this->view('products_stocks_movements/informations', [
+		$this->view('product_stocks_movements/informations', [
 			'title'    => 'Informações da movimentação de estoque',
 			'movement' => $data['product_stock_movement'],
 		]);
@@ -246,7 +246,7 @@ class ProductStockMovementController extends TenantAwareController
 				}
 
 			http_response_code(422);
-			$this->view('products_stocks_movements/index', [
+			$this->view('product_stocks_movements/index', [
 				'movements'  => $movements,
 				'products'   => $product->getOptions(false),
 				'title'      => 'Movimentações de estoque',

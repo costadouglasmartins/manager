@@ -31,9 +31,9 @@ class ProductStockMovement extends TenantModel
 		              Product.sku AS product_sku,
 		              Product.unit AS product_unit,
 		              ProductCategory.name AS product_category_name
-		       FROM products_stocks_movements AS ProductStockMovement
+		       FROM product_stocks_movements AS ProductStockMovement
 		       INNER JOIN products AS Product ON Product.id = ProductStockMovement.product_id
-		       LEFT JOIN products_categories AS ProductCategory ON ProductCategory.id = Product.product_category_id";
+		       LEFT JOIN product_categories AS ProductCategory ON ProductCategory.id = Product.product_category_id";
 		}
 
 	/**
@@ -76,7 +76,7 @@ class ProductStockMovement extends TenantModel
 			$newQuantity = $this->calculateNewQuantity($movementType, $previousQuantity, $quantity);
 
 			$stmt = $this->db->prepare("
-				INSERT INTO products_stocks_movements
+				INSERT INTO product_stocks_movements
 				    (`product_id`, `movement_type`, `quantity`, `previous_quantity`, `new_quantity`,
 				     `unit_cost`, `unit_price`, `reference`, `observations`, `movement_date`, `created`, `modified`)
 				VALUES
@@ -101,8 +101,8 @@ class ProductStockMovement extends TenantModel
 			$movementId = (int) $this->db->lastInsertId();
 			$this->updateProductStock($productId, $newQuantity);
 			$movementSnapshot = $this->findAllByProductStockMovementId($movementId);
-			$this->auditCreate('product_stock_movement', 'products_stocks_movements', $movementId, $movementSnapshot, [
-				'affected_tables' => ['products_stocks_movements', 'products'],
+			$this->auditCreate('product_stock_movement', 'product_stocks_movements', $movementId, $movementSnapshot, [
+				'affected_tables' => ['product_stocks_movements', 'products'],
 			]);
 			$this->db->commit();
 
@@ -213,7 +213,7 @@ class ProductStockMovement extends TenantModel
 			$newProductResultingStock = $this->calculateNewQuantity($movementType, $newProductBaseStock, $quantity);
 
 			$stmt = $this->db->prepare("
-				UPDATE products_stocks_movements
+				UPDATE product_stocks_movements
 				SET product_id = :product_id,
 				    movement_type = :movement_type,
 				    quantity = :quantity,
@@ -250,8 +250,8 @@ class ProductStockMovement extends TenantModel
 				}
 
 			$afterData = $this->findAllByProductStockMovementId($movementId);
-			$this->auditUpdate('product_stock_movement', 'products_stocks_movements', $movementId, $beforeData, $afterData, [
-				'affected_tables' => ['products_stocks_movements', 'products'],
+			$this->auditUpdate('product_stock_movement', 'product_stocks_movements', $movementId, $beforeData, $afterData, [
+				'affected_tables' => ['product_stocks_movements', 'products'],
 			]);
 
 			$this->db->commit();
@@ -307,14 +307,14 @@ class ProductStockMovement extends TenantModel
 			);
 
 			$stmt = $this->db->prepare("
-				DELETE FROM products_stocks_movements
+				DELETE FROM product_stocks_movements
 				WHERE id = :id
 			");
 			$stmt->execute(['id' => $movementId]);
 
 			$this->updateProductStock($productId, $restoredStock);
-			$this->auditDelete('product_stock_movement', 'products_stocks_movements', $movementId, $beforeData, [
-				'affected_tables' => ['products_stocks_movements', 'products'],
+			$this->auditDelete('product_stock_movement', 'product_stocks_movements', $movementId, $beforeData, [
+				'affected_tables' => ['product_stocks_movements', 'products'],
 			]);
 			$this->db->commit();
 			}
@@ -362,9 +362,9 @@ class ProductStockMovement extends TenantModel
 	public function count(array $filters = []): int
 		{
 		$sql = "SELECT COUNT(*) AS total
-		        FROM products_stocks_movements AS ProductStockMovement
+		        FROM product_stocks_movements AS ProductStockMovement
 		        INNER JOIN products AS Product ON Product.id = ProductStockMovement.product_id
-		        LEFT JOIN products_categories AS ProductCategory ON ProductCategory.id = Product.product_category_id
+		        LEFT JOIN product_categories AS ProductCategory ON ProductCategory.id = Product.product_category_id
 		        WHERE 1 = 1";
 		$params = [];
 
@@ -457,7 +457,7 @@ class ProductStockMovement extends TenantModel
 			       movement_type,
 			       quantity,
 			       previous_quantity
-			FROM products_stocks_movements
+			FROM product_stocks_movements
 			WHERE id = :id
 			FOR UPDATE
 		");

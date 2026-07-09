@@ -18,7 +18,7 @@ class ProductCategory extends TenantModel
 		              ProductCategory.active,
 		              ProductCategory.created,
 		              ProductCategory.modified
-		       FROM products_categories AS ProductCategory";
+		       FROM product_categories AS ProductCategory";
 		}
 
 	/**
@@ -33,7 +33,7 @@ class ProductCategory extends TenantModel
 			$this->db->beginTransaction();
 
 			$stmt = $this->db->prepare("
-				INSERT INTO products_categories
+				INSERT INTO product_categories
 				    (`name`, `description`, `active`, `created`, `modified`)
 				VALUES
 				    (:name, :description, :active, :created, :modified)
@@ -48,7 +48,7 @@ class ProductCategory extends TenantModel
 
 			$categoryId = (int) $this->db->lastInsertId();
 			$categorySnapshot = $this->find($categoryId);
-			$this->auditCreate('product_category', 'products_categories', $categoryId, $categorySnapshot);
+			$this->auditCreate('product_category', 'product_categories', $categoryId, $categorySnapshot);
 			$this->db->commit();
 
 			return ['product_category_id' => $categoryId];
@@ -112,7 +112,7 @@ class ProductCategory extends TenantModel
 		$categoryId = (int) $id;
 		$beforeData = $this->find($categoryId);
 		$stmt = $this->db->prepare("
-			UPDATE products_categories
+			UPDATE product_categories
 			SET `name` = :name,
 			    `description` = :description,
 			    `active` = :active,
@@ -129,7 +129,7 @@ class ProductCategory extends TenantModel
 		]);
 
 		$afterData = $this->find($categoryId);
-		$this->auditUpdate('product_category', 'products_categories', $categoryId, $beforeData, $afterData);
+		$this->auditUpdate('product_category', 'product_categories', $categoryId, $beforeData, $afterData);
 		}
 
 	/**
@@ -166,11 +166,11 @@ class ProductCategory extends TenantModel
 				'product_category_id' => $categoryId,
 			]);
 
-			$stmt = $this->db->prepare("DELETE FROM products_categories WHERE id = :id");
+			$stmt = $this->db->prepare("DELETE FROM product_categories WHERE id = :id");
 			$stmt->execute(['id' => $categoryId]);
 
-			$this->auditDelete('product_category', 'products_categories', $categoryId, $category, [
-				'affected_tables' => ['products_categories', 'products'],
+			$this->auditDelete('product_category', 'product_categories', $categoryId, $category, [
+				'affected_tables' => ['product_categories', 'products'],
 				'unlinked_products_count' => (int) $unlinkProducts->rowCount(),
 			]);
 			$this->db->commit();
@@ -218,7 +218,7 @@ class ProductCategory extends TenantModel
 	public function count(array $filters = []): int
 		{
 		$sql = "SELECT COUNT(*) AS total
-		        FROM products_categories AS ProductCategory
+		        FROM product_categories AS ProductCategory
 		        WHERE 1 = 1";
 		$params = [];
 

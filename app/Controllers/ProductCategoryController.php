@@ -57,7 +57,7 @@ class ProductCategoryController extends TenantAwareController
 			]);
 			}
 
-		$this->view('products_categories/index', [
+		$this->view('product_categories/index', [
 			'categories' => $categories,
 			'title'      => 'Categorias de produtos',
 			'filters'    => $filters,
@@ -73,7 +73,7 @@ class ProductCategoryController extends TenantAwareController
 	public function create(): void
 		{
 		$this->requirePermission('product_category.create');
-		$this->view('products_categories/create', ['title' => 'Nova categoria de produto']);
+		$this->view('product_categories/create', ['title' => 'Nova categoria de produto']);
 		}
 
 	/**
@@ -104,7 +104,7 @@ class ProductCategoryController extends TenantAwareController
 			$this->redirect('product_category');
 			}
 
-		$this->view('products_categories/edit', [
+		$this->view('product_categories/edit', [
 			'title'    => 'Editar categoria de produto',
 			'category' => $category,
 		]);
@@ -140,7 +140,7 @@ class ProductCategoryController extends TenantAwareController
 			$this->redirect('product_category');
 			}
 
-		$this->view('products_categories/informations', [
+		$this->view('product_categories/informations', [
 			'title'    => 'Informações da categoria de produto',
 			'category' => $data['product_category'],
 		]);
@@ -187,7 +187,7 @@ class ProductCategoryController extends TenantAwareController
 				}
 
 			http_response_code(422);
-			$this->view('products_categories/index', [
+			$this->view('product_categories/index', [
 				'categories' => $categories,
 				'title'      => 'Categorias de produtos',
 				'filters'    => $filters,

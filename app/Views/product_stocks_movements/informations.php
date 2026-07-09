@@ -38,7 +38,7 @@ $movementTypeLabel = static function (string $type): string {
 };
 ?>
 <link rel="stylesheet" href="<?= url('assets/css/rich_text_editor.css?v=1'); ?>">
-<link rel="stylesheet" href="<?= url('assets/css/products_stocks_movements/informations.css?v=1'); ?>">
+<link rel="stylesheet" href="<?= url('assets/css/product_stocks_movements/informations.css?v=1'); ?>">
 
 <div class="store-page">
   <div class="store-page-header">
@@ -112,4 +112,4 @@ $movementTypeLabel = static function (string $type): string {
   </div>
 </div>
 
-<script src="<?= url('assets/js/products_stocks_movements/informations.js?v=1'); ?>"></script>
+<script src="<?= url('assets/js/product_stocks_movements/informations.js?v=1'); ?>"></script>

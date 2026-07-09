@@ -121,4 +121,4 @@ $queryFilters = http_build_query([
 <?php endif; ?>
 
 <script src="<?= url('assets/js/shared/delete_modal.js?v=1'); ?>"></script>
-<script src="<?= url('assets/js/products_categories/index.js?v=1'); ?>"></script>
+<script src="<?= url('assets/js/product_categories/index.js?v=1'); ?>"></script>
