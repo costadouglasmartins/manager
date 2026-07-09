@@ -2,21 +2,20 @@
 // Expected variables:
 // $permissions, $users, $selectedUserId, $userPermissionIds, $effectiveAbilities
 
-function permGroup(string $ability): string
-	{
+$permGroup = static function (string $ability): string {
 	$pos = strpos($ability, '.');
 	if ($pos === false)
 		{
 		return 'outros';
 		}
 	return substr($ability, 0, $pos);
-	}
+};
 
 $groups = [];
 foreach ($permissions as $p)
 	{
 	$ability = (string) $p['ability'];
-	$group = permGroup($ability);
+	$group = $permGroup($ability);
 	if (!isset($groups[$group]))
 		{
 		$groups[$group] = [];
@@ -40,133 +39,192 @@ if (isset($_GET['created']))
 $queryFilters = http_build_query([
 	'user_id' => (int) ($selectedUserId ?? 0),
 ]);
+
+$selectedPermissionIds = array_values(array_unique(array_filter(array_map('intval', (array) ($userPermissionIds ?? [])))));
+$totalPermissions = count($permissions);
+$selectedPermissionsTotal = count($selectedPermissionIds);
 ?>
-<h5 class="mb-3">Gerenciar permissões (por usuário)</h5>
+<link rel="stylesheet" href="<?= url('assets/css/permissions/index.css?v=1'); ?>">
 
-<?php if ($syncCount !== null): ?>
-  <div class="alert <?= ($syncCount > 0 ? 'alert-success' : 'alert-warning'); ?> py-2">
-    <?= ($syncCount > 0 ? ('Sincronização concluída: ' . (int) $syncCount . ' permissões adicionadas ao catálogo.') : 'Sincronização concluída: nenhuma permissão nova foi encontrada.'); ?>
+<div class="permissions-page app-page">
+  <div class="permissions-page-header app-page-header">
+    <div>
+      <span class="permissions-page-kicker app-page-kicker"><i class="bi bi-shield-lock"></i> Segurança</span>
+      <h5>Gerenciar permissões</h5>
+      <p class="permissions-page-subtitle">
+        Permissões atribuídas diretamente por usuário, sem alterar perfis, grupos ou regras de negócio.
+      </p>
+    </div>
+    <div class="permissions-header-stats" aria-label="Resumo do catálogo de permissões">
+      <span class="permissions-stat">
+        <strong><?= (int) $totalPermissions; ?></strong>
+        <small>permissões</small>
+      </span>
+      <span class="permissions-stat">
+        <strong><?= (int) count($groups); ?></strong>
+        <small>grupos</small>
+      </span>
+      <span class="permissions-stat">
+        <strong><?= (int) $selectedPermissionsTotal; ?></strong>
+        <small>ativas</small>
+      </span>
+    </div>
   </div>
-<?php endif; ?>
 
-<?php if ($created !== null): ?>
-  <div class="alert <?= ($created === 1 ? 'alert-success' : 'alert-danger'); ?> py-2">
-    <?= ($created === 1 ? 'Permissão adicionada ao catálogo.' : 'Não foi possível adicionar (já existe ou ability inválida).'); ?>
-  </div>
-<?php endif; ?>
+  <?php if ($syncCount !== null): ?>
+    <div class="alert <?= ($syncCount > 0 ? 'alert-success' : 'alert-warning'); ?> py-2 mb-0">
+      <?= ($syncCount > 0 ? ('Sincronização concluída: ' . (int) $syncCount . ' permissões adicionadas ao catálogo.') : 'Sincronização concluída: nenhuma permissão nova foi encontrada.'); ?>
+    </div>
+  <?php endif; ?>
 
-<div class="d-flex flex-wrap gap-2 mb-3">
-  <form method="POST" action="<?= url('permission/sync'); ?>" class="d-inline">
-    <input type="hidden" name="selected_user_id" value="<?= (int) ($selectedUserId ?? 0); ?>">
-    <button class="btn btn-primary" type="submit">
-      Sincronizar permissões
-    </button>
-  </form>
+  <?php if ($created !== null): ?>
+    <div class="alert <?= ($created === 1 ? 'alert-success' : 'alert-danger'); ?> py-2 mb-0">
+      <?= ($created === 1 ? 'Permissão adicionada ao catálogo.' : 'Não foi possível adicionar (já existe ou ability inválida).'); ?>
+    </div>
+  <?php endif; ?>
 
-  <a href="<?= url('permission/orphaned'); ?>" class="btn btn-warning">
-    Permissões órfãs
-  </a>
+  <section class="permissions-toolbar app-section">
+    <div class="permissions-toolbar-main">
+      <form method="POST" action="<?= url('permission/sync'); ?>" class="permissions-inline-form">
+        <input type="hidden" name="selected_user_id" value="<?= (int) ($selectedUserId ?? 0); ?>">
+        <button class="btn btn-primary" type="submit">
+          <i class="bi bi-arrow-repeat"></i> Sincronizar permissões
+        </button>
+      </form>
 
-  <button class="btn btn-secondary" type="button" data-bs-toggle="collapse" data-bs-target="#addPermCatalog" aria-expanded="false" aria-controls="addPermCatalog">
-    Adicionar permissão manualmente
-  </button>
+      <a href="<?= url('permission/orphaned'); ?>" class="btn btn-warning">
+        <i class="bi bi-exclamation-triangle"></i> Permissões órfãs
+      </a>
 
-  <?= pdfExportButton('permission', $queryFilters); ?>
-  <?= excelExportButton('permission', $queryFilters); ?>
-</div>
-
-<div class="collapse mb-4" id="addPermCatalog">
-  <div class="border rounded p-3">
-    <form method="POST" action="<?= url('permission/create'); ?>" class="row g-2 align-items-end">
-      <input type="hidden" name="selected_user_id" value="<?= (int) ($selectedUserId ?? 0); ?>">
-      <div class="col-12 col-md-4">
-        <label class="form-label">Nova ability</label>
-        <input class="form-control form-control-sm" name="ability" placeholder="ex.: report.index" required>
-      </div>
-      <div class="col-12 col-md-6">
-        <label class="form-label">Descrição</label>
-        <input class="form-control form-control-sm" name="description" placeholder="Opcional">
-      </div>
-      <div class="col-12 col-md-2">
-        <button class="btn btn-sm btn-primary w-100" type="submit">Adicionar</button>
-      </div>
-      <div class="col-12">
-        <small class="text-muted">
-          Dica: depois de criar a ability, conceda-a ao usuário abaixo para efetivar o acesso.
-        </small>
-      </div>
-    </form>
-  </div>
-</div>
-<!--
-<div class="alert alert-secondary py-2">
-  <div class="small mb-0">
-    As permissões são atribuídas <strong>somente por usuário</strong>. Não há perfis/grupos.
-  </div>
-</div>
---->
-<form method="GET" action="<?= url('permission'); ?>" class="row g-2 align-items-end mb-3">
-  <div class="col-12 col-md-8 col-lg-12">
-    <small class="text-muted">Marque/desmarque as funcionalidades para o usuário selecionado.</small>
-  </div>
-  <div class="col-12 col-md-8 col-lg-12">
-    <!--<label class="form-label">Usuário</label>-->
-    <select name="user_id" class="form-select" onchange="this.form.submit()">
-      <option value="0">Selecione um usuário...</option>
-      <?php foreach ($users as $u): ?>
-        <?php
-          $uid = (int) $u['id'];
-          $label = trim((string) $u['username']);
-          if (!empty($u['email']))
-            {
-            $label .= ' (' . $u['email'] . ')';
-            }
-          if (!empty($u['type']))
-            {
-            $label .= ' [' . $u['type'] . ']';
-            } ?>
-        <option value="<?= $uid; ?>" <?= ($uid === (int) $selectedUserId ? 'selected' : ''); ?>><?= htmlspecialchars($label); ?></option>
-      <?php endforeach; ?>
-    </select>
-  </div>
-  
-</form>
-
-<?php if ((int) $selectedUserId <= 0): ?>
-  <div class="alert alert-info mb-0">Selecione um usuário para editar permissões.</div>
-<?php else: ?>
-
-  <form method="POST" action="<?= url('permission/saveUser'); ?>">
-    <input type="hidden" name="user_id" value="<?= (int) $selectedUserId; ?>">
-
-    <div class="card mb-3">
-      <div class="card-header d-flex align-items-center justify-content-between">
-        <span class="fw-semibold">Todas as permissões</span>
-        <div class="form-check form-switch m-0">
-          <input class="form-check-input" type="checkbox" id="permToggleAll" title="Marcar/desmarcar todas as permissões">
-          <label class="form-check-label small text-muted" for="permToggleAll">Todas</label>
-        </div>
-      </div>
+      <button class="btn btn-secondary" type="button" data-bs-toggle="collapse" data-bs-target="#addPermCatalog" aria-expanded="false" aria-controls="addPermCatalog">
+        <i class="bi bi-plus-lg"></i> Adicionar manualmente
+      </button>
     </div>
 
-    <div class="row g-3 mb-3">
-    <?php $groupIndex = 0; ?>
-    <?php foreach ($groups as $groupName => $items): ?>
-      <?php $groupIndex++; ?>
-      <div class="col-12 col-md-6 col-xl-4">
-        <div class="card h-100">
-          <div class="card-header d-flex align-items-center justify-content-between">
-            <span class="fw-semibold text-capitalize"><?= htmlspecialchars($groupName); ?></span>
-            <div class="form-check form-switch m-0">
-              <input class="form-check-input perm-group-toggle" type="checkbox" id="permGroupToggle<?= (int) $groupIndex; ?>" data-group="<?= (int) $groupIndex; ?>" title="Marcar/desmarcar todas deste grupo">
-              <label class="form-check-label small text-muted" for="permGroupToggle<?= (int) $groupIndex; ?>">Todas</label>
-            </div>
-          </div>
-          <div class="card-body p-0">
-              <table class="table table-sm table-bordered align-middle mb-0">
+    <div class="permissions-toolbar-export">
+      <?= pdfExportButton('permission', $queryFilters); ?>
+      <?= excelExportButton('permission', $queryFilters); ?>
+    </div>
+  </section>
+
+  <div class="collapse" id="addPermCatalog">
+    <section class="permissions-manual-panel app-section">
+      <div class="permissions-section-heading">
+        <div>
+          <span class="permissions-section-label">Catálogo</span>
+          <h6>Adicionar permissão manualmente</h6>
+        </div>
+      </div>
+      <form method="POST" action="<?= url('permission/create'); ?>" class="row g-3 align-items-end">
+        <input type="hidden" name="selected_user_id" value="<?= (int) ($selectedUserId ?? 0); ?>">
+        <div class="col-12 col-md-4">
+          <label class="form-label" for="permissionAbility">Nova ability</label>
+          <input class="form-control" id="permissionAbility" name="ability" placeholder="ex.: report.index" required>
+        </div>
+        <div class="col-12 col-md-6">
+          <label class="form-label" for="permissionDescription">Descrição</label>
+          <input class="form-control" id="permissionDescription" name="description" placeholder="Opcional">
+        </div>
+        <div class="col-12 col-md-2">
+          <button class="btn btn-primary w-100" type="submit">Adicionar</button>
+        </div>
+        <div class="col-12">
+          <small class="text-muted">
+            Depois de criar a ability, conceda-a ao usuário abaixo para efetivar o acesso.
+          </small>
+        </div>
+      </form>
+    </section>
+  </div>
+
+  <form method="GET" action="<?= url('permission'); ?>" class="permissions-user-form">
+    <section class="permissions-user-section app-section">
+      <div class="permissions-section-heading">
+        <div>
+          <span class="permissions-section-label">Usuário</span>
+          <h6>Selecione quem receberá as permissões</h6>
+        </div>
+      </div>
+      <div class="permissions-user-select">
+        <select name="user_id" class="form-select" onchange="this.form.submit()" aria-label="Selecionar usuário">
+          <option value="0">Selecione um usuário...</option>
+          <?php foreach ($users as $u): ?>
+            <?php
+              $uid = (int) $u['id'];
+              $label = trim((string) $u['username']);
+              if (!empty($u['email']))
+                {
+                $label .= ' (' . $u['email'] . ')';
+                }
+              if (!empty($u['type']))
+                {
+                $label .= ' [' . $u['type'] . ']';
+                }
+            ?>
+            <option value="<?= $uid; ?>" <?= ($uid === (int) $selectedUserId ? 'selected' : ''); ?>><?= htmlspecialchars($label, ENT_QUOTES, 'UTF-8'); ?></option>
+          <?php endforeach; ?>
+        </select>
+        <small class="text-muted">Marque ou desmarque as funcionalidades para o usuário selecionado.</small>
+      </div>
+    </section>
+  </form>
+
+  <?php if ((int) $selectedUserId <= 0): ?>
+    <section class="permissions-empty-state app-section">
+      <span class="permissions-empty-icon"><i class="bi bi-person-check"></i></span>
+      <div>
+        <h6>Selecione um usuário para editar permissões</h6>
+        <p class="mb-0 text-muted">O catálogo permanece visível somente depois que um usuário é escolhido.</p>
+      </div>
+    </section>
+  <?php else: ?>
+
+    <form method="POST" action="<?= url('permission/saveUser'); ?>" class="permissions-assignment-form">
+      <input type="hidden" name="user_id" value="<?= (int) $selectedUserId; ?>">
+
+      <section class="permissions-master-panel app-section">
+        <div class="permissions-master-text">
+          <span class="permissions-section-label">Permissões</span>
+          <h6>Todas as permissões do catálogo</h6>
+          <small class="text-muted">Use os controles globais ou de cada grupo para acelerar a seleção.</small>
+        </div>
+        <div class="form-check form-switch permissions-switch m-0">
+          <input class="form-check-input" type="checkbox" id="permToggleAll" title="Marcar/desmarcar todas as permissões">
+          <label class="form-check-label" for="permToggleAll">Todas</label>
+        </div>
+      </section>
+
+      <div class="permissions-groups-grid">
+        <?php $groupIndex = 0; ?>
+        <?php foreach ($groups as $groupName => $items): ?>
+          <?php
+            $groupIndex++;
+            $groupSelectedCount = 0;
+            foreach ($items as $p)
+              {
+              if (in_array((int) $p['id'], $selectedPermissionIds, true))
+                {
+                $groupSelectedCount++;
+                }
+              }
+          ?>
+          <section class="permission-group-card">
+            <header class="permission-group-header">
+              <div>
+                <span class="permission-group-name"><?= htmlspecialchars($groupName, ENT_QUOTES, 'UTF-8'); ?></span>
+                <small><?= (int) $groupSelectedCount; ?> de <?= (int) count($items); ?> ativa(s)</small>
+              </div>
+              <div class="form-check form-switch permissions-switch m-0">
+                <input class="form-check-input perm-group-toggle" type="checkbox" id="permGroupToggle<?= (int) $groupIndex; ?>" data-group="<?= (int) $groupIndex; ?>" title="Marcar/desmarcar todas deste grupo">
+                <label class="form-check-label" for="permGroupToggle<?= (int) $groupIndex; ?>">Todas</label>
+              </div>
+            </header>
+
+            <div class="permission-group-table table-responsive">
+              <table class="table table-sm align-middle mb-0">
                 <thead>
                   <tr>
-                    <th class="col-1">On</th>
+                    <th class="permission-toggle-column">On</th>
                     <th>Ability</th>
                     <th>Descrição</th>
                   </tr>
@@ -175,147 +233,57 @@ $queryFilters = http_build_query([
                   <?php foreach ($items as $p): ?>
                     <?php
                       $pid = (int) $p['id'];
-                      $checked = in_array($pid, $userPermissionIds, true);
+                      $checked = in_array($pid, $selectedPermissionIds, true);
                     ?>
                     <tr>
                       <td class="text-center">
-                        <input class="form-check-input" type="checkbox" name="permission_ids[]" value="<?= $pid; ?>" data-group="<?= (int) $groupIndex; ?>" <?= ($checked ? 'checked' : ''); ?>>
+                        <input class="form-check-input" type="checkbox" name="permission_ids[]" value="<?= $pid; ?>" data-group="<?= (int) $groupIndex; ?>" aria-label="Permissão <?= htmlspecialchars((string) $p['ability'], ENT_QUOTES, 'UTF-8'); ?>" <?= ($checked ? 'checked' : ''); ?>>
                       </td>
-                      <td style="word-break:break-all"><code><?= htmlspecialchars($p['ability']); ?></code></td>
-                      <td class="text-muted small"><?= htmlspecialchars((string) ($p['description'] ?? '')); ?></td>
+                      <td><code class="permission-ability"><?= htmlspecialchars((string) $p['ability'], ENT_QUOTES, 'UTF-8'); ?></code></td>
+                      <td class="permission-description"><?= htmlspecialchars((string) ($p['description'] ?? ''), ENT_QUOTES, 'UTF-8'); ?></td>
                     </tr>
                   <?php endforeach; ?>
                 </tbody>
               </table>
-          </div>
-        </div>
+            </div>
+          </section>
+        <?php endforeach; ?>
       </div>
-    <?php endforeach; ?>
-    </div>
 
-    <div class="d-flex flex-wrap gap-2 align-items-center">
-      <button type="submit" class="btn btn-primary">
-        <i class="bi bi-save me-1"></i> Salvar permissões
-      </button>
-      <a class="btn btn-secondary" href="<?= url('permission?user_id=' . (int) $selectedUserId); ?>">
-        Recarregar
-      </a>
-      <button class="btn btn-dark" type="button" data-bs-toggle="collapse" data-bs-target="#effectivePerms" aria-expanded="false" aria-controls="effectivePerms">
-        Ver permissões ativas
-      </button>
-    </div>
-
-    <div class="collapse mt-3" id="effectivePerms">
-      <div class="border rounded p-3">
-        <div class="fw-semibold mb-2">Permissões ativas do usuário</div>
-        <?php if (empty($effectiveAbilities)): ?>
-          <div class="text-muted">Nenhuma permissão ativa encontrada.</div>
-        <?php else: ?>
-          <div class="d-flex flex-wrap gap-2">
-            <?php foreach ($effectiveAbilities as $ab): ?>
-              <span class="badge text-bg-secondary"><code class="text-white"><?= htmlspecialchars($ab); ?></code></span>
-            <?php endforeach; ?>
+      <div class="collapse permissions-effective-collapse" id="effectivePerms">
+        <section class="permissions-effective-panel app-section">
+          <div class="permissions-section-heading">
+            <div>
+              <span class="permissions-section-label">Usuário selecionado</span>
+              <h6>Permissões ativas</h6>
+            </div>
           </div>
-        <?php endif; ?>
+          <?php if (empty($effectiveAbilities)): ?>
+            <div class="text-muted">Nenhuma permissão ativa encontrada.</div>
+          <?php else: ?>
+            <div class="permissions-effective-list">
+              <?php foreach ($effectiveAbilities as $ab): ?>
+                <span class="permission-badge"><code><?= htmlspecialchars((string) $ab, ENT_QUOTES, 'UTF-8'); ?></code></span>
+              <?php endforeach; ?>
+            </div>
+          <?php endif; ?>
+        </section>
       </div>
-    </div>
 
-  </form>
+      <div class="form-actions permissions-save-actions">
+        <a class="btn btn-secondary" href="<?= url('permission?user_id=' . (int) $selectedUserId); ?>">
+          <i class="bi bi-arrow-clockwise"></i> Recarregar
+        </a>
+        <button class="btn btn-secondary" type="button" data-bs-toggle="collapse" data-bs-target="#effectivePerms" aria-expanded="false" aria-controls="effectivePerms">
+          <i class="bi bi-list-check"></i> Ver permissões ativas
+        </button>
+        <button type="submit" class="btn btn-primary">
+          <i class="bi bi-check-lg"></i> Salvar permissões
+        </button>
+      </div>
+    </form>
 
-  <script>
-    (function () {
-      var toggleAll = document.getElementById('permToggleAll');
-      var checkboxes = document.querySelectorAll('input[name="permission_ids[]"]');
-      var groupToggles = document.querySelectorAll('.perm-group-toggle');
+  <?php endif; ?>
+</div>
 
-      function groupCheckboxes(group)
-        {
-        return document.querySelectorAll('input[name="permission_ids[]"][data-group="' + group + '"]');
-        }
-
-      function allCheckedIn(list)
-        {
-        for (var i = 0; i < list.length; i++)
-          {
-          if (!list[i].checked)
-            {
-            return false;
-            }
-          }
-        return list.length > 0;
-        }
-
-      function someCheckedIn(list)
-        {
-        for (var i = 0; i < list.length; i++)
-          {
-          if (list[i].checked)
-            {
-            return true;
-            }
-          }
-        return false;
-        }
-
-      function syncToggle(toggle, list)
-        {
-        var allOn = allCheckedIn(list);
-        toggle.checked = allOn;
-        toggle.indeterminate = (!allOn && someCheckedIn(list));
-        }
-
-      function updateGlobalToggle()
-        {
-        if (toggleAll)
-          {
-          syncToggle(toggleAll, checkboxes);
-          }
-        }
-
-      function updateGroupToggles()
-        {
-        for (var i = 0; i < groupToggles.length; i++)
-          {
-          syncToggle(groupToggles[i], groupCheckboxes(groupToggles[i].getAttribute('data-group')));
-          }
-        }
-
-      function refresh()
-        {
-        updateGlobalToggle();
-        updateGroupToggles();
-        }
-
-      if (toggleAll)
-        {
-        toggleAll.addEventListener('change', function () {
-          for (var i = 0; i < checkboxes.length; i++)
-            {
-            checkboxes[i].checked = this.checked;
-            }
-          refresh();
-        });
-        }
-
-      for (var i = 0; i < groupToggles.length; i++)
-        {
-        groupToggles[i].addEventListener('change', function () {
-          var list = groupCheckboxes(this.getAttribute('data-group'));
-          for (var j = 0; j < list.length; j++)
-            {
-            list[j].checked = this.checked;
-            }
-          refresh();
-        });
-        }
-
-      for (var i = 0; i < checkboxes.length; i++)
-        {
-        checkboxes[i].addEventListener('change', refresh);
-        }
-
-      refresh();
-    }());
-  </script>
-
-<?php endif; ?>
+<script src="<?= url('assets/js/permissions/index.js?v=1'); ?>"></script>

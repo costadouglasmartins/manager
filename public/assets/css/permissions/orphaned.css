@@ -1,0 +1,160 @@
+.permissions-orphaned-page {
+  display: grid;
+  gap: 1rem;
+}
+
+.permissions-orphaned-header {
+  align-items: stretch;
+}
+
+.permissions-orphaned-subtitle {
+  max-width: 760px;
+  margin: 0.45rem 0 0;
+  color: var(--app-muted);
+}
+
+.permissions-orphaned-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-content: flex-start;
+  justify-content: flex-end;
+  gap: 0.6rem;
+}
+
+.permissions-orphaned-actions .btn-outline-success {
+  --bs-btn-color: var(--app-success);
+  --bs-btn-border-color: color-mix(in srgb, var(--app-success) 58%, var(--app-border));
+  --bs-btn-hover-bg: var(--app-success);
+  --bs-btn-hover-border-color: var(--app-success);
+}
+
+.permissions-orphaned-summary {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(160px, 220px)) minmax(240px, 1fr);
+  gap: 0.75rem;
+  align-items: center;
+}
+
+.permissions-orphaned-summary-item {
+  display: flex;
+  min-height: 72px;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.7rem;
+  border: 1px solid var(--app-border);
+  border-radius: 8px;
+  background: var(--app-surface-raised);
+}
+
+.permissions-orphaned-summary-item strong {
+  display: block;
+  color: var(--app-text);
+  font-size: 1.2rem;
+  line-height: 1;
+}
+
+.permissions-orphaned-summary-item small {
+  color: var(--app-muted);
+  font-weight: 700;
+}
+
+.permissions-summary-icon,
+.permissions-empty-icon {
+  display: inline-flex;
+  flex: 0 0 auto;
+  width: 42px;
+  height: 42px;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid color-mix(in srgb, var(--app-accent) 24%, var(--app-border));
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--app-accent) 10%, var(--app-surface-raised));
+  color: var(--app-accent);
+  font-size: 1.1rem;
+}
+
+.permissions-summary-icon-warning {
+  border-color: color-mix(in srgb, var(--app-warning) 34%, var(--app-border));
+  background: color-mix(in srgb, var(--app-warning) 13%, var(--app-surface-raised));
+  color: var(--app-warning);
+}
+
+.permissions-orphaned-empty {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.permissions-orphaned-empty h6,
+.permissions-orphaned-card h6 {
+  margin: 0.15rem 0 0;
+  color: var(--app-text);
+  font-weight: 850;
+}
+
+.permissions-section-label {
+  display: inline-flex;
+  align-items: center;
+  color: var(--app-accent);
+  font-size: 0.78rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.permissions-orphaned-card {
+  overflow: hidden;
+  padding: 0;
+}
+
+.permissions-orphaned-card-header {
+  padding: 1rem;
+  border-bottom: 1px solid var(--app-border);
+  background: var(--app-surface-raised);
+}
+
+.permissions-orphaned-table .permission-ability,
+.permissions-modal-ability code {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.permissions-orphaned-table .permission-description {
+  color: var(--app-muted) !important;
+  font-size: 0.9rem;
+}
+
+.permissions-orphaned-row-warning > * {
+  background: color-mix(in srgb, var(--app-warning) 9%, var(--app-surface)) !important;
+}
+
+.permissions-zero-count {
+  color: var(--app-muted);
+  font-weight: 750;
+}
+
+@media (max-width: 991.98px) {
+  .permissions-orphaned-header {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .permissions-orphaned-actions {
+    justify-content: flex-start;
+  }
+
+  .permissions-orphaned-summary {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 575.98px) {
+  .permissions-orphaned-actions,
+  .permissions-orphaned-actions .btn {
+    width: 100%;
+  }
+
+  .permissions-orphaned-empty {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}
