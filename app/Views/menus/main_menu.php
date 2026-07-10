@@ -24,54 +24,6 @@
           <ul class="dropdown-menu" aria-labelledby="menuExemplo">
 
             <li class="dropdown-submenu">
-              <a class="dropdown-item submenu-toggle" href="#"><i class="bi bi-signpost-split me-2"></i>Bairros</a>
-              <ul class="dropdown-menu">
-                <?php if (authCan('neighborhood.index')): ?>
-                  <li><a class="dropdown-item" href="<?= url('neighborhood'); ?>"><i class="bi bi-list me-2"></i>Listar</a></li>
-                <?php endif; ?>
-              </ul>
-            </li>
-
-            <li><hr class="dropdown-divider" /></li>
-
-            <li class="dropdown-submenu">
-              <a class="dropdown-item submenu-toggle" href="#"><i class="bi bi-globe-americas me-2"></i>Cidadaes</a>
-              <ul class="dropdown-menu">
-                <?php if (authCan('city.index')): ?>
-                <li><a class="dropdown-item" href="<?= url('city'); ?>"><i class="bi bi-list me-2"></i>Listar</a></li>
-                <?php endif; ?>
-              </ul>
-            </li>
-
-            <li><hr class="dropdown-divider" /></li>
-
-            <li class="dropdown-submenu">
-              <a class="dropdown-item submenu-toggle" href="#"><i class="bi bi-globe-americas me-2"></i>Estados</a>
-              <ul class="dropdown-menu">
-                <?php if (authCan('state.index')): ?>
-                  <li><a class="dropdown-item" href="<?= url('state'); ?>"><i class="bi bi-list me-2"></i>Listar</a></li>
-                <?php endif; ?>
-              </ul>
-            </li>
-
-            <li><hr class="dropdown-divider" /></li>
-
-            <li class="dropdown-submenu">
-              <a class="dropdown-item submenu-toggle" href="#"><i class="bi bi-globe-americas me-2"></i>Países</a>
-              <ul class="dropdown-menu">
-                <?php if (authCan('country.create')): ?>
-                  <li><a class="dropdown-item" href="<?= url('country/create'); ?>"><i class="bi bi-file-earmark me-2"></i>Cadastrar</a></li>
-                <?php endif; ?>
-                <li><hr class="dropdown-divider" /></li>
-                <?php if (authCan('country.index')): ?>
-                  <li><a class="dropdown-item" href="<?= url('country'); ?>"><i class="bi bi-list me-2"></i>Listar</a></li>
-                <?php endif; ?>
-              </ul>
-            </li>
-
-            <li><hr class="dropdown-divider" /></li>
-
-            <li class="dropdown-submenu">
               <a class="dropdown-item submenu-toggle" href="#"><i class="bi bi-people-fill me-2"></i>Pessoas</a>
               <ul class="dropdown-menu">
                 <?php if (authCan('person.create')): ?>
@@ -125,48 +77,46 @@
             <i class="bi bi-bank me-1"></i> Financeiro
           </a>
           <ul class="dropdown-menu" aria-labelledby="financeMenu">
-            <li class="dropdown-submenu">
-              <a class="dropdown-item submenu-toggle" href="#"><i class="bi bi-gear me-2"></i>Configurações</a>
-              <ul class="dropdown-menu">
-                <li class="dropdown-submenu">
-                  <a class="dropdown-item submenu-toggle" href="#"><i class="bi bi-folder me-2"></i>Bancos</a>
-                  <ul class="dropdown-menu">
-                    <?php if (authCan('bank.index')): ?>
-                      <li><a class="dropdown-item" href="<?= url('bank'); ?>"><i class="bi bi-bank me-2"></i>Bancos</a></li>
-                    <?php endif; ?>
-                    <li><hr class="dropdown-divider" /></li>
-                    <?php if (authCan('bank_account.index')): ?>
-                      <li><a class="dropdown-item" href="<?= url('bank_account'); ?>"><i class="bi bi-wallet2 me-2"></i>Contas Bancárias</a></li>
-                    <?php endif; ?>
-                  </ul>
-                </li>
-                <li><hr class="dropdown-divider" /></li>
-                <li class="dropdown-submenu">
-                  <a class="dropdown-item submenu-toggle" href="#"><i class="bi bi-folder me-2"></i>Submenu 2</a>
-                  <ul class="dropdown-menu">
-                  </ul>
-                </li>
-              </ul>
-            </li>
-            <li><hr class="dropdown-divider" /></li>
-            <?php if (authCan('financial_operation.spreadsheet')): ?>
-              <li><a class="dropdown-item" href="<?= url('financial_operation'); ?>"><i class="bi bi-receipt me-2"></i>Operações Financeiras</a></li>
+            <?php if (authCan('bank.index')): ?>
+              <li><a class="dropdown-item" href="<?= url('bank'); ?>"><i class="bi bi-bank me-2"></i>Bancos</a></li>
               <li><hr class="dropdown-divider" /></li>
-              <li><a class="dropdown-item" href="<?= url('financial_operation/spreadsheet'); ?>"><i class="bi bi-table me-2"></i>Planilha anual</a></li>
             <?php endif; ?>
-            <li><hr class="dropdown-divider" /></li>
-            <?php if (authCan('financial_operation_category.index')): ?>
-              <li><a class="dropdown-item" href="<?= url('financial_operation_category'); ?>"><i class="bi bi-tags me-2"></i>Operações financeiras - Categoriass</a></li>
+            <?php if (authCan('bank_account.index')): ?>
+              <li><a class="dropdown-item" href="<?= url('bank_account'); ?>"><i class="bi bi-wallet2 me-2"></i>Contas Bancárias</a></li>
             <?php endif; ?>
+            
             <li><hr class="dropdown-divider" /></li>
-            <?php if (authCan('financial_operation_subcategory.index')): ?>
-              <li><a class="dropdown-item" href="<?= url('financial_operation_subcategory'); ?>"><i class="bi bi-diagram-3 me-2"></i>Operações financeiras - Subcategorias</a></li>
+            <?php if (authCan('financial_operation.spreadsheet') || authCan('financial_operation_category.index') || authCan('financial_operation_subcategory.index') || authCan('financial_operation_payment.index')): ?>
+              <li class="dropdown-submenu">
+                <a class="dropdown-item submenu-toggle" href="#"><i class="bi bi-receipt me-2"></i>Operações financeiras</a>
+                <ul class="dropdown-menu">
+                  <?php if (authCan('financial_operation.spreadsheet')): ?>
+                    <li><a class="dropdown-item" href="<?= url('financial_operation'); ?>"><i class="bi bi-receipt me-2"></i>Operações</a></li>
+                    <li><hr class="dropdown-divider" /></li>
+                    <li><a class="dropdown-item" href="<?= url('financial_operation/spreadsheet'); ?>"><i class="bi bi-table me-2"></i>Planilha anual</a></li>
+                    <?php if (authCan('financial_operation_category.index') || authCan('financial_operation_subcategory.index') || authCan('financial_operation_payment.index')): ?>
+                      <li><hr class="dropdown-divider" /></li>
+                    <?php endif; ?>
+                  <?php endif; ?>
+                  <?php if (authCan('financial_operation_category.index')): ?>
+                    <li><a class="dropdown-item" href="<?= url('financial_operation_category'); ?>"><i class="bi bi-tags me-2"></i>Categorias</a></li>
+                    <?php if (authCan('financial_operation_subcategory.index') || authCan('financial_operation_payment.index')): ?>
+                      <li><hr class="dropdown-divider" /></li>
+                    <?php endif; ?>
+                  <?php endif; ?>
+                  <?php if (authCan('financial_operation_subcategory.index')): ?>
+                    <li><a class="dropdown-item" href="<?= url('financial_operation_subcategory'); ?>"><i class="bi bi-diagram-3 me-2"></i>Subcategorias</a></li>
+                    <?php if (authCan('financial_operation_payment.index')): ?>
+                      <li><hr class="dropdown-divider" /></li>
+                    <?php endif; ?>
+                  <?php endif; ?>
+                  <?php if (authCan('financial_operation_payment.index')): ?>
+                    <li><a class="dropdown-item" href="<?= url('financial_operation_payment'); ?>"><i class="bi bi-cash-stack me-2"></i>Pagamentos</a></li>
+                  <?php endif; ?>
+                </ul>
+              </li>
+              <li><hr class="dropdown-divider" /></li>
             <?php endif; ?>
-            <li><hr class="dropdown-divider" /></li>
-            <?php if (authCan('financial_operation_payment.index')): ?>
-              <li><a class="dropdown-item" href="<?= url('financial_operation_payment'); ?>"><i class="bi bi-cash-stack me-2"></i>Operações financeiras - Pagamentos</a></li>
-            <?php endif; ?>
-            <li><hr class="dropdown-divider" /></li>
             <?php if (authCan('bank_slip.index')): ?>
               <li><a class="dropdown-item" href="<?= url('bank_slip'); ?>"><i class="bi bi-upc-scan me-2"></i>Boletos</a></li>
             <?php endif; ?>
