@@ -71,7 +71,7 @@ class RecordListExportService
 	 * Returns the columns available for the resource export picker.
 	 *
 	 * @param string $resource Resource key.
-	 * @return array<int, array{key: string, label: string}>
+	 * @return array<int, array{key: string, label: string, checked: bool}>
 	 */
 	public function exportColumns(string $resource): array
 		{
@@ -83,6 +83,7 @@ class RecordListExportService
 			$columns[] = [
 				'key' => (string) $index,
 				'label' => (string) ($column['label'] ?? ('Coluna ' . ((int) $index + 1))),
+				'checked' => (bool) ($column['checked'] ?? true),
 			];
 			}
 
@@ -155,39 +156,94 @@ class RecordListExportService
 				['label' => 'CEP', 'field' => 'zip_code'],
 				['label' => 'Logradouro', 'field' => 'street'],
 				['label' => 'Número', 'field' => 'number'],
+				['label' => 'Pessoa ID', 'field' => 'person_id', 'align' => 'right'],
+				['label' => 'Bairro ID', 'field' => 'neighborhood_id', 'align' => 'right'],
 				['label' => 'Bairro', 'field' => 'neighborhood_name'],
 				['label' => 'Cidade', 'field' => 'neighborhood_city_name'],
 				['label' => 'Pessoa', 'field' => 'person_name'],
 				['label' => 'Observações', 'field' => 'observations'],
+				['label' => 'Criado em', 'callback' => fn (array $row): string => $this->dateTime($row['created'] ?? '')],
+				['label' => 'Modificado em', 'callback' => fn (array $row): string => $this->dateTime($row['modified'] ?? '')],
 			], ['needsTenant' => true, 'tenantIdArgument' => true]),
 			'bank_account' => $this->standardDefinition(BankAccount::class, 'Lista de contas bancárias', 'contas_bancarias', ['id', 'bank_id', 'name', 'agency', 'account', 'active'], [
 				['label' => '#', 'field' => 'id', 'align' => 'right'],
+				['label' => 'Banco ID', 'field' => 'bank_id', 'align' => 'right'],
 				['label' => 'Banco', 'callback' => fn (array $row): string => $this->bankLabel($row)],
 				['label' => 'Nome', 'field' => 'name'],
 				['label' => 'Agência', 'field' => 'agency'],
 				['label' => 'Conta', 'field' => 'account'],
 				['label' => 'Tipo PIX', 'field' => 'pix_key_type'],
 				['label' => 'Chave PIX', 'field' => 'pix_key'],
+				['label' => 'Instrução boleto 1', 'field' => 'bank_slip_instructions_line_1'],
+				['label' => 'Instrução boleto 2', 'field' => 'bank_slip_instructions_line_2'],
+				['label' => 'Instrução boleto 3', 'field' => 'bank_slip_instructions_line_3'],
+				['label' => 'Instrução boleto 4', 'field' => 'bank_slip_instructions_line_4'],
+				['label' => 'Protestar boleto', 'callback' => fn (array $row): string => $this->yesNo($row['bank_slip_protest'] ?? null)],
+				['label' => 'Dias para protesto', 'field' => 'bank_slip_protest_number_of_days', 'align' => 'right'],
+				['label' => 'Carteira boleto', 'field' => 'bank_slip_wallet'],
+				['label' => 'Espécie título', 'field' => 'bank_slip_species_title'],
+				['label' => 'Tipo de juros', 'field' => 'bank_slip_interest_type'],
+				['label' => 'Tipo valor juros', 'field' => 'bank_slip_interest_amount_type'],
+				['label' => 'Juros boleto', 'callback' => fn (array $row): string => $this->nullableMoney($row['bank_slip_interest'] ?? null), 'align' => 'right'],
+				['label' => 'Multa boleto', 'callback' => fn (array $row): string => $this->nullableMoney($row['bank_slip_late_fee_amount'] ?? null), 'align' => 'right'],
 				['label' => 'Status', 'callback' => fn (array $row): string => $this->activeLabel($row['active'] ?? null)],
+				['label' => 'Criado em', 'callback' => fn (array $row): string => $this->dateTime($row['created'] ?? '')],
+				['label' => 'Modificado em', 'callback' => fn (array $row): string => $this->dateTime($row['modified'] ?? '')],
 			], ['needsTenant' => true]),
 			'bank_file' => $this->standardDefinition(BankFile::class, 'Lista de remessas', 'remessas', ['id', 'file_type', 'file_name', 'bank_account_id'], [
 				['label' => '#', 'field' => 'id', 'align' => 'right'],
+				['label' => 'Conta bancária ID', 'field' => 'bank_account_id', 'align' => 'right'],
 				['label' => 'Tipo', 'field' => 'file_type'],
 				['label' => 'Arquivo', 'field' => 'file_name'],
+				['label' => 'Caminho do arquivo', 'field' => 'file_path'],
+				['label' => 'Hash do arquivo', 'field' => 'file_hash'],
 				['label' => 'Conta bancária', 'field' => 'bank_account_name'],
 				['label' => 'Banco', 'callback' => fn (array $row): string => $this->bankLabel($row)],
 				['label' => 'Boletos', 'field' => 'bank_slips_count', 'align' => 'right'],
 				['label' => 'Criado em', 'callback' => fn (array $row): string => $this->dateTime($row['created'] ?? '')],
+				['label' => 'Modificado em', 'callback' => fn (array $row): string => $this->dateTime($row['modified'] ?? '')],
 			], ['needsTenant' => true]),
 			'bank_slip' => $this->standardDefinition(BankSlip::class, 'Lista de boletos bancários', 'boletos_bancarios', ['id', 'bank_account_id', 'bank_account_ids', 'status', 'document_number'], [
 				['label' => '#', 'field' => 'id', 'align' => 'right'],
+				['label' => 'Pagamento financeiro ID', 'field' => 'financial_operation_payment_id', 'align' => 'right'],
+				['label' => 'Conta bancária ID', 'field' => 'bank_account_id', 'align' => 'right'],
+				['label' => 'Remessa ID', 'field' => 'bank_file_id', 'align' => 'right'],
 				['label' => 'Documento', 'field' => 'document_number'],
+				['label' => 'Nosso número', 'field' => 'our_number'],
+				['label' => 'Dígito nosso número', 'field' => 'our_number_digit'],
+				['label' => 'Carteira', 'field' => 'portfolio'],
 				['label' => 'Banco/conta', 'callback' => fn (array $row): string => trim($this->bankLabel($row) . ' - ' . (string) ($row['bank_account_name'] ?? ''), ' -')],
+				['label' => 'Tipo documento sacado', 'field' => 'payer_document_type'],
+				['label' => 'Documento sacado', 'field' => 'payer_document'],
 				['label' => 'Sacado', 'field' => 'payer_name'],
+				['label' => 'Logradouro sacado', 'field' => 'payer_street'],
+				['label' => 'Bairro sacado', 'field' => 'payer_neighborhood'],
+				['label' => 'Cidade sacado', 'field' => 'payer_city'],
+				['label' => 'UF sacado', 'field' => 'payer_state'],
+				['label' => 'CEP sacado', 'field' => 'payer_zip_code'],
 				['label' => 'Vencimento', 'callback' => fn (array $row): string => $this->date($row['due_date'] ?? '')],
+				['label' => 'Emissão', 'callback' => fn (array $row): string => $this->date($row['issue_date'] ?? '')],
+				['label' => 'Pagamento', 'callback' => fn (array $row): string => $this->date($row['payment_date'] ?? '')],
 				['label' => 'Valor', 'callback' => fn (array $row): string => $this->money($row['amount'] ?? 0), 'align' => 'right'],
+				['label' => 'Valor pago', 'callback' => fn (array $row): string => $this->nullableMoney($row['paid_amount'] ?? null), 'align' => 'right'],
+				['label' => 'Valor creditado', 'callback' => fn (array $row): string => $this->nullableMoney($row['credited_amount'] ?? null), 'align' => 'right'],
+				['label' => 'Crédito', 'callback' => fn (array $row): string => $this->date($row['credit_date'] ?? '')],
+				['label' => 'Data juros', 'callback' => fn (array $row): string => $this->date($row['interest_date'] ?? '')],
+				['label' => 'Juros por dia', 'callback' => fn (array $row): string => $this->money($row['interest_amount_per_day'] ?? 0), 'align' => 'right'],
+				['label' => 'Data desconto', 'callback' => fn (array $row): string => $this->date($row['discount_date'] ?? '')],
+				['label' => 'Desconto', 'callback' => fn (array $row): string => $this->money($row['discount_amount'] ?? 0), 'align' => 'right'],
+				['label' => 'Data multa', 'callback' => fn (array $row): string => $this->date($row['fine_date'] ?? '')],
+				['label' => 'Multa', 'callback' => fn (array $row): string => $this->money($row['fine_amount'] ?? 0), 'align' => 'right'],
+				['label' => 'Código protesto', 'field' => 'protest_code'],
+				['label' => 'Dias protesto', 'field' => 'protest_days', 'align' => 'right'],
+				['label' => 'Código baixa', 'field' => 'write_off_code'],
+				['label' => 'Dias baixa', 'field' => 'write_off_days', 'align' => 'right'],
+				['label' => 'Última ocorrência', 'field' => 'last_occurrence_code'],
+				['label' => 'Mensagem ocorrência', 'field' => 'last_occurrence_message'],
 				['label' => 'Status', 'field' => 'status'],
 				['label' => 'Remessa', 'field' => 'bank_file_name'],
+				['label' => 'Criado em', 'callback' => fn (array $row): string => $this->dateTime($row['created'] ?? '')],
+				['label' => 'Modificado em', 'callback' => fn (array $row): string => $this->dateTime($row['modified'] ?? '')],
 			], ['needsTenant' => true, 'normalizeFilters' => fn (array $filters, array $query): array => $this->normalizeBankSlipFilters($filters, $query)]),
 			'bank' => $this->standardDefinition(Bank::class, 'Lista de bancos', 'bancos', ['id', 'name', 'number'], [
 				['label' => '#', 'field' => 'id', 'align' => 'right'],
@@ -195,53 +251,75 @@ class RecordListExportService
 				['label' => 'Nome', 'field' => 'name'],
 				['label' => 'CNAB', 'field' => 'cnab'],
 				['label' => 'Status', 'callback' => fn (array $row): string => $this->activeLabel($row['active'] ?? null)],
+				['label' => 'Criado em', 'callback' => fn (array $row): string => $this->dateTime($row['created'] ?? '')],
+				['label' => 'Modificado em', 'callback' => fn (array $row): string => $this->dateTime($row['modified'] ?? '')],
 			]),
 			'city' => $this->standardDefinition(City::class, 'Lista de cidades', 'cidades', ['id', 'name', 'country_id', 'state_id'], [
 				['label' => '#', 'field' => 'id', 'align' => 'right'],
 				['label' => 'Nome', 'field' => 'name'],
+				['label' => 'Descrição', 'field' => 'description'],
+				['label' => 'Estado ID', 'field' => 'state_id', 'align' => 'right'],
 				['label' => 'Estado', 'field' => 'state_name'],
 				['label' => 'UF', 'field' => 'state_acronym'],
 				['label' => 'País', 'field' => 'country_name'],
+				['label' => 'Criado em', 'callback' => fn (array $row): string => $this->dateTime($row['created'] ?? '')],
+				['label' => 'Modificado em', 'callback' => fn (array $row): string => $this->dateTime($row['modified'] ?? '')],
 			]),
 			'country' => $this->standardDefinition(Country::class, 'Lista de países', 'paises', ['id', 'name', 'acronym'], [
 				['label' => '#', 'field' => 'id', 'align' => 'right'],
 				['label' => 'Nome', 'field' => 'name'],
 				['label' => 'Sigla', 'field' => 'acronym'],
+				['label' => 'Criado em', 'callback' => fn (array $row): string => $this->dateTime($row['created'] ?? '')],
+				['label' => 'Modificado em', 'callback' => fn (array $row): string => $this->dateTime($row['modified'] ?? '')],
 			]),
 			'email' => $this->standardDefinition(Email::class, 'Lista de e-mails', 'emails', ['id', 'email', 'person_id', 'person_name'], [
 				['label' => '#', 'field' => 'id', 'align' => 'right'],
 				['label' => 'E-mail', 'field' => 'email'],
+				['label' => 'Pessoa ID', 'field' => 'person_id', 'align' => 'right'],
 				['label' => 'Pessoa', 'field' => 'person_name'],
 				['label' => 'Login', 'callback' => fn (array $row): string => $this->yesNo($row['is_login'] ?? null)],
 				['label' => 'Observações', 'field' => 'observations'],
+				['label' => 'Criado em', 'callback' => fn (array $row): string => $this->dateTime($row['created'] ?? '')],
+				['label' => 'Modificado em', 'callback' => fn (array $row): string => $this->dateTime($row['modified'] ?? '')],
 			], ['needsTenant' => true, 'tenantIdArgument' => true]),
 			'financial_operation' => $this->standardDefinition(FinancialOperation::class, 'Lista de operações financeiras', 'operacoes_financeiras', ['id', 'financial_operation_category_id', 'total_amount'], [
 				['label' => '#', 'field' => 'id', 'align' => 'right'],
+				['label' => 'Categoria ID', 'field' => 'financial_operation_category_id', 'align' => 'right'],
 				['label' => 'Categoria', 'field' => 'financial_operation_category_name'],
+				['label' => 'Subcategoria ID', 'field' => 'financial_operation_subcategory_id', 'align' => 'right'],
 				['label' => 'Valor total', 'callback' => fn (array $row): string => $this->money($row['total_amount'] ?? 0), 'align' => 'right'],
 				['label' => 'Criado em', 'callback' => fn (array $row): string => $this->dateTime($row['created'] ?? '')],
+				['label' => 'Modificado em', 'callback' => fn (array $row): string => $this->dateTime($row['modified'] ?? '')],
 			], ['needsTenant' => true]),
 			'financial_operation_category' => $this->standardDefinition(FinancialOperationCategory::class, 'Lista de categorias financeiras', 'categorias_financeiras', ['id', 'name'], [
 				['label' => '#', 'field' => 'id', 'align' => 'right'],
 				['label' => 'Nome', 'field' => 'name'],
 				['label' => 'Criado em', 'callback' => fn (array $row): string => $this->dateTime($row['created'] ?? '')],
+				['label' => 'Modificado em', 'callback' => fn (array $row): string => $this->dateTime($row['modified'] ?? '')],
 			], ['needsTenant' => true]),
 			'financial_operation_payment' => $this->standardDefinition(FinancialOperationPayment::class, 'Lista de pagamentos financeiros', 'pagamentos_financeiros', ['id', 'financial_operation_id', 'value'], [
 				['label' => '#', 'field' => 'id', 'align' => 'right'],
+				['label' => 'Operação ID', 'field' => 'financial_operation_id', 'align' => 'right'],
 				['label' => 'Operação', 'callback' => fn (array $row): string => $this->operationLabel($row)],
 				['label' => 'Valor', 'callback' => fn (array $row): string => $this->money($row['value'] ?? 0), 'align' => 'right'],
 				['label' => 'Criado em', 'callback' => fn (array $row): string => $this->dateTime($row['created'] ?? '')],
+				['label' => 'Modificado em', 'callback' => fn (array $row): string => $this->dateTime($row['modified'] ?? '')],
 			], ['needsTenant' => true]),
 			'financial_operation_subcategory' => $this->standardDefinition(FinancialOperationSubcategory::class, 'Lista de subcategorias financeiras', 'subcategorias_financeiras', ['id', 'financial_operation_category_id', 'name'], [
 				['label' => '#', 'field' => 'id', 'align' => 'right'],
+				['label' => 'Categoria ID', 'field' => 'financial_operation_category_id', 'align' => 'right'],
 				['label' => 'Categoria', 'field' => 'financial_operation_category_name'],
 				['label' => 'Nome', 'field' => 'name'],
 				['label' => 'Criado em', 'callback' => fn (array $row): string => $this->dateTime($row['created'] ?? '')],
+				['label' => 'Modificado em', 'callback' => fn (array $row): string => $this->dateTime($row['modified'] ?? '')],
 			], ['needsTenant' => true]),
 			'neighborhood' => $this->standardDefinition(Neighborhood::class, 'Lista de bairros', 'bairros', ['id', 'name', 'city_id'], [
 				['label' => '#', 'field' => 'id', 'align' => 'right'],
 				['label' => 'Nome', 'field' => 'name'],
+				['label' => 'Cidade ID', 'field' => 'city_id', 'align' => 'right'],
 				['label' => 'Cidade', 'field' => 'city_name'],
+				['label' => 'Criado em', 'callback' => fn (array $row): string => $this->dateTime($row['created'] ?? '')],
+				['label' => 'Modificado em', 'callback' => fn (array $row): string => $this->dateTime($row['modified'] ?? '')],
 			]),
 			'permission' => [
 				'title' => 'Lista de permissões',
@@ -254,8 +332,11 @@ class RecordListExportService
 					['label' => '#', 'field' => 'id', 'align' => 'right'],
 					['label' => 'Grupo', 'field' => 'group'],
 					['label' => 'Ability', 'field' => 'ability'],
+					['label' => 'Sistema', 'field' => 'system'],
 					['label' => 'Descrição', 'field' => 'description'],
 					['label' => 'Selecionada', 'field' => 'assigned'],
+					['label' => 'Criado em', 'callback' => fn (array $row): string => $this->dateTime($row['created'] ?? '')],
+					['label' => 'Modificado em', 'callback' => fn (array $row): string => $this->dateTime($row['modified'] ?? '')],
 				],
 			],
 			'permission_orphaned' => [
@@ -268,8 +349,11 @@ class RecordListExportService
 				'columns' => [
 					['label' => '#', 'field' => 'id', 'align' => 'right'],
 					['label' => 'Ability', 'field' => 'ability'],
+					['label' => 'Sistema', 'field' => 'system'],
 					['label' => 'Descrição', 'field' => 'description'],
 					['label' => 'Usuários afetados', 'field' => 'user_count', 'align' => 'right'],
+					['label' => 'Criado em', 'callback' => fn (array $row): string => $this->dateTime($row['created'] ?? '')],
+					['label' => 'Modificado em', 'callback' => fn (array $row): string => $this->dateTime($row['modified'] ?? '')],
 				],
 			],
 			'person' => $this->standardDefinition(Person::class, 'Lista de pessoas', 'pessoas', ['id', 'name', 'type', 'document', 'birthdate', 'active'], [
@@ -280,55 +364,84 @@ class RecordListExportService
 				['label' => 'Nascimento', 'callback' => fn (array $row): string => $this->date($row['birthdate'] ?? '')],
 				['label' => 'Tipo', 'callback' => fn (array $row): string => $this->personTypeLabel($row['type'] ?? '')],
 				['label' => 'Status', 'callback' => fn (array $row): string => $this->activeLabel($row['active'] ?? null)],
+				['label' => 'Criado em', 'callback' => fn (array $row): string => $this->dateTime($row['created'] ?? '')],
+				['label' => 'Modificado em', 'callback' => fn (array $row): string => $this->dateTime($row['modified'] ?? '')],
 			], ['needsTenant' => true, 'tenantIdArgument' => true]),
 			'phone_number' => $this->standardDefinition(PhoneNumber::class, 'Lista de telefones', 'telefones', ['id', 'phone_number', 'person_id'], [
 				['label' => '#', 'field' => 'id', 'align' => 'right'],
 				['label' => 'Telefone', 'callback' => fn (array $row): string => \maskPhoneBr((string) ($row['phone_number'] ?? ''))],
+				['label' => 'Pessoa ID', 'field' => 'person_id', 'align' => 'right'],
 				['label' => 'Pessoa', 'field' => 'person_name'],
 				['label' => 'Observações', 'field' => 'observations'],
+				['label' => 'Criado em', 'callback' => fn (array $row): string => $this->dateTime($row['created'] ?? '')],
+				['label' => 'Modificado em', 'callback' => fn (array $row): string => $this->dateTime($row['modified'] ?? '')],
 			], ['needsTenant' => true, 'tenantIdArgument' => true]),
 			'product' => $this->standardDefinition(Product::class, 'Lista de produtos', 'produtos', ['id', 'product_category_id', 'sku', 'name', 'active', 'stock_status'], [
 				['label' => '#', 'field' => 'id', 'align' => 'right'],
+				['label' => 'Usuário ID', 'field' => 'user_id', 'align' => 'right'],
+				['label' => 'Categoria ID', 'field' => 'product_category_id', 'align' => 'right'],
 				['label' => 'SKU', 'field' => 'sku'],
+				['label' => 'Código de barras', 'field' => 'barcode'],
 				['label' => 'Nome', 'field' => 'name'],
 				['label' => 'Categoria', 'field' => 'product_category_name'],
+				['label' => 'Descrição', 'field' => 'description'],
 				['label' => 'Estoque', 'callback' => fn (array $row): string => $this->quantity($row['stock_quantity'] ?? 0), 'align' => 'right'],
 				['label' => 'Mínimo', 'callback' => fn (array $row): string => $this->quantity($row['minimum_stock'] ?? 0), 'align' => 'right'],
+				['label' => 'Unidade', 'field' => 'unit'],
 				['label' => 'Preço de custo', 'callback' => fn (array $row): string => $this->money($row['cost_price'] ?? 0), 'align' => 'right'],
 				['label' => 'Preço de venda', 'callback' => fn (array $row): string => $this->money($row['sale_price'] ?? 0), 'align' => 'right'],
 				['label' => 'Status', 'callback' => fn (array $row): string => $this->activeLabel($row['active'] ?? null)],
+				['label' => 'Criado em', 'callback' => fn (array $row): string => $this->dateTime($row['created'] ?? '')],
+				['label' => 'Modificado em', 'callback' => fn (array $row): string => $this->dateTime($row['modified'] ?? '')],
 			], ['needsTenant' => true]),
 			'product_category' => $this->standardDefinition(ProductCategory::class, 'Lista de categorias de produtos', 'categorias_produtos', ['id', 'name', 'active'], [
 				['label' => '#', 'field' => 'id', 'align' => 'right'],
 				['label' => 'Nome', 'field' => 'name'],
 				['label' => 'Descrição', 'field' => 'description'],
 				['label' => 'Status', 'callback' => fn (array $row): string => $this->activeLabel($row['active'] ?? null)],
+				['label' => 'Criado em', 'callback' => fn (array $row): string => $this->dateTime($row['created'] ?? '')],
+				['label' => 'Modificado em', 'callback' => fn (array $row): string => $this->dateTime($row['modified'] ?? '')],
 			], ['needsTenant' => true]),
 			'product_stock_movement' => $this->standardDefinition(ProductStockMovement::class, 'Lista de movimentações de estoque', 'movimentacoes_estoque', ['id', 'product_id', 'movement_type', 'reference'], [
 				['label' => '#', 'field' => 'id', 'align' => 'right'],
+				['label' => 'Produto ID', 'field' => 'product_id', 'align' => 'right'],
 				['label' => 'Produto', 'callback' => fn (array $row): string => $this->productLabel($row)],
 				['label' => 'Tipo', 'callback' => fn (array $row): string => $this->movementTypeLabel($row['movement_type'] ?? '')],
 				['label' => 'Quantidade', 'callback' => fn (array $row): string => $this->quantity($row['quantity'] ?? 0), 'align' => 'right'],
 				['label' => 'Saldo anterior', 'callback' => fn (array $row): string => $this->quantity($row['previous_quantity'] ?? 0), 'align' => 'right'],
 				['label' => 'Novo saldo', 'callback' => fn (array $row): string => $this->quantity($row['new_quantity'] ?? 0), 'align' => 'right'],
+				['label' => 'Custo unitário', 'callback' => fn (array $row): string => $this->nullableMoney($row['unit_cost'] ?? null), 'align' => 'right'],
+				['label' => 'Preço unitário', 'callback' => fn (array $row): string => $this->nullableMoney($row['unit_price'] ?? null), 'align' => 'right'],
 				['label' => 'Referência', 'field' => 'reference'],
+				['label' => 'Observações', 'field' => 'observations'],
 				['label' => 'Data', 'callback' => fn (array $row): string => $this->dateTime($row['movement_date'] ?? '')],
+				['label' => 'Criado em', 'callback' => fn (array $row): string => $this->dateTime($row['created'] ?? '')],
+				['label' => 'Modificado em', 'callback' => fn (array $row): string => $this->dateTime($row['modified'] ?? '')],
 			], ['needsTenant' => true]),
 			'state' => $this->standardDefinition(State::class, 'Lista de estados', 'estados', ['id', 'name', 'acronym'], [
 				['label' => '#', 'field' => 'id', 'align' => 'right'],
 				['label' => 'Nome', 'field' => 'name'],
 				['label' => 'Sigla', 'field' => 'acronym'],
+				['label' => 'País ID', 'field' => 'country_id', 'align' => 'right'],
 				['label' => 'País', 'field' => 'country_name'],
+				['label' => 'Criado em', 'callback' => fn (array $row): string => $this->dateTime($row['created'] ?? '')],
+				['label' => 'Modificado em', 'callback' => fn (array $row): string => $this->dateTime($row['modified'] ?? '')],
 			]),
 			'task' => $this->standardDefinition(Task::class, 'Lista de tarefas', 'tarefas', ['id', 'task_category_id', 'status', 'assignee_person_id', 'title', 'description', 'third_party_name', 'created_from', 'created_to'], [
 				['label' => '#', 'field' => 'id', 'align' => 'right'],
+				['label' => 'Categoria ID', 'field' => 'task_category_id', 'align' => 'right'],
 				['label' => 'Tarefa', 'field' => 'title'],
 				['label' => 'Categoria', 'field' => 'task_category_name'],
 				['label' => 'Situação', 'callback' => fn (array $row): string => Task::statusLabel((string) ($row['status'] ?? ''))],
 				['label' => 'Responsáveis', 'field' => 'assignee_names'],
+				['label' => 'Terceiro pessoa ID', 'field' => 'third_party_person_id', 'align' => 'right'],
+				['label' => 'Nome do terceiro', 'field' => 'third_party_name'],
 				['label' => 'Terceiro', 'callback' => fn (array $row): string => $this->thirdPartyLabel($row)],
+				['label' => 'Descrição', 'field' => 'description'],
+				['label' => 'Criado por usuário ID', 'field' => 'created_by_user_id', 'align' => 'right'],
 				['label' => 'Tempo', 'callback' => fn (array $row): string => Task::formatDuration((int) ($row['total_seconds'] ?? 0))],
 				['label' => 'Criada em', 'callback' => fn (array $row): string => Task::formatDateTime($row['created'] ?? '')],
+				['label' => 'Modificada em', 'callback' => fn (array $row): string => Task::formatDateTime($row['modified'] ?? '')],
 			], [
 				'needsTenant' => true,
 				'searchArguments' => fn (array $filters, array $query, int $total): array => [$filters, max(1, $total), 0, $this->taskSort($query), $this->taskDirection($query)],
@@ -338,12 +451,19 @@ class RecordListExportService
 				['label' => 'Nome', 'field' => 'name'],
 				['label' => 'Descrição', 'field' => 'description'],
 				['label' => 'Status', 'callback' => fn (array $row): string => $this->activeLabel($row['active'] ?? null)],
+				['label' => 'Criado em', 'callback' => fn (array $row): string => $this->dateTime($row['created'] ?? '')],
+				['label' => 'Modificado em', 'callback' => fn (array $row): string => $this->dateTime($row['modified'] ?? '')],
 			], ['needsTenant' => true]),
 			'user' => $this->standardDefinition(User::class, 'Lista de usuários', 'usuarios', ['id', 'username', 'type', 'active'], [
 				['label' => '#', 'field' => 'id', 'align' => 'right'],
+				['label' => 'Pessoa ID', 'field' => 'person_id', 'align' => 'right'],
+				['label' => 'Tenant ID', 'field' => 'tenant_id', 'align' => 'right'],
 				['label' => 'Usuário', 'field' => 'username'],
+				['label' => 'Senha (hash)', 'field' => 'password', 'checked' => false],
 				['label' => 'Tipo', 'callback' => fn (array $row): string => $this->userTypeLabel($row['type'] ?? '')],
 				['label' => 'Status', 'callback' => fn (array $row): string => $this->activeLabel($row['active'] ?? null)],
+				['label' => 'Criado em', 'callback' => fn (array $row): string => $this->dateTime($row['created'] ?? '')],
+				['label' => 'Modificado em', 'callback' => fn (array $row): string => $this->dateTime($row['modified'] ?? '')],
 			], ['needsTenant' => true, 'tenantIdArgument' => true]),
 		];
 		}
@@ -473,7 +593,16 @@ class RecordListExportService
 		{
 		if (!array_key_exists('export_columns', $query))
 			{
-			return $columns;
+			$defaultColumns = [];
+			foreach ($columns as $column)
+				{
+				if ((bool) ($column['checked'] ?? true))
+					{
+					$defaultColumns[] = $column;
+					}
+				}
+
+			return !empty($defaultColumns) ? $defaultColumns : $columns;
 			}
 
 		$selected = $query['export_columns'];
@@ -684,8 +813,11 @@ class RecordListExportService
 				'id' => (int) ($permission['id'] ?? 0),
 				'group' => $this->permissionGroup($ability),
 				'ability' => $ability,
+				'system' => (string) ($permission['system'] ?? ''),
 				'description' => (string) ($permission['description'] ?? ''),
 				'assigned' => isset($assignedLookup[(int) ($permission['id'] ?? 0)]) ? 'Sim' : 'Não',
+				'created' => (string) ($permission['created'] ?? ''),
+				'modified' => (string) ($permission['modified'] ?? ''),
 			];
 			}
 
@@ -706,8 +838,11 @@ class RecordListExportService
 			$rows[] = [
 				'id' => $permissionId,
 				'ability' => (string) ($permission['ability'] ?? ''),
+				'system' => (string) ($permission['system'] ?? ''),
 				'description' => (string) ($permission['description'] ?? ''),
 				'user_count' => (int) ($permissionStats[$permissionId]['user_count'] ?? 0),
+				'created' => (string) ($permission['created'] ?? ''),
+				'modified' => (string) ($permission['modified'] ?? ''),
 			];
 			}
 
@@ -770,6 +905,16 @@ class RecordListExportService
 	private function money($value): string
 		{
 		return 'R$ ' . number_format((float) $value, 2, ',', '.');
+		}
+
+	private function nullableMoney($value): string
+		{
+		if ($value === null || trim($this->stringValue($value)) === '')
+			{
+			return '';
+			}
+
+		return $this->money($value);
 		}
 
 	private function quantity($value): string

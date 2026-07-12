@@ -26,7 +26,10 @@ class Permission extends Model
 		$stmt = $this->db->prepare("
 			SELECT MIN(id) AS id,
 			       ability,
-			       MAX(description) AS description
+			       MIN(`system`) AS `system`,
+			       MAX(description) AS description,
+			       MIN(created) AS created,
+			       MAX(modified) AS modified
 			FROM {$permissionsTable}
 			WHERE `system` = :system
 			GROUP BY ability

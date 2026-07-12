@@ -24,6 +24,7 @@ class FinancialOperation extends TenantModel
 		{
 		return "SELECT FinancialOperation.id,
 		              FinancialOperation.financial_operation_category_id,
+		              FinancialOperation.financial_operation_subcategory_id,
 		              FinancialOperation.total_amount,
 		              FinancialOperation.created,
 		              FinancialOperation.modified,

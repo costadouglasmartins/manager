@@ -9,7 +9,7 @@ if (!function_exists('listExportColumns'))
 	 * Returns configured export columns for a list resource.
 	 *
 	 * @param string $route Base list route.
-	 * @return array<int, array{key: string, label: string}>
+	 * @return array<int, array{key: string, label: string, checked: bool}>
 	 */
 	function listExportColumns(string $route): array
 		{
@@ -73,8 +73,9 @@ if (!function_exists('listExportDropdownButton'))
 		foreach ($columns as $index => $column)
 			{
 			$inputId = $dropdownId . '-column-' . $index;
+			$checked = (bool) ($column['checked'] ?? true) ? ' checked' : '';
 			$items .= '<label class="dropdown-item list-export-column" for="' . htmlspecialchars($inputId, ENT_QUOTES, 'UTF-8') . '">' .
-				'<input class="form-check-input js-list-export-column" id="' . htmlspecialchars($inputId, ENT_QUOTES, 'UTF-8') . '" type="checkbox" value="' . htmlspecialchars((string) $column['key'], ENT_QUOTES, 'UTF-8') . '" checked>' .
+				'<input class="form-check-input js-list-export-column" id="' . htmlspecialchars($inputId, ENT_QUOTES, 'UTF-8') . '" type="checkbox" value="' . htmlspecialchars((string) $column['key'], ENT_QUOTES, 'UTF-8') . '"' . $checked . '>' .
 				'<span>' . htmlspecialchars((string) $column['label'], ENT_QUOTES, 'UTF-8') . '</span>' .
 				'</label>';
 			}
