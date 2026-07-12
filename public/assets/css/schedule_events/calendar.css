@@ -1,0 +1,69 @@
+.schedule-page {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: 1rem;
+  min-height: calc(100vh - var(--app-navbar-height) - 1.25rem - 2.5rem - 3.5rem - 1rem);
+}
+
+.schedule-section,
+.schedule-calendar-header {
+  border: 1px solid var(--app-border);
+  border-radius: 8px;
+  background: var(--app-surface);
+  box-shadow: var(--app-shadow-sm);
+  padding: 1rem;
+}
+
+.schedule-calendar-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.schedule-calendar-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.schedule-calendar-section {
+  display: flex;
+  min-height: 0;
+  padding: 0.75rem;
+}
+
+#scheduleCalendar {
+  flex: 1 1 auto;
+  min-height: 0;
+  width: 100%;
+}
+
+.fc {
+  color: var(--app-text);
+  width: 100%;
+}
+
+.fc,
+.fc .fc-view-harness,
+.fc .fc-scrollgrid {
+  min-height: 0;
+}
+
+.fc .fc-toolbar-title {
+  font-size: 1.25rem;
+  font-weight: 850;
+  letter-spacing: 0;
+}
+
+.fc .fc-button {
+  border-radius: 7px;
+}
+
+@media (max-width: 768px) {
+  .schedule-calendar-actions,
+  .schedule-calendar-actions .btn {
+    width: 100%;
+  }
+}

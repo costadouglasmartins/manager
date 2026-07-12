@@ -1,0 +1,33 @@
+.schedule-page {
+  display: grid;
+  gap: 1rem;
+}
+
+.schedule-section {
+  border: 1px solid var(--app-border);
+  border-radius: 8px;
+  background: var(--app-surface);
+  box-shadow: var(--app-shadow-sm);
+  padding: 1rem;
+}
+
+.schedule-section h6 {
+  margin: 0;
+  color: var(--app-text);
+  font-weight: 850;
+  letter-spacing: 0;
+}
+
+.schedule-section-heading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.schedule-recurrence-hidden,
+.schedule-time-hidden {
+  display: none;
+}

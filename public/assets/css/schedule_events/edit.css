@@ -1,0 +1,16 @@
+.schedule-page {
+  display: grid;
+  gap: 1rem;
+}
+
+.schedule-section {
+  border: 1px solid var(--app-border);
+  border-radius: 8px;
+  background: var(--app-surface);
+  box-shadow: var(--app-shadow-sm);
+  padding: 1rem;
+}
+
+.schedule-time-hidden {
+  display: none;
+}

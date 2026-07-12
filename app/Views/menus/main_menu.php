@@ -158,6 +158,45 @@
           </li>
           <!-- /Menu tarefas -->
         <?php endif; ?>
+        <?php if (authCan('schedule.index') || authCan('schedule.create') || authCan('schedule.calendar') || authCan('schedule_category.index') || authCan('schedule_category.create')): ?>
+          <!-- Menu agenda -->
+          <li class="nav-item dropdown">
+            <a class="nav-link dropdown-toggle" href="#" id="scheduleMenu" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+              <i class="bi bi-calendar3 me-1"></i> Agenda
+            </a>
+            <ul class="dropdown-menu" aria-labelledby="scheduleMenu">
+              <?php if (authCan('schedule.create')): ?>
+                <li><a class="dropdown-item" href="<?= url('schedule/create'); ?>"><i class="bi bi-calendar-plus me-2"></i>Cadastrar</a></li>
+                <li><hr class="dropdown-divider" /></li>
+              <?php endif; ?>
+              <?php if (authCan('schedule.index')): ?>
+                <li><a class="dropdown-item" href="<?= url('schedule'); ?>"><i class="bi bi-list-ul me-2"></i>Listar</a></li>
+                <li><hr class="dropdown-divider" /></li>
+              <?php endif; ?>
+              <?php if (authCan('schedule.calendar')): ?>
+                <li><a class="dropdown-item" href="<?= url('schedule/calendar'); ?>"><i class="bi bi-calendar3 me-2"></i>Calendário</a></li>
+                <?php if (authCan('schedule_category.index') || authCan('schedule_category.create')): ?>
+                  <li><hr class="dropdown-divider" /></li>
+                <?php endif; ?>
+              <?php endif; ?>
+              <?php if (authCan('schedule_category.index') || authCan('schedule_category.create')): ?>
+                <li class="dropdown-submenu">
+                  <a class="dropdown-item submenu-toggle" href="#"><i class="bi bi-tags me-2"></i>Categorias</a>
+                  <ul class="dropdown-menu">
+                    <?php if (authCan('schedule_category.create')): ?>
+                      <li><a class="dropdown-item" href="<?= url('schedule_category/create'); ?>"><i class="bi bi-tag me-2"></i>Cadastrar</a></li>
+                    <?php endif; ?>
+                    <li><hr class="dropdown-divider" /></li>
+                    <?php if (authCan('schedule_category.index')): ?>
+                      <li><a class="dropdown-item" href="<?= url('schedule_category'); ?>"><i class="bi bi-list me-2"></i>Listar</a></li>
+                    <?php endif; ?>
+                  </ul>
+                </li>
+              <?php endif; ?>
+            </ul>
+          </li>
+          <!-- /Menu agenda -->
+        <?php endif; ?>
         <!-- Menu loja -->
         <li class="nav-item dropdown">
           <a class="nav-link dropdown-toggle" href="#" id="storeMenu" role="button" data-bs-toggle="dropdown" aria-expanded="false">

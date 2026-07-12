@@ -1,0 +1,23 @@
+.schedule-category-page {
+  display: grid;
+  gap: 1rem;
+}
+
+.schedule-section {
+  border: 1px solid var(--app-border);
+  border-radius: 8px;
+  background: var(--app-surface);
+  box-shadow: var(--app-shadow-sm);
+  padding: 1rem;
+}
+
+.schedule-category-sample {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  padding: 0.25rem 0.6rem;
+  border-radius: 7px;
+  font-size: 0.8rem;
+  font-weight: 800;
+  letter-spacing: 0;
+}

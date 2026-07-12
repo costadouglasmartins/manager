@@ -411,6 +411,89 @@ a.dashboard-metric:focus {
   color: var(--app-accent);
 }
 
+.dashboard-schedule-list {
+  display: grid;
+  gap: 0.65rem;
+}
+
+.dashboard-schedule-row {
+  grid-template-columns: 82px minmax(0, 1fr);
+  align-items: stretch;
+  color: inherit;
+  text-decoration: none;
+  transition: border-color 0.15s ease, transform 0.15s ease;
+}
+
+.dashboard-schedule-row:hover,
+.dashboard-schedule-row:focus {
+  border-color: color-mix(in srgb, var(--app-accent) 38%, var(--app-border));
+  color: inherit;
+  transform: translateY(-1px);
+}
+
+.dashboard-schedule-date {
+  display: inline-flex;
+  min-width: 0;
+  flex-direction: column;
+  justify-content: center;
+  gap: 0.15rem;
+  padding: 0.45rem;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--app-accent) 10%, transparent);
+  color: var(--app-accent);
+  text-align: center;
+}
+
+.dashboard-schedule-date span {
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+.dashboard-schedule-date strong {
+  color: inherit;
+  font-size: 1.2rem;
+  line-height: 1;
+}
+
+.dashboard-schedule-main {
+  display: grid;
+  min-width: 0;
+  gap: 0.35rem;
+}
+
+.dashboard-schedule-title {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.dashboard-schedule-title strong {
+  min-width: 0;
+}
+
+.dashboard-schedule-meta {
+  display: flex;
+  min-width: 0;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.dashboard-schedule-category {
+  display: inline-flex;
+  max-width: 100%;
+  align-items: center;
+  padding: 0.2rem 0.45rem;
+  border-radius: 8px;
+  font-size: 0.78rem;
+  font-weight: 800;
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+}
+
 .dashboard-empty {
   margin: 0;
 }
@@ -494,5 +577,14 @@ a.dashboard-metric:focus {
 
   .dashboard-action-list .btn {
     width: 100%;
+  }
+
+  .dashboard-schedule-row {
+    grid-template-columns: 1fr;
+  }
+
+  .dashboard-schedule-title {
+    align-items: flex-start;
+    flex-direction: column;
   }
 }

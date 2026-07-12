@@ -1,0 +1,50 @@
+.schedule-page {
+  display: grid;
+  gap: 1rem;
+}
+
+.schedule-section {
+  border: 1px solid var(--app-border);
+  border-radius: 8px;
+  background: var(--app-surface);
+  box-shadow: var(--app-shadow-sm);
+  padding: 1rem;
+}
+
+.schedule-section h6 {
+  margin: 0 0 0.75rem;
+  color: var(--app-text);
+  font-weight: 850;
+  letter-spacing: 0;
+}
+
+.schedule-event-category,
+.schedule-participant {
+  display: inline-flex;
+  align-items: center;
+  min-height: 26px;
+  padding: 0.2rem 0.55rem;
+  border-radius: 7px;
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0;
+}
+
+.schedule-participant {
+  background: var(--app-hover);
+  color: var(--app-text);
+}
+
+.schedule-participant.is-inactive {
+  opacity: 0.55;
+}
+
+.schedule-participant-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+}
+
+.schedule-description {
+  color: var(--app-text);
+}

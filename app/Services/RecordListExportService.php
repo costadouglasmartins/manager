@@ -22,6 +22,8 @@ use App\Models\PhoneNumber;
 use App\Models\Product;
 use App\Models\ProductCategory;
 use App\Models\ProductStockMovement;
+use App\Models\ScheduleCategory;
+use App\Models\ScheduleEvent;
 use App\Models\State;
 use App\Models\Task;
 use App\Models\TaskCategory;
@@ -454,6 +456,36 @@ class RecordListExportService
 				['label' => 'Criado em', 'callback' => fn (array $row): string => $this->dateTime($row['created'] ?? '')],
 				['label' => 'Modificado em', 'callback' => fn (array $row): string => $this->dateTime($row['modified'] ?? '')],
 			], ['needsTenant' => true]),
+			'schedule' => $this->standardDefinition(ScheduleEvent::class, 'Lista de eventos da agenda', 'eventos_agenda', ['id', 'schedule_category_id', 'status', 'participant_person_id', 'title', 'location', 'starts_from', 'starts_to'], [
+				['label' => '#', 'field' => 'id', 'align' => 'right'],
+				['label' => 'Categoria ID', 'field' => 'schedule_category_id', 'align' => 'right'],
+				['label' => 'Categoria', 'field' => 'schedule_category_name'],
+				['label' => 'Evento', 'field' => 'title'],
+				['label' => 'Situação', 'callback' => fn (array $row): string => ScheduleEvent::statusLabel((string) ($row['status'] ?? ''))],
+				['label' => 'Participantes', 'field' => 'participant_names'],
+				['label' => 'Local', 'field' => 'location'],
+				['label' => 'Dia inteiro', 'callback' => fn (array $row): string => $this->yesNo($row['all_day'] ?? null)],
+				['label' => 'Início', 'callback' => fn (array $row): string => ScheduleEvent::formatDateTime($row['starts_at'] ?? '')],
+				['label' => 'Fim', 'callback' => fn (array $row): string => ScheduleEvent::formatDateTime($row['ends_at'] ?? '')],
+				['label' => 'Recorrência ID', 'field' => 'schedule_events_recurrence_id', 'align' => 'right'],
+				['label' => 'Sequência', 'field' => 'recurrence_sequence', 'align' => 'right'],
+				['label' => 'Criado por', 'field' => 'created_by_username'],
+				['label' => 'Criado em', 'callback' => fn (array $row): string => ScheduleEvent::formatDateTime($row['created'] ?? '')],
+				['label' => 'Modificado em', 'callback' => fn (array $row): string => ScheduleEvent::formatDateTime($row['modified'] ?? '')],
+			], [
+				'needsTenant' => true,
+				'searchArguments' => fn (array $filters, array $query, int $total): array => [$filters, max(1, $total), 0, $this->scheduleSort($query), $this->scheduleDirection($query)],
+			]),
+			'schedule_category' => $this->standardDefinition(ScheduleCategory::class, 'Lista de categorias da agenda', 'categorias_agenda', ['id', 'name', 'active'], [
+				['label' => '#', 'field' => 'id', 'align' => 'right'],
+				['label' => 'Nome', 'field' => 'name'],
+				['label' => 'Descrição', 'field' => 'description'],
+				['label' => 'Cor de fundo', 'field' => 'background_color'],
+				['label' => 'Cor da descrição', 'field' => 'description_color'],
+				['label' => 'Status', 'callback' => fn (array $row): string => $this->activeLabel($row['active'] ?? null)],
+				['label' => 'Criado em', 'callback' => fn (array $row): string => $this->dateTime($row['created'] ?? '')],
+				['label' => 'Modificado em', 'callback' => fn (array $row): string => $this->dateTime($row['modified'] ?? '')],
+			], ['needsTenant' => true]),
 			'user' => $this->standardDefinition(User::class, 'Lista de usuários', 'usuarios', ['id', 'username', 'type', 'active'], [
 				['label' => '#', 'field' => 'id', 'align' => 'right'],
 				['label' => 'Pessoa ID', 'field' => 'person_id', 'align' => 'right'],
@@ -864,6 +896,17 @@ class RecordListExportService
 	private function taskDirection(array $query): string
 		{
 		return strtolower(trim((string) ($query['direction'] ?? 'desc'))) === 'asc' ? 'asc' : 'desc';
+		}
+
+	private function scheduleSort(array $query): string
+		{
+		$sort = trim((string) ($query['sort'] ?? 'starts_at'));
+		return $sort !== '' ? $sort : 'starts_at';
+		}
+
+	private function scheduleDirection(array $query): string
+		{
+		return strtolower(trim((string) ($query['direction'] ?? 'asc'))) === 'desc' ? 'desc' : 'asc';
 		}
 
 	private function activeLabel($value): string

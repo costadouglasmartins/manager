@@ -6,6 +6,7 @@ $quickActions = is_array($dashboard['quickActions'] ?? null) ? $dashboard['quick
 $recentPeople = is_array($dashboard['recentPeople'] ?? null) ? $dashboard['recentPeople'] : [];
 $recentUsers = is_array($dashboard['recentUsers'] ?? null) ? $dashboard['recentUsers'] : [];
 $pendingTasks = is_array($dashboard['pendingTasks'] ?? null) ? $dashboard['pendingTasks'] : [];
+$upcomingScheduleEvents = is_array($dashboard['upcomingScheduleEvents'] ?? null) ? $dashboard['upcomingScheduleEvents'] : [];
 $schemaVersions = is_array($schemaVersions ?? null) ? $schemaVersions : [];
 $latestSchema = is_array($dashboard['latestSchema'] ?? null) ? $dashboard['latestSchema'] : null;
 $currentUser = is_array($currentUser ?? null) ? $currentUser : [];
@@ -199,6 +200,60 @@ $userName = trim((string) ($currentUser['name'] ?? ''));
 						<?php endif; ?>
 					</tbody>
 				</table>
+			</div>
+		</section>
+
+		<section class="dashboard-panel dashboard-schedule-panel">
+			<div class="dashboard-panel-heading">
+				<div>
+					<span class="dashboard-section-label">Agenda</span>
+					<h2>Próximos eventos</h2>
+				</div>
+				<?php if (function_exists('authCan') && authCan('schedule.calendar')): ?>
+					<a class="dashboard-panel-link" href="<?= url('schedule/calendar'); ?>">Ver calendário</a>
+				<?php endif; ?>
+			</div>
+
+			<div class="dashboard-schedule-list">
+				<?php if (!empty($upcomingScheduleEvents)): ?>
+					<?php foreach ($upcomingScheduleEvents as $scheduleEvent): ?>
+						<?php
+						$categoryBg = (string) ($scheduleEvent['schedule_category_background_color'] ?? '#0d6efd');
+						$categoryColor = (string) ($scheduleEvent['schedule_category_description_color'] ?? '#ffffff');
+						$scheduleDay = '-';
+						$scheduleDateLabel = $formatDateTime($scheduleEvent['starts_at'] ?? '');
+						try
+							{
+							$scheduleDate = new DateTimeImmutable((string) ($scheduleEvent['starts_at'] ?? ''));
+							$scheduleDay = $scheduleDate->format('d');
+							$scheduleDateLabel = ((int) ($scheduleEvent['all_day'] ?? 0) === 1) ? $scheduleDate->format('m/Y') : $scheduleDate->format('m/Y H:i');
+							}
+						catch (Throwable $e)
+							{
+							}
+						?>
+						<a class="dashboard-list-row dashboard-schedule-row" href="<?= url('schedule/informations/' . (int) ($scheduleEvent['id'] ?? 0)); ?>">
+							<span class="dashboard-schedule-date">
+								<strong><?= htmlspecialchars($scheduleDay, ENT_QUOTES, 'UTF-8'); ?></strong>
+								<span><?= htmlspecialchars($scheduleDateLabel, ENT_QUOTES, 'UTF-8'); ?></span>
+							</span>
+							<span class="dashboard-schedule-main">
+								<span class="dashboard-schedule-title">
+									<strong><?= htmlspecialchars((string) ($scheduleEvent['title'] ?? ''), ENT_QUOTES, 'UTF-8'); ?></strong>
+									<span class="badge <?= htmlspecialchars(\App\Models\ScheduleEvent::statusBadgeClass((string) ($scheduleEvent['status'] ?? '')), ENT_QUOTES, 'UTF-8'); ?>"><?= htmlspecialchars(\App\Models\ScheduleEvent::statusLabel((string) ($scheduleEvent['status'] ?? '')), ENT_QUOTES, 'UTF-8'); ?></span>
+								</span>
+								<small><?= htmlspecialchars((string) ($scheduleEvent['participant_names'] ?? ''), ENT_QUOTES, 'UTF-8'); ?></small>
+								<?php if (!empty($scheduleEvent['schedule_category_name'])): ?>
+									<span class="dashboard-schedule-meta">
+										<span class="dashboard-schedule-category" style="background-color: <?= htmlspecialchars($categoryBg, ENT_QUOTES, 'UTF-8'); ?>; color: <?= htmlspecialchars($categoryColor, ENT_QUOTES, 'UTF-8'); ?>;"><?= htmlspecialchars((string) ($scheduleEvent['schedule_category_name'] ?? ''), ENT_QUOTES, 'UTF-8'); ?></span>
+									</span>
+								<?php endif; ?>
+							</span>
+						</a>
+					<?php endforeach; ?>
+				<?php else: ?>
+					<p class="dashboard-empty">Nenhum evento futuro encontrado.</p>
+				<?php endif; ?>
 			</div>
 		</section>
 

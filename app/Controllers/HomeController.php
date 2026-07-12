@@ -8,6 +8,7 @@ use App\Models\Address;
 use App\Models\Email;
 use App\Models\Person;
 use App\Models\PhoneNumber;
+use App\Models\ScheduleEvent;
 use App\Models\SchemaVersion;
 use App\Models\Task;
 use App\Models\Tenant;
@@ -83,6 +84,7 @@ class HomeController extends Controller
 		$addressModel = new Address();
 		$schemaVersionModel = new SchemaVersion();
 		$taskModel = new Task();
+		$scheduleModel = new ScheduleEvent();
 
 		$peopleTotal = $this->safeInt(function () use ($personModel, $tenantId) {
 			return $personModel->count([], $tenantId);
@@ -120,6 +122,12 @@ class HomeController extends Controller
 		$pendingTasksTotal = $this->safeInt(function () use ($taskModel) {
 			return $taskModel->count(['statuses' => Task::pendingStatuses()]);
 		});
+		$upcomingScheduleTotal = $this->safeInt(function () use ($scheduleModel) {
+			return $scheduleModel->count([
+				'status' => ScheduleEvent::STATUS_SCHEDULED,
+				'starts_from' => date('Y-m-d'),
+			]);
+		});
 
 		$schemaVersions = $this->safeArray(function () use ($schemaVersionModel) {
 			return $schemaVersionModel->getLatest(10);
@@ -139,6 +147,9 @@ class HomeController extends Controller
 			unset($task);
 
 			return $tasks;
+		});
+		$upcomingScheduleEvents = $this->safeArray(function () use ($scheduleModel) {
+			return $scheduleModel->dashboardEvents(10);
 		});
 
 		$latestSchema = $schemaVersions[0] ?? null;
@@ -184,6 +195,15 @@ class HomeController extends Controller
 					'tone' => 'teal',
 					'href' => 'task',
 					'ability' => 'task.index',
+				],
+				[
+					'label' => 'Agenda',
+					'value' => $upcomingScheduleTotal,
+					'caption' => 'Eventos futuros agendados',
+					'icon' => 'bi-calendar3',
+					'tone' => 'indigo',
+					'href' => 'schedule/calendar',
+					'ability' => 'schedule.calendar',
 				],
 				[
 					'label' => 'E-mails',
@@ -242,8 +262,10 @@ class HomeController extends Controller
 			'quickActions' => [
 				['label' => 'Nova pessoa', 'icon' => 'bi-person-fill-add', 'href' => 'person/create', 'ability' => 'person.create', 'variant' => 'primary'],
 				['label' => 'Nova tarefa', 'icon' => 'bi-plus-square', 'href' => 'task/create', 'ability' => 'task.create', 'variant' => 'primary'],
+				['label' => 'Novo evento', 'icon' => 'bi-calendar-plus', 'href' => 'schedule/create', 'ability' => 'schedule.create', 'variant' => 'primary'],
 				['label' => 'Pessoas', 'icon' => 'bi-person-lines-fill', 'href' => 'person', 'ability' => 'person.index', 'variant' => 'secondary'],
 				['label' => 'Tarefas', 'icon' => 'bi-list-check', 'href' => 'task', 'ability' => 'task.index', 'variant' => 'secondary'],
+				['label' => 'Agenda', 'icon' => 'bi-calendar3', 'href' => 'schedule/calendar', 'ability' => 'schedule.calendar', 'variant' => 'secondary'],
 				['label' => 'Usuários', 'icon' => 'bi-person-badge', 'href' => 'user', 'ability' => 'user.index', 'variant' => 'secondary'],
 				['label' => 'E-mails', 'icon' => 'bi-envelope-paper', 'href' => 'email', 'ability' => 'email.index', 'variant' => 'secondary'],
 				['label' => 'Telefones', 'icon' => 'bi-telephone', 'href' => 'phone_number', 'ability' => 'phone_number.index', 'variant' => 'secondary'],
@@ -252,6 +274,7 @@ class HomeController extends Controller
 			'recentPeople' => $recentPeople,
 			'recentUsers' => $recentUsers,
 			'pendingTasks' => $pendingTasks,
+			'upcomingScheduleEvents' => $upcomingScheduleEvents,
 			'schemaVersions' => $schemaVersions,
 			'schemaTotal' => $schemaTotal,
 			'latestSchema' => $latestSchema,
@@ -271,6 +294,7 @@ class HomeController extends Controller
 			'recentPeople' => [],
 			'recentUsers' => [],
 			'pendingTasks' => [],
+			'upcomingScheduleEvents' => [],
 			'schemaVersions' => [],
 			'schemaTotal' => 0,
 			'latestSchema' => null,
