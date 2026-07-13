@@ -77,9 +77,12 @@ $tenantStatus = (string) ($tenant['status'] ?? '');
 $tenantStatusLabel = $tenantStatus === 'active' ? 'Ativo' : ($tenantStatus !== '' ? ucfirst($tenantStatus) : '-');
 $tenantDocument = trim((string) ($tenant['document'] ?? ''));
 $userName = trim((string) ($currentUser['name'] ?? ''));
+$metricsCount = count($metrics);
+$metricsDesktopColumns = $metricsCount <= 4 ? max(1, $metricsCount) : (int) ceil($metricsCount / 2);
+$metricsDesktopColumns = min(6, max(1, $metricsDesktopColumns));
 ?>
 
-<link rel="stylesheet" href="<?= url('assets/css/home/index.css?v=2'); ?>">
+<link rel="stylesheet" href="<?= url('assets/css/home/index.css?v=3'); ?>">
 
 <div class="dashboard-shell">
 	<?php if (!empty($tenant)): ?>
@@ -113,7 +116,7 @@ $userName = trim((string) ($currentUser['name'] ?? ''));
 			</div>
 		</section>
 
-		<section class="dashboard-metrics" aria-label="Indicadores do tenant">
+		<section class="dashboard-metrics" style="--dashboard-metrics-desktop-columns: <?= $metricsDesktopColumns; ?>;" aria-label="Indicadores do tenant">
 			<?php foreach ($metrics as $metric): ?>
 				<?php
 				$tone = preg_replace('/[^a-z0-9_-]/i', '', (string) ($metric['tone'] ?? 'blue'));
