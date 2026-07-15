@@ -47,7 +47,15 @@ if (session_status() === PHP_SESSION_NONE)
   session_start();
   }
 
-require_once ROOT_PATH . '/vendor/autoload.php';
+$sharedAssetsPath = getenv('SHARED_ASSETS_PATH') ?: dirname(ROOT_PATH) . '/assets';
+$composerAutoload = rtrim($sharedAssetsPath, '/\\') . '/vendor/autoload.php';
+
+if (!is_file($composerAutoload))
+  {
+  throw new RuntimeException('Shared Composer dependencies were not installed.');
+  }
+
+require_once $composerAutoload;
 require_once ROOT_PATH . '/app/Core/App.php';
 require_once ROOT_PATH . '/app/Core/Controller.php';
 require_once ROOT_PATH . '/app/Core/Database.php';

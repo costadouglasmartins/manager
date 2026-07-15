@@ -1,3 +1,4 @@
 .mcp/
+/vendor/
 public/tenant_files/*
 tmp/

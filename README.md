@@ -9,6 +9,7 @@ As configurações Docker usadas no ambiente local ficam no diretório acima da 
 
 ```text
 /var/www/html/
+  assets/
   manager_main/
   manager/
 ```
@@ -25,16 +26,15 @@ Em produção, evite habilitar Xdebug. Ele aparece no Docker para desenvolviment
 
 ### Publicação dos arquivos
 
-1. Envie os diretórios `manager_main` e `manager` para `/var/www/html`.
-2. Instale as dependências PHP de cada aplicação:
+1. Envie os diretórios `assets`, `manager_main` e `manager` para `/var/www/html`.
+2. Instale uma única vez as dependências PHP compartilhadas:
 
 ```sh
-cd /var/www/html/manager_main
-composer install --no-dev --optimize-autoloader
-
-cd /var/www/html/manager
+cd /var/www/html/assets
 composer install --no-dev --optimize-autoloader
 ```
+
+Os dois sistemas procuram esse diretório no mesmo nível por padrão. Se a implantação utilizar outro caminho, configure `SHARED_ASSETS_PATH` com o caminho absoluto da pasta `assets`.
 
 3. Garanta permissão de escrita para o usuário do PHP-FPM nas pastas públicas que recebem arquivos por tenant:
 
@@ -58,6 +58,7 @@ DB_CHARSET=utf8mb4
 
 SUPPORT_CHAT_SECRET=troque_por_um_segredo_forte
 SUPPORT_CHAT_WS_URL=wss://seu-dominio.com/ws
+SHARED_ASSETS_PATH=/var/www/html/assets
 ```
 
 No Docker local, o host do banco é `mysql`, a porta é `3306` e o Redis fica disponível no host `redis`. Em um servidor tradicional, ajuste `DB_HOST` e a conexão do Redis conforme a infraestrutura instalada.
@@ -115,6 +116,10 @@ server {
         rewrite ^/manager/public/(.*)$ /manager/public/index.php?url=$1&$args last;
     }
 
+    location ^~ /assets/ {
+        deny all;
+    }
+
     location ~ \.php$ {
         try_files $uri =404;
         include fastcgi_params;
@@ -144,6 +149,10 @@ Se usar Apache, mantenha a mesma raiz em `/var/www/html` e habilite `AllowOverri
         Options Indexes FollowSymLinks
         AllowOverride All
         Require all granted
+    </Directory>
+
+    <Directory /var/www/html/assets>
+        Require all denied
     </Directory>
 </VirtualHost>
 ```
