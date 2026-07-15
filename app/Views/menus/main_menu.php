@@ -2,7 +2,7 @@
   <div class="container-fluid app-navbar-container">
     <a class="navbar-brand app-brand d-flex align-items-center" href="<?= url('/'); ?>">
       <!--<i class="bi bi-boxes me-2"></i>-->
-      <span class="app-brand-mark"><img src="<?= url('/assets/images/favicon-32x32.png'); ?>" alt=""></span>
+      <span class="app-brand-mark"><img src="/assets/bootstrap/images/favicon-32x32.png" alt=""></span>
       <!--<span class="app-brand-text">Manager</span>-->
     </a>
 

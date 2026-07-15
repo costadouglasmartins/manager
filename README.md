@@ -116,6 +116,14 @@ server {
         rewrite ^/manager/public/(.*)$ /manager/public/index.php?url=$1&$args last;
     }
 
+    location ^~ /assets/bootstrap/ {
+        location ~* \.(?:css|js|map|svg|png|ico|woff|woff2)$ {
+            try_files $uri =404;
+        }
+
+        return 404;
+    }
+
     location ^~ /assets/ {
         deny all;
     }
@@ -153,6 +161,16 @@ Se usar Apache, mantenha a mesma raiz em `/var/www/html` e habilite `AllowOverri
 
     <Directory /var/www/html/assets>
         Require all denied
+    </Directory>
+
+    <Directory /var/www/html/assets/bootstrap>
+        Options -Indexes
+        AllowOverride None
+        Require all granted
+
+        <FilesMatch "(?i)^(?!.*\.(css|js|map|svg|png|ico|woff|woff2)$).*$">
+            Require all denied
+        </FilesMatch>
     </Directory>
 </VirtualHost>
 ```
