@@ -21,6 +21,6 @@
   </section>
 </div>
 
-<script src="<?= url('assets/fullcalendar/dist/index.global.min.js'); ?>"></script>
-<script src="<?= url('assets/fullcalendar/packages/core/locales-all.global.min.js'); ?>"></script>
+<script src="/assets/fullcalendar/dist/index.global.min.js"></script>
+<script src="/assets/fullcalendar/packages/core/locales-all.global.min.js"></script>
 <script src="<?= url('assets/js/schedule_events/calendar.js?v=2'); ?>"></script>

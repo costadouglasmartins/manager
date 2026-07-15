@@ -124,6 +124,14 @@ server {
         return 404;
     }
 
+    location ^~ /assets/fullcalendar/ {
+        location ~* \.js$ {
+            try_files $uri =404;
+        }
+
+        return 404;
+    }
+
     location ^~ /assets/ {
         deny all;
     }
@@ -169,6 +177,16 @@ Se usar Apache, mantenha a mesma raiz em `/var/www/html` e habilite `AllowOverri
         Require all granted
 
         <FilesMatch "(?i)^(?!.*\.(css|js|map|svg|png|ico|woff|woff2)$).*$">
+            Require all denied
+        </FilesMatch>
+    </Directory>
+
+    <Directory /var/www/html/assets/fullcalendar>
+        Options -Indexes
+        AllowOverride None
+        Require all granted
+
+        <FilesMatch "(?i)^(?!.*\.js$).*$">
             Require all denied
         </FilesMatch>
     </Directory>
