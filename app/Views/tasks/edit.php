@@ -103,5 +103,5 @@ $thirdPartyName = (string) ($formTask['third_party_name'] ?? $task['third_party_
   </form>
 </div>
 
-<script src="<?= url('assets/js/autocomplete.js?v=2'); ?>"></script>
+<script src="/assets/autocomplete/autocomplete.js?v=2"></script>
 <script src="<?= url('assets/js/tasks/edit.js?v=1'); ?>"></script>

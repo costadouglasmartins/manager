@@ -59,5 +59,5 @@ $editorHtml = trim(preg_replace('/<([a-z][a-z0-9]*)\b[^>]*>/i', '<$1>', strip_ta
   </form>
 </div>
 
-<script src="<?= url('assets/js/rich_text_editor.js?v=1'); ?>"></script>
+<script src="/assets/richtexteditor/rich_text_editor.js?v=2"></script>
 <script src="<?= url('assets/js/task_categories/edit.js?v=1'); ?>"></script>

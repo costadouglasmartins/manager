@@ -43,7 +43,7 @@ $hasTenantContext = class_exists('App\\Core\\TenantContext') && \App\Core\Tenant
   <script src="/assets/bootstrap/js/bootstrap.bundle.min.js"></script>
   <script src="<?= url('assets/js/menu.js?v=3'); ?>"></script>
   <script src="<?= url('assets/js/main.js?v=5'); ?>"></script>
-  <script src="<?= url('assets/js/helper.js?v=1'); ?>"></script>
+  <script src="/assets/helpers/helper.js?v=1"></script>
   <?php if ($isAuthenticated && $hasTenantContext): ?>
     <?php require __DIR__ . '/../support_chats/widget.php'; ?>
   <?php endif; ?>

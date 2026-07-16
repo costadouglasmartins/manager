@@ -97,4 +97,4 @@ $queryFilters = http_build_query([
 <?php if ($totalPages > 1): ?>
   <?= paginationLinks('email', $page, $totalPages, $queryFilters, 2, 'Anterior', 'Próxima') ?>
 <?php endif; ?>
-<script src="<?= url('assets/js/autocomplete.js?v=2'); ?>"></script>
+<script src="/assets/autocomplete/autocomplete.js?v=2"></script>

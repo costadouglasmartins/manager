@@ -56,5 +56,5 @@
 </div>
 <!-- /Endereço -->
 
-<script src="<?= url('assets/js/autocomplete.js?v=2'); ?>"></script>
+<script src="/assets/autocomplete/autocomplete.js?v=2"></script>
 <script src="<?= url('assets/js/addresses/create.js?v=1'); ?>"></script>
