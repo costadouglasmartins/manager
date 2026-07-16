@@ -80,41 +80,27 @@ class BankSlip extends TenantModel
 
 		$stmt = $this->db->prepare("
 			INSERT INTO bank_slips
-			    (`financial_operation_payment_id`, `bank_account_id`, `status`, `document_number`, `our_number`, `portfolio`,
+			    (`financial_operation_payment_id`, `bank_account_id`, `bank_file_id`, `status`, `document_number`, `our_number`,
+			     `our_number_digit`, `portfolio`,
 			     `payer_document_type`, `payer_document`, `payer_name`, `payer_street`, `payer_neighborhood`, `payer_city`,
-			     `payer_state`, `payer_zip_code`, `amount`, `due_date`, `issue_date`, `interest_amount_per_day`,
-			     `discount_amount`, `fine_amount`, `created`, `modified`)
+			     `payer_state`, `payer_zip_code`, `amount`, `due_date`, `issue_date`, `payment_date`, `paid_amount`,
+			     `credited_amount`, `credit_date`, `interest_date`, `interest_amount_per_day`, `discount_date`,
+			     `discount_amount`, `fine_date`, `fine_amount`, `protest_code`, `protest_days`, `write_off_code`,
+			     `write_off_days`, `last_occurrence_code`, `last_occurrence_message`, `created`, `modified`)
 			VALUES
-			    (:financial_operation_payment_id, :bank_account_id, :status, :document_number, :our_number, :portfolio,
+			    (:financial_operation_payment_id, :bank_account_id, :bank_file_id, :status, :document_number, :our_number,
+			     :our_number_digit, :portfolio,
 			     :payer_document_type, :payer_document, :payer_name, :payer_street, :payer_neighborhood, :payer_city,
-			     :payer_state, :payer_zip_code, :amount, :due_date, :issue_date, :interest_amount_per_day,
-			     :discount_amount, :fine_amount, :created, :modified)
+			     :payer_state, :payer_zip_code, :amount, :due_date, :issue_date, :payment_date, :paid_amount,
+			     :credited_amount, :credit_date, :interest_date, :interest_amount_per_day, :discount_date,
+			     :discount_amount, :fine_date, :fine_amount, :protest_code, :protest_days, :write_off_code,
+			     :write_off_days, :last_occurrence_code, :last_occurrence_message, :created, :modified)
 		");
 
-		$stmt->execute([
-			'financial_operation_payment_id' => $payload['financial_operation_payment_id'],
-			'bank_account_id'                => $payload['bank_account_id'],
-			'status'                         => $payload['status'],
-			'document_number'                => $payload['document_number'],
-			'our_number'                     => $payload['our_number'],
-			'portfolio'                      => $payload['portfolio'],
-			'payer_document_type'            => $payload['payer_document_type'],
-			'payer_document'                 => $payload['payer_document'],
-			'payer_name'                     => $payload['payer_name'],
-			'payer_street'                   => $payload['payer_street'],
-			'payer_neighborhood'             => $payload['payer_neighborhood'],
-			'payer_city'                     => $payload['payer_city'],
-			'payer_state'                    => $payload['payer_state'],
-			'payer_zip_code'                 => $payload['payer_zip_code'],
-			'amount'                         => $payload['amount'],
-			'due_date'                       => $payload['due_date'],
-			'issue_date'                     => $payload['issue_date'],
-			'interest_amount_per_day'        => $payload['interest_amount_per_day'],
-			'discount_amount'                => $payload['discount_amount'],
-			'fine_amount'                    => $payload['fine_amount'],
+		$stmt->execute(array_merge($payload, [
 			'created'                        => date('Y-m-d H:i:s'),
 			'modified'                       => date('Y-m-d H:i:s'),
-		]);
+		]));
 		$bankSlipId = (int) $this->db->lastInsertId();
 		$bankSlipSnapshot = $this->find($bankSlipId);
 		$this->auditCreate('bank_slip', 'bank_slips', $bankSlipId, $bankSlipSnapshot);
@@ -156,9 +142,11 @@ class BankSlip extends TenantModel
 				UPDATE bank_slips
 				SET `financial_operation_payment_id` = :financial_operation_payment_id,
 				    `bank_account_id` = :bank_account_id,
+				    `bank_file_id` = :bank_file_id,
 				    `status` = :status,
 				    `document_number` = :document_number,
 				    `our_number` = :our_number,
+				    `our_number_digit` = :our_number_digit,
 				    `portfolio` = :portfolio,
 				    `payer_document_type` = :payer_document_type,
 				    `payer_document` = :payer_document,
@@ -171,15 +159,30 @@ class BankSlip extends TenantModel
 				    `amount` = :amount,
 				    `due_date` = :due_date,
 				    `issue_date` = :issue_date,
+				    `payment_date` = :payment_date,
+				    `paid_amount` = :paid_amount,
+				    `credited_amount` = :credited_amount,
+				    `credit_date` = :credit_date,
+				    `interest_date` = :interest_date,
 				    `interest_amount_per_day` = :interest_amount_per_day,
+				    `discount_date` = :discount_date,
 				    `discount_amount` = :discount_amount,
+				    `fine_date` = :fine_date,
 				    `fine_amount` = :fine_amount,
+				    `protest_code` = :protest_code,
+				    `protest_days` = :protest_days,
+				    `write_off_code` = :write_off_code,
+				    `write_off_days` = :write_off_days,
+				    `last_occurrence_code` = :last_occurrence_code,
+				    `last_occurrence_message` = :last_occurrence_message,
 				    `modified` = :modified
 				WHERE id = :id
 			");
-			$payload['modified'] = date('Y-m-d H:i:s');
-			$payload['id'] = $bankSlipId;
-			$stmt->execute($payload);
+			$updatePayload = array_merge($payload, [
+				'modified' => date('Y-m-d H:i:s'),
+				'id' => $bankSlipId,
+			]);
+			$stmt->execute($updatePayload);
 
 			$afterData = $this->find($bankSlipId);
 			$this->auditUpdate('bank_slip', 'bank_slips', $bankSlipId, $beforeData, $afterData);
@@ -486,11 +489,13 @@ class BankSlip extends TenantModel
 			}
 
 		$payload = [
-			'financial_operation_payment_id' => ($data['financial_operation_payment_id'] ?? '') !== '' ? (int) $data['financial_operation_payment_id'] : null,
+			'financial_operation_payment_id' => $this->normalizeNullableId($data['financial_operation_payment_id'] ?? null),
 			'bank_account_id'                => (int) ($data['bank_account_id'] ?? 0),
+			'bank_file_id'                   => $this->normalizeNullableId($data['bank_file_id'] ?? null),
 			'status'                         => $status,
 			'document_number'                => trim((string) ($data['document_number'] ?? '')),
 			'our_number'                     => trim((string) ($data['our_number'] ?? '')) ?: null,
+			'our_number_digit'               => trim((string) ($data['our_number_digit'] ?? '')) ?: null,
 			'portfolio'                      => trim((string) ($data['portfolio'] ?? '109')),
 			'payer_document_type'            => strtoupper(trim((string) ($data['payer_document_type'] ?? 'CPF'))),
 			'payer_document'                 => normalizeCpfCnpjByType((string) ($data['payer_document'] ?? ''), (string) ($data['payer_document_type'] ?? 'CPF')),
@@ -501,11 +506,24 @@ class BankSlip extends TenantModel
 			'payer_state'                    => strtoupper(trim((string) ($data['payer_state'] ?? ''))),
 			'payer_zip_code'                 => preg_replace('/\D+/', '', (string) ($data['payer_zip_code'] ?? '')) ?? '',
 			'amount'                         => $this->normalizeDecimal($data['amount'] ?? '0'),
-			'due_date'                       => trim((string) ($data['due_date'] ?? date('Y-m-d'))),
-			'issue_date'                     => trim((string) ($data['issue_date'] ?? date('Y-m-d'))),
+			'due_date'                       => $this->normalizeRequiredDate($data['due_date'] ?? date('Y-m-d'), 'vencimento'),
+			'issue_date'                     => $this->normalizeRequiredDate($data['issue_date'] ?? date('Y-m-d'), 'emissão'),
+			'payment_date'                   => $this->normalizeNullableDate($data['payment_date'] ?? null, 'pagamento'),
+			'paid_amount'                    => $this->normalizeNullableDecimal($data['paid_amount'] ?? null),
+			'credited_amount'                => $this->normalizeNullableDecimal($data['credited_amount'] ?? null),
+			'credit_date'                    => $this->normalizeNullableDate($data['credit_date'] ?? null, 'crédito'),
+			'interest_date'                  => $this->normalizeNullableDate($data['interest_date'] ?? null, 'início dos juros'),
 			'interest_amount_per_day'        => $this->normalizeDecimal($data['interest_amount_per_day'] ?? '0'),
+			'discount_date'                  => $this->normalizeNullableDate($data['discount_date'] ?? null, 'limite do desconto'),
 			'discount_amount'                => $this->normalizeDecimal($data['discount_amount'] ?? '0'),
+			'fine_date'                      => $this->normalizeNullableDate($data['fine_date'] ?? null, 'início da multa'),
 			'fine_amount'                    => $this->normalizeDecimal($data['fine_amount'] ?? '0'),
+			'protest_code'                   => trim((string) ($data['protest_code'] ?? '')) ?: null,
+			'protest_days'                   => $this->normalizeNullableTinyint($data['protest_days'] ?? null, 'Dias para protesto'),
+			'write_off_code'                 => trim((string) ($data['write_off_code'] ?? '')) ?: null,
+			'write_off_days'                 => $this->normalizeNullableTinyint($data['write_off_days'] ?? null, 'Dias para baixa'),
+			'last_occurrence_code'           => trim((string) ($data['last_occurrence_code'] ?? '')) ?: null,
+			'last_occurrence_message'        => trim((string) ($data['last_occurrence_message'] ?? '')) ?: null,
 		];
 		if (!in_array($payload['payer_document_type'], ['CPF', 'CNPJ'], true))
 			{
@@ -517,6 +535,81 @@ class BankSlip extends TenantModel
 			}
 
 		return $payload;
+		}
+
+	/**
+	 * Normalizes an optional foreign key identifier.
+	 **/
+	private function normalizeNullableId($value): ?int
+		{
+		$id = (int) $value;
+		return $id > 0 ? $id : null;
+		}
+
+	/**
+	 * Normalizes a required ISO date.
+	 **/
+	private function normalizeRequiredDate($value, string $label): string
+		{
+		$date = $this->normalizeNullableDate($value, $label);
+		if ($date === null)
+			{
+			throw new \InvalidArgumentException('Informe a data de ' . $label . '.');
+			}
+
+		return $date;
+		}
+
+	/**
+	 * Normalizes an optional ISO date.
+	 **/
+	private function normalizeNullableDate($value, string $label): ?string
+		{
+		$text = trim((string) $value);
+		if ($text === '')
+			{
+			return null;
+			}
+
+		$date = \DateTimeImmutable::createFromFormat('!Y-m-d', $text);
+		if (!$date || $date->format('Y-m-d') !== $text)
+			{
+			throw new \InvalidArgumentException('Data de ' . $label . ' inválida.');
+			}
+
+		return $text;
+		}
+
+	/**
+	 * Normalizes an optional decimal amount.
+	 **/
+	private function normalizeNullableDecimal($value): ?string
+		{
+		if (trim((string) $value) === '')
+			{
+			return null;
+			}
+
+		return $this->normalizeDecimal($value);
+		}
+
+	/**
+	 * Normalizes an optional unsigned tiny integer.
+	 **/
+	private function normalizeNullableTinyint($value, string $label): ?int
+		{
+		$text = trim((string) $value);
+		if ($text === '')
+			{
+			return null;
+			}
+
+		if (!preg_match('/^\d+$/', $text) || (int) $text > 255)
+			{
+			throw new \InvalidArgumentException($label . ' deve ser um número entre 0 e 255.');
+			}
+
+		return (int) $text;
 		}
 
 	private function normalizeDecimal($value): string

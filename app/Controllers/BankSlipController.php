@@ -70,8 +70,21 @@ class BankSlipController extends TenantAwareController
 		$this->requirePermission('bank_slip.store');
 
 		$model = new BankSlip();
-		$model->create($_POST);
-		$this->redirect('bank_slip');
+		try
+			{
+			$model->create($_POST);
+			$this->redirect('bank_slip');
+			}
+		catch (\Throwable $e)
+			{
+			http_response_code(422);
+			$this->view('bank_slips/create', [
+				'title' => 'Novo boleto',
+				'bankAccounts' => $model->getBankAccountOptions(),
+				'formData' => $_POST,
+				'formError' => $e->getMessage(),
+			]);
+			}
 		}
 
 	/**
