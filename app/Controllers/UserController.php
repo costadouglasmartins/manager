@@ -8,6 +8,7 @@ use App\Core\TenantContext;
 use App\Models\Tenant;
 use App\Models\User;
 use App\Services\AuditLogService;
+use App\Services\UserPresenceService;
 
 class UserController extends Controller
 	{
@@ -206,6 +207,7 @@ class UserController extends Controller
 							if ($tenant)
 								{
 								TenantContext::setTenant($tenant);
+								$this->setInitialPresence($user, $tenant);
 								$this->writeAuthenticationLog('login', $user, $tenant, [
 									'tenant_selection' => 'primary_user_tenant',
 								]);
@@ -219,6 +221,7 @@ class UserController extends Controller
 						if (count($tenants) === 1)
 							{
 							TenantContext::setTenant($tenants[0]);
+							$this->setInitialPresence($user, $tenants[0]);
 							$this->writeAuthenticationLog('login', $user, $tenants[0], [
 								'tenant_selection' => 'single_accessible_tenant',
 							]);
@@ -278,6 +281,7 @@ class UserController extends Controller
 
 		if (!empty($currentUser))
 			{
+			(new UserPresenceService())->markOffline((int) ($currentUser['id'] ?? 0));
 			$this->writeAuthenticationLog('logout', $currentUser, $currentTenant, [
 				'tenant_selection' => $currentTenant ? 'selected' : 'none',
 			]);
@@ -297,6 +301,34 @@ class UserController extends Controller
 		session_destroy();
 		$this->redirect('user/login');
 		exit;
+		}
+
+	/**
+	 * Sets the authenticated user initial presence.
+	 * @param array<string, mixed> $user Authenticated user payload.
+	 * @param array<string, mixed>|null $tenant Selected tenant payload.
+	 * @return void
+	 **/
+	private function setInitialPresence(array $user, ?array $tenant): void
+		{
+		$userId = (int) ($user['id'] ?? 0);
+		$tenantId = isset($tenant['id']) && (int) $tenant['id'] > 0 ? (int) $tenant['id'] : null;
+
+		if ($userId <= 0)
+			{
+			return;
+			}
+
+		try
+			{
+			$presence = (new UserPresenceService())->setStatus($userId, $tenantId, UserPresenceService::STATUS_ONLINE);
+			$_SESSION['manager']['user']['presence_status'] = $presence['status'];
+			}
+		catch (\RuntimeException $e)
+			{
+			$presence = (new UserPresenceService())->setStatus($userId, $tenantId, UserPresenceService::STATUS_OFFLINE);
+			$_SESSION['manager']['user']['presence_status'] = $presence['status'];
+			}
 		}
 
   /**

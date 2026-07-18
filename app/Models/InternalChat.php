@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Core\Model;
+use App\Services\UserPresenceService;
 use PDO;
 
 class InternalChat extends Model
@@ -17,11 +18,13 @@ class InternalChat extends Model
 		$usersTable = $this->managerTable('users');
 		$peopleTable = $this->managerTable('people');
 		$tenantUsersTable = $this->managerTable('tenant_users');
+		$userPresencesTable = $this->managerTable('user_presences');
 
 		$stmt = $this->db->prepare("
 			SELECT DISTINCT User.id,
 			       User.username,
 			       Person.name,
+			       COALESCE(UserPresence.status, 'offline') AS presence_status,
 			       COALESCE(
 			         TenantUser.role,
 			         CASE
@@ -35,6 +38,8 @@ class InternalChat extends Model
 			LEFT JOIN {$tenantUsersTable} AS TenantUser
 				ON TenantUser.user_id = User.id
 				AND TenantUser.tenant_id = :tenant_id
+			LEFT JOIN {$userPresencesTable} AS UserPresence
+				ON UserPresence.user_id = User.id
 			WHERE User.active = 1
 			  AND User.id <> :current_user_id
 			  AND (TenantUser.user_id IS NOT NULL OR User.tenant_id = :tenant_id)
@@ -45,7 +50,17 @@ class InternalChat extends Model
 			'current_user_id' => $currentUserId,
 		]);
 
-		return $stmt->fetchAll(PDO::FETCH_ASSOC);
+		$users = $stmt->fetchAll(PDO::FETCH_ASSOC);
+		foreach ($users as &$user)
+			{
+			$meta = UserPresenceService::statusMeta((string) ($user['presence_status'] ?? 'offline'));
+			$user['presence_label'] = $meta['label'];
+			$user['presence_class'] = $meta['class'];
+			$user['presence_icon'] = $meta['icon'];
+			}
+
+		unset($user);
+		return $users;
 		}
 
 	/**

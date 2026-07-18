@@ -4,6 +4,12 @@ $managerUser = $_SESSION['manager']['user'] ?? null;
 $isAuthenticated = !empty($managerUser);
 $userName = $isAuthenticated ? (string) ($managerUser['name'] ?? 'Usuário(a)') : 'Usuário(a)';
 $hasTenantContext = class_exists('App\\Core\\TenantContext') && \App\Core\TenantContext::hasTenant();
+$userPresence = null;
+if ($isAuthenticated && class_exists('App\\Services\\UserPresenceService'))
+  {
+  $userPresence = (new \App\Services\UserPresenceService())->current((int) ($managerUser['id'] ?? 0));
+  }
+$userPresence = is_array($userPresence) ? $userPresence : \App\Services\UserPresenceService::statusMeta('offline') + ['status' => 'offline'];
 ?>
 <!DOCTYPE html>
 <html lang="pt-BR" id="htmlRoot" data-bs-theme="light">
@@ -41,6 +47,9 @@ $hasTenantContext = class_exists('App\\Core\\TenantContext') && \App\Core\Tenant
   <script src="/assets/bootstrap/js/bootstrap.bundle.min.js"></script>
   <script src="<?= url('assets/js/menu.js?v=4'); ?>"></script>
   <script src="<?= url('assets/js/main.js?v=5'); ?>"></script>
+  <?php if ($isAuthenticated): ?>
+    <script src="<?= url('assets/js/user_presences/user_presence.js?v=1'); ?>"></script>
+  <?php endif; ?>
   <?php if ($isAuthenticated && $hasTenantContext): ?>
     <?php require __DIR__ . '/../support_chats/widget.php'; ?>
   <?php endif; ?>

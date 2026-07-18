@@ -5,6 +5,7 @@ namespace App\Controllers;
 use App\Core\Controller;
 use App\Core\TenantContext;
 use App\Models\Tenant;
+use App\Services\UserPresenceService;
 
 class TenantController extends Controller
   {
@@ -28,6 +29,7 @@ class TenantController extends Controller
 			if ($tenant)
 			  {
 				TenantContext::setTenant($tenant);
+				$this->setTenantPresence($userId, $tenant);
 				$this->redirect('/');
 			  }
 
@@ -83,6 +85,7 @@ class TenantController extends Controller
 		  }
 
 		TenantContext::setTenant($tenant);
+		$this->setTenantPresence((int) ($user['id'] ?? 0), $tenant);
 
 		$this->json([
 			'message' => 'Tenant selecionado com sucesso.',
@@ -96,11 +99,42 @@ class TenantController extends Controller
 	public function clear()
 	  {
 		$this->requireAuth();
+		$user = $_SESSION['manager']['user'] ?? [];
+		$userId = (int) ($user['id'] ?? 0);
+		if ($userId > 0)
+		  {
+			(new UserPresenceService())->setStatus($userId, null, UserPresenceService::STATUS_OFFLINE);
+		  }
 		TenantContext::clear();
 
 		$this->json([
 			'message' => 'Contexto do tenant removido.',
 		]);
+	  }
+
+	/**
+	 * Updates presence after a tenant context change.
+	 * @param int $userId User identifier.
+	 * @param array<string, mixed> $tenant Selected tenant payload.
+	 * @return void
+	 **/
+	private function setTenantPresence(int $userId, array $tenant): void
+	  {
+		if ($userId <= 0)
+		  {
+			return;
+		  }
+
+		try
+		  {
+			$presence = (new UserPresenceService())->setStatus($userId, (int) ($tenant['id'] ?? 0), UserPresenceService::STATUS_ONLINE);
+			$_SESSION['manager']['user']['presence_status'] = $presence['status'];
+		  }
+		catch (\RuntimeException $e)
+		  {
+			$presence = (new UserPresenceService())->setStatus($userId, (int) ($tenant['id'] ?? 0), UserPresenceService::STATUS_OFFLINE);
+			$_SESSION['manager']['user']['presence_status'] = $presence['status'];
+		  }
 	  }
   }
 ?>
