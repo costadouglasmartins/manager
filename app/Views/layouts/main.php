@@ -23,7 +23,7 @@ $userPresence = is_array($userPresence) ? $userPresence : \App\Services\UserPres
   <link rel="stylesheet" href="/assets/bootstrap/css/bootstrap.min.css">
   <link rel="stylesheet" href="/assets/bootstrap/images/bootstrap-icons.min.css">
   <link rel="stylesheet" href="<?= url('assets/css/main.css?v=13'); ?>">
-  <link rel="stylesheet" href="<?= url('assets/css/menu.css?v=3'); ?>">
+  <link rel="stylesheet" href="<?= url('assets/css/menu.css?v=4'); ?>">
   <link rel="apple-touch-icon" sizes="180x180" href="/assets/bootstrap/images/apple-touch-icon.png">
   <link rel="icon" type="image/png" sizes="32x32" href="/assets/bootstrap/images/favicon-32x32.png">
   <link rel="icon" type="image/png" sizes="16x16" href="/assets/bootstrap/images/favicon-16x16.png">
@@ -48,7 +48,7 @@ $userPresence = is_array($userPresence) ? $userPresence : \App\Services\UserPres
   <script src="<?= url('assets/js/menu.js?v=4'); ?>"></script>
   <script src="<?= url('assets/js/main.js?v=5'); ?>"></script>
   <?php if ($isAuthenticated): ?>
-    <script src="<?= url('assets/js/user_presences/user_presence.js?v=1'); ?>"></script>
+    <script src="<?= url('assets/js/user_presences/user_presence.js?v=2'); ?>"></script>
   <?php endif; ?>
   <?php if ($isAuthenticated && $hasTenantContext): ?>
     <?php require __DIR__ . '/../support_chats/widget.php'; ?>

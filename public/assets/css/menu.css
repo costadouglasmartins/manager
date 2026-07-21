@@ -51,3 +51,297 @@
 .dropdown-submenu.show > .submenu-toggle::after {
   transform: rotate(0deg);
 }
+
+/* Account and presence menu */
+.app-account-menu {
+  width: min(380px, calc(100vw - 1.5rem));
+  padding: 0.55rem;
+  border-radius: 14px;
+}
+
+.app-account-summary {
+  display: flex;
+  gap: 0.7rem;
+  align-items: center;
+  padding: 0.55rem 0.65rem 0.45rem;
+}
+
+.app-account-avatar {
+  display: inline-flex;
+  width: 38px;
+  height: 38px;
+  flex: 0 0 38px;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid color-mix(in srgb, var(--app-accent) 22%, var(--app-border));
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--app-accent) 10%, var(--app-surface-raised));
+  color: var(--app-accent);
+  font-size: 1rem;
+}
+
+.app-account-identity {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  line-height: 1.25;
+}
+
+.app-account-identity strong {
+  overflow: hidden;
+  color: var(--app-text);
+  font-size: 0.92rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.app-account-eyebrow {
+  margin-bottom: 0.12rem;
+  color: var(--app-muted);
+  font-size: 0.68rem;
+  font-weight: 750;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.app-account-divider {
+  margin: 0.45rem 0.35rem;
+}
+
+.app-presence-panel {
+  margin: 0.25rem;
+  padding: 0.75rem;
+  border: 1px solid var(--app-border);
+  border-radius: 11px;
+  background: var(--app-surface-raised);
+}
+
+.app-presence-header {
+  display: flex;
+  gap: 0.75rem;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 0.7rem;
+}
+
+.app-presence-title,
+.app-presence-description {
+  display: block;
+}
+
+.app-presence-title {
+  color: var(--app-text);
+  font-size: 0.84rem;
+  font-weight: 750;
+}
+
+.app-presence-title i {
+  margin-right: 0.18rem;
+  color: var(--app-accent);
+}
+
+.app-presence-description {
+  margin-top: 0.12rem;
+  color: var(--app-muted);
+  font-size: 0.71rem;
+}
+
+.app-presence-current {
+  display: inline-flex;
+  min-height: 27px;
+  flex: 0 0 auto;
+  gap: 0.35rem;
+  align-items: center;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  padding: 0.28rem 0.58rem;
+  font-size: 0.72rem;
+  font-weight: 750;
+}
+
+.app-presence-current.text-bg-success {
+  border-color: color-mix(in srgb, var(--app-success) 28%, transparent);
+  background: color-mix(in srgb, var(--app-success) 12%, var(--app-surface-solid)) !important;
+  color: var(--app-success) !important;
+}
+
+.app-presence-current.text-bg-warning {
+  border-color: color-mix(in srgb, var(--app-warning) 28%, transparent);
+  background: color-mix(in srgb, var(--app-warning) 12%, var(--app-surface-solid)) !important;
+  color: var(--app-warning) !important;
+}
+
+.app-presence-current.text-bg-danger {
+  border-color: color-mix(in srgb, var(--app-danger) 28%, transparent);
+  background: color-mix(in srgb, var(--app-danger) 12%, var(--app-surface-solid)) !important;
+  color: var(--app-danger) !important;
+}
+
+.app-presence-current.text-bg-secondary {
+  border-color: color-mix(in srgb, var(--app-muted) 28%, transparent);
+  background: color-mix(in srgb, var(--app-muted) 12%, var(--app-surface-solid)) !important;
+  color: var(--app-muted) !important;
+}
+
+.app-presence-current-icon {
+  font-size: 0.62rem;
+}
+
+.app-presence-options {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.45rem;
+}
+
+.app-presence-option {
+  --presence-color: var(--app-muted);
+  position: relative;
+  display: grid;
+  min-width: 0;
+  min-height: 58px;
+  grid-template-columns: 28px minmax(0, 1fr) 16px;
+  gap: 0.42rem;
+  align-items: center;
+  border: 1px solid var(--app-border);
+  border-radius: 9px;
+  background: var(--app-surface-solid);
+  color: var(--app-text);
+  padding: 0.5rem 0.48rem;
+  text-align: left;
+  transition: border-color 0.16s ease, background-color 0.16s ease, box-shadow 0.16s ease, transform 0.16s ease;
+}
+
+.app-presence-option-online {
+  --presence-color: var(--app-success);
+}
+
+.app-presence-option-away {
+  --presence-color: var(--app-warning);
+}
+
+.app-presence-option-busy {
+  --presence-color: var(--app-danger);
+}
+
+.app-presence-option:hover:not(:disabled),
+.app-presence-option:focus-visible {
+  border-color: color-mix(in srgb, var(--presence-color) 55%, var(--app-border));
+  background: color-mix(in srgb, var(--presence-color) 5%, var(--app-surface-solid));
+  transform: translateY(-1px);
+}
+
+.app-presence-option:focus-visible {
+  outline: 3px solid color-mix(in srgb, var(--presence-color) 20%, transparent);
+  outline-offset: 1px;
+}
+
+.app-presence-option.is-active {
+  border-color: color-mix(in srgb, var(--presence-color) 64%, var(--app-border));
+  background: color-mix(in srgb, var(--presence-color) 8%, var(--app-surface-solid));
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--presence-color) 14%, transparent);
+}
+
+.app-presence-option-icon {
+  display: inline-flex;
+  width: 27px;
+  height: 27px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--presence-color) 12%, var(--app-surface-solid));
+  color: var(--presence-color);
+  font-size: 0.72rem;
+}
+
+.app-presence-option-copy {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  line-height: 1.2;
+}
+
+.app-presence-option-copy strong {
+  overflow: hidden;
+  font-size: 0.76rem;
+  font-weight: 750;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.app-presence-option-copy small {
+  overflow: hidden;
+  margin-top: 0.08rem;
+  color: var(--app-muted);
+  font-size: 0.63rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.app-presence-option-check {
+  color: var(--presence-color);
+  font-size: 0.8rem;
+  opacity: 0;
+  transform: scale(0.7);
+  transition: opacity 0.16s ease, transform 0.16s ease;
+}
+
+.app-presence-option.is-active .app-presence-option-check {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.app-presence-option:disabled {
+  cursor: wait;
+  opacity: 0.62;
+}
+
+.app-presence-feedback {
+  display: block;
+  min-height: 0.9rem;
+  margin-top: 0.38rem;
+  color: var(--app-success);
+  font-size: 0.66rem;
+  line-height: 0.9rem;
+}
+
+.app-presence-feedback.is-error {
+  color: var(--app-danger);
+}
+
+.app-account-action {
+  display: flex;
+  gap: 0.65rem;
+  align-items: center;
+  padding-inline: 0.7rem;
+}
+
+.app-account-action i {
+  width: 1.15rem;
+  margin: 0;
+  text-align: center;
+}
+
+.app-account-action-danger,
+.app-account-action-danger i {
+  color: var(--app-danger);
+}
+
+.app-account-action-danger:hover,
+.app-account-action-danger:focus,
+.app-account-action-danger:hover i,
+.app-account-action-danger:focus i {
+  color: var(--app-danger);
+}
+
+@media (max-width: 400px) {
+  .app-presence-options {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .app-presence-option,
+  .app-presence-option-check {
+    transition: none;
+  }
+}

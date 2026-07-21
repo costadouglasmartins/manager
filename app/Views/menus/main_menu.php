@@ -237,32 +237,72 @@
       <!-- Usuário -->
       <ul class="navbar-nav app-navbar-nav mb-2 mb-lg-0">
         <li class="nav-item dropdown me-lg-3">
-          <a class="nav-link dropdown-toggle app-nav-link d-flex align-items-center" href="#" id="accountMenu" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+          <a class="nav-link dropdown-toggle app-nav-link d-flex align-items-center" href="#" id="accountMenu" role="button" data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false">
             <i class="bi bi-person-circle me-2"></i>
           </a>
-          <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="accountMenu">
+          <ul class="dropdown-menu dropdown-menu-end app-account-menu" aria-labelledby="accountMenu">
             <!--
             <li><a class="dropdown-item" href="#"><i class="bi bi-gear me-2"></i>Perfil</a></li>
             <li><hr class="dropdown-divider" /></li>
             <li><a class="dropdown-item text-danger" href="<?= ('permission'); ?>"><i class="bi bi-box-arrow-right me-2"></i>Permissões</a></li>
             -->
             <?php if ($isAuthenticated): ?>
-              <li class="px-3 py-2" data-user-presence data-status-url="<?= url('user_presence/status'); ?>">
-                <div class="d-flex align-items-center justify-content-between gap-2 mb-2">
-                  <span class="small text-body-secondary">Presence</span>
-                  <span class="badge <?= htmlspecialchars((string) ($userPresence['class'] ?? 'text-bg-secondary'), ENT_QUOTES, 'UTF-8'); ?>" data-user-presence-badge><i class="bi <?= htmlspecialchars((string) ($userPresence['icon'] ?? 'bi-circle'), ENT_QUOTES, 'UTF-8'); ?> me-1" data-user-presence-icon aria-hidden="true"></i><span data-user-presence-label><?= htmlspecialchars((string) ($userPresence['label'] ?? 'Offline'), ENT_QUOTES, 'UTF-8'); ?></span></span>
-                </div>
-                <div class="btn-group btn-group-sm w-100" role="group" aria-label="Presence status">
-                  <button class="btn btn-outline-success" type="button" data-user-presence-status="online" title="Online"><i class="bi bi-circle-fill" aria-hidden="true"></i><span class="visually-hidden">Online</span></button>
-                  <button class="btn btn-outline-warning" type="button" data-user-presence-status="away" title="Away"><i class="bi bi-clock-fill" aria-hidden="true"></i><span class="visually-hidden">Away</span></button>
-                  <button class="btn btn-outline-danger" type="button" data-user-presence-status="busy" title="Busy"><i class="bi bi-dash-circle-fill" aria-hidden="true"></i><span class="visually-hidden">Busy</span></button>
-                  <button class="btn btn-outline-secondary" type="button" data-user-presence-status="offline" title="Offline"><i class="bi bi-circle" aria-hidden="true"></i><span class="visually-hidden">Offline</span></button>
-                </div>
+              <?php
+              $currentPresenceStatus = (string) ($userPresence['status'] ?? 'offline');
+              $presenceLabels = [
+                'online' => 'Online',
+                'away' => 'Ausente',
+                'busy' => 'Ocupado',
+                'offline' => 'Offline',
+              ];
+              $currentPresenceLabel = $presenceLabels[$currentPresenceStatus] ?? $presenceLabels['offline'];
+              ?>
+              <li class="app-account-summary">
+                <span class="app-account-avatar" aria-hidden="true"><i class="bi bi-person-fill"></i></span>
+                <span class="app-account-identity">
+                  <span class="app-account-eyebrow">Minha conta</span>
+                  <strong title="<?= htmlspecialchars($userName, ENT_QUOTES, 'UTF-8'); ?>"><?= htmlspecialchars($userName, ENT_QUOTES, 'UTF-8'); ?></strong>
+                </span>
               </li>
-              <li><hr class="dropdown-divider" /></li>
-              <li><a class="dropdown-item" href="<?= url('user/edit/' . (int) ($managerUser['id'] ?? 0)); ?>"><i class="bi bi-person-lines-fill me-2"></i>Meus dados</a></li>
-              <li><hr class="dropdown-divider" /></li>
-              <li><a class="dropdown-item" href="<?= url('user/logout'); ?>" onclick="return confirm('Tem certeza que deseja sair?');"><i class="bi bi-box-arrow-right me-2"></i>Olá, <?= htmlspecialchars($userName, ENT_QUOTES, 'UTF-8'); ?>, encerrar sessão?</a></li>
+              <li><hr class="dropdown-divider app-account-divider" /></li>
+              <li class="app-presence-panel" data-user-presence data-status-url="<?= url('user_presence/status'); ?>" aria-busy="false">
+                <div class="app-presence-header">
+                  <div>
+                    <span class="app-presence-title"><i class="bi bi-broadcast-pin" aria-hidden="true"></i> Presença</span>
+                    <span class="app-presence-description">Como sua equipe vê você</span>
+                  </div>
+                  <span class="badge app-presence-current <?= htmlspecialchars((string) ($userPresence['class'] ?? 'text-bg-secondary'), ENT_QUOTES, 'UTF-8'); ?>" data-user-presence-badge>
+                    <i class="bi <?= htmlspecialchars((string) ($userPresence['icon'] ?? 'bi-circle'), ENT_QUOTES, 'UTF-8'); ?> app-presence-current-icon" data-user-presence-icon aria-hidden="true"></i>
+                    <span data-user-presence-label><?= htmlspecialchars($currentPresenceLabel, ENT_QUOTES, 'UTF-8'); ?></span>
+                  </span>
+                </div>
+                <div class="app-presence-options" role="group" aria-label="Alterar status de presença">
+                  <button class="app-presence-option app-presence-option-online<?= $currentPresenceStatus === 'online' ? ' is-active' : ''; ?>" type="button" aria-pressed="<?= $currentPresenceStatus === 'online' ? 'true' : 'false'; ?>" data-user-presence-status="online" data-user-presence-name="Online">
+                    <span class="app-presence-option-icon"><i class="bi bi-circle-fill" aria-hidden="true"></i></span>
+                    <span class="app-presence-option-copy"><strong>Online</strong><small>Disponível</small></span>
+                    <i class="bi bi-check-lg app-presence-option-check" aria-hidden="true"></i>
+                  </button>
+                  <button class="app-presence-option app-presence-option-away<?= $currentPresenceStatus === 'away' ? ' is-active' : ''; ?>" type="button" aria-pressed="<?= $currentPresenceStatus === 'away' ? 'true' : 'false'; ?>" data-user-presence-status="away" data-user-presence-name="Ausente">
+                    <span class="app-presence-option-icon"><i class="bi bi-clock-fill" aria-hidden="true"></i></span>
+                    <span class="app-presence-option-copy"><strong>Ausente</strong><small>Volto em breve</small></span>
+                    <i class="bi bi-check-lg app-presence-option-check" aria-hidden="true"></i>
+                  </button>
+                  <button class="app-presence-option app-presence-option-busy<?= $currentPresenceStatus === 'busy' ? ' is-active' : ''; ?>" type="button" aria-pressed="<?= $currentPresenceStatus === 'busy' ? 'true' : 'false'; ?>" data-user-presence-status="busy" data-user-presence-name="Ocupado">
+                    <span class="app-presence-option-icon"><i class="bi bi-dash-circle-fill" aria-hidden="true"></i></span>
+                    <span class="app-presence-option-copy"><strong>Ocupado</strong><small>Evitar interrupções</small></span>
+                    <i class="bi bi-check-lg app-presence-option-check" aria-hidden="true"></i>
+                  </button>
+                  <button class="app-presence-option app-presence-option-offline<?= $currentPresenceStatus === 'offline' ? ' is-active' : ''; ?>" type="button" aria-pressed="<?= $currentPresenceStatus === 'offline' ? 'true' : 'false'; ?>" data-user-presence-status="offline" data-user-presence-name="Offline">
+                    <span class="app-presence-option-icon"><i class="bi bi-circle" aria-hidden="true"></i></span>
+                    <span class="app-presence-option-copy"><strong>Offline</strong><small>Desconectado</small></span>
+                    <i class="bi bi-check-lg app-presence-option-check" aria-hidden="true"></i>
+                  </button>
+                </div>
+                <span class="app-presence-feedback" data-user-presence-feedback role="status" aria-live="polite"></span>
+              </li>
+              <li><hr class="dropdown-divider app-account-divider" /></li>
+              <li><a class="dropdown-item app-account-action" href="<?= url('user/edit/' . (int) ($managerUser['id'] ?? 0)); ?>"><i class="bi bi-person-lines-fill"></i><span>Meus dados</span></a></li>
+              <li><a class="dropdown-item app-account-action app-account-action-danger" href="<?= url('user/logout'); ?>" onclick="return confirm('Tem certeza que deseja sair?');"><i class="bi bi-box-arrow-right"></i><span>Encerrar sessão</span></a></li>
             <?php else: ?>
               <li><a class="dropdown-item" href="<?= url('user/login'); ?>">Entrar</a></li>
             <?php endif; ?>
