@@ -203,15 +203,38 @@
             <i class="bi bi-shop me-1"></i> Loja
           </a>
           <ul class="dropdown-menu" aria-labelledby="storeMenu">
-            <?php if (authCan('product_category.index')): ?>
-              <li><a class="dropdown-item" href="<?= url('product_category'); ?>"><i class="bi bi-tags me-2"></i>Categorias de produtos</a></li>
+            <?php if (authCan('product_category.create') || authCan('product_category.index')): ?>
+              <li class="dropdown-submenu">
+                <a class="dropdown-item submenu-toggle" href="#"><i class="bi bi-tags me-2"></i>Categorias de produtos</a>
+                <ul class="dropdown-menu">
+                  <?php if (authCan('product_category.create')): ?>
+                    <li><a class="dropdown-item" href="<?= url('product_category/create'); ?>"><i class="bi bi-tag me-2"></i>Cadastrar</a></li>
+                  <?php endif; ?>
+                  <li><hr class="dropdown-divider" /></li>
+                  <?php if (authCan('product_category.index')): ?>
+                    <li><a class="dropdown-item" href="<?= url('product_category'); ?>"><i class="bi bi-list me-2"></i>Listar</a></li>
+                  <?php endif; ?>
+                </ul>
+              </li>
             <?php endif; ?>
             <li><hr class="dropdown-divider" /></li>
-            <?php if (authCan('product.index')): ?>
-              <li><a class="dropdown-item" href="<?= url('product'); ?>"><i class="bi bi-box-seam me-2"></i>Produtos</a></li>
-            <?php endif; ?>
-            <?php if (authCan('product.create')): ?>
-              <li><a class="dropdown-item" href="<?= url('product/import-spreadsheet'); ?>"><i class="bi bi-file-earmark-spreadsheet me-2"></i>Importar produtos</a></li>
+            <?php if (authCan('product.create') || authCan('product.index')): ?>
+              <li class="dropdown-submenu">
+                <a class="dropdown-item submenu-toggle" href="#"><i class="bi bi-box-seam me-2"></i>Produtos</a>
+                <ul class="dropdown-menu">
+                  <?php if (authCan('product.create')): ?>
+                    <li><a class="dropdown-item" href="<?= url('product/create'); ?>"><i class="bi bi-plus-square me-2"></i>Cadastrar</a></li>
+                  <?php endif; ?>
+                  <li><hr class="dropdown-divider" /></li>
+                  <?php if (authCan('product.create')): ?>
+                    <li><a class="dropdown-item" href="<?= url('product/import-spreadsheet'); ?>"><i class="bi bi-file-earmark-spreadsheet me-2"></i>Importar</a></li>
+                  <?php endif; ?>
+                  <li><hr class="dropdown-divider" /></li>
+                  <?php if (authCan('product.index')): ?>
+                    <li><a class="dropdown-item" href="<?= url('product'); ?>"><i class="bi bi-list-ul me-2"></i>Listar</a></li>
+                  <?php endif; ?>
+                </ul>
+              </li>
             <?php endif; ?>
             <li><hr class="dropdown-divider" /></li>
             <?php if (authCan('product_stock_movement.index')): ?>
