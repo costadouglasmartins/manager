@@ -6,8 +6,10 @@ use App\Core\TenantAwareController;
 use App\Models\Product;
 use App\Models\ProductAttribute;
 use App\Models\ProductCategory;
+use App\Models\ProductHistory;
 use App\Models\ProductUnit;
 use App\Services\ChunkedUploadService;
+use App\Services\ProductImportService;
 
 class ProductController extends TenantAwareController
 	{
@@ -18,6 +20,8 @@ class ProductController extends TenantAwareController
 		'export-excel' => 'exportExcel',
 		'export-pdf'   => 'exportPdf',
 		'upload-chunk' => 'uploadChunk',
+		'import-spreadsheet' => 'importSpreadsheet',
+		'download-import-template' => 'downloadImportTemplate',
 	];
 
 	/**
@@ -43,6 +47,7 @@ class ProductController extends TenantAwareController
 			'name'                => isset($_GET['name']) ? trim($_GET['name']) : '',
 			'active'              => isset($_GET['active']) ? trim($_GET['active']) : '',
 			'stock_status'        => isset($_GET['stock_status']) ? trim($_GET['stock_status']) : '',
+			'attribute_filters'   => is_array($_GET['attribute_filters'] ?? null) ? $_GET['attribute_filters'] : [],
 		];
 
 		$page = isset($_GET['page']) ? (int) $_GET['page'] : 1;
@@ -62,6 +67,14 @@ class ProductController extends TenantAwareController
 			}
 
 		$category = new ProductCategory();
+		$filterAttributes = [];
+		$selectedCategoryId = (int) $filters['product_category_id'];
+		if ($selectedCategoryId > 0)
+			{
+			$filterAttributes = array_values(array_filter((new ProductAttribute())->getCategorySchema($selectedCategoryId), static function (array $attribute): bool {
+				return (int) ($attribute['filterable'] ?? 0) === 1;
+			}));
+			}
 
 		if ($this->wantsJson())
 			{
@@ -83,6 +96,7 @@ class ProductController extends TenantAwareController
 			'page'        => $page,
 			'totalPages'  => $totalPages,
 			'total'       => $total,
+			'filterAttributes' => $filterAttributes,
 		]);
 		}
 
@@ -101,6 +115,7 @@ class ProductController extends TenantAwareController
 			'units'           => (new ProductUnit())->groupedOptions(),
 			'categorySchemas' => $this->categorySchemas($categories),
 			'attributeValues' => [],
+			'priceRules'      => [],
 		]);
 		}
 
@@ -140,6 +155,7 @@ class ProductController extends TenantAwareController
 				'categorySchemas' => $this->categorySchemas($categories),
 				'attributeValues' => $this->submittedAttributeValues($_POST['attributes'] ?? []),
 				'variations'       => $this->submittedVariations($_POST['variations'] ?? []),
+				'priceRules'        => $this->submittedPriceRules($_POST['price_rules'] ?? []),
 				'formData'        => $_POST,
 				'formError'       => $e->getMessage(),
 			]);
@@ -202,6 +218,7 @@ class ProductController extends TenantAwareController
 			'categorySchemas' => $this->categorySchemas($categories),
 			'attributeValues' => (new ProductAttribute())->getItemValueMap((int) $id),
 			'variations'      => $data['variations'] ?? [],
+			'priceRules'       => $data['price_rules'] ?? [],
 		]);
 		}
 
@@ -241,6 +258,7 @@ class ProductController extends TenantAwareController
 				'categorySchemas' => $this->categorySchemas($categories),
 				'attributeValues' => $this->submittedAttributeValues($_POST['attributes'] ?? []),
 				'variations'       => $this->submittedVariations($_POST['variations'] ?? []),
+				'priceRules'        => $this->submittedPriceRules($_POST['price_rules'] ?? []),
 				'formData'        => $_POST,
 				'formError'       => $e->getMessage(),
 			]);
@@ -269,8 +287,62 @@ class ProductController extends TenantAwareController
 			'images'         => $data['images'],
 			'attributes'     => $data['attributes'],
 			'variations'     => $data['variations'] ?? [],
+			'priceRules'      => $data['price_rules'] ?? [],
 			'stockMovements' => $data['stock_movements'],
+			'history'        => (new ProductHistory())->recentForProduct((int) $id),
 		]);
+		}
+
+	public function importSpreadsheet(): void
+		{
+		$category = new ProductCategory();
+		$service = new ProductImportService();
+		$result = null;
+		$formError = null;
+		if (strtoupper((string) ($_SERVER['REQUEST_METHOD'] ?? 'GET')) === 'POST')
+			{
+			$this->requirePermission('product.store');
+			try
+				{
+				$result = $service->importCsv((int) ($_POST['product_category_id'] ?? 0), $_FILES['spreadsheet'] ?? [], $this->currentUserId());
+				}
+			catch (\Throwable $e)
+				{
+				http_response_code(422);
+				$formError = $e->getMessage();
+				}
+			}
+		else $this->requirePermission('product.create');
+
+		$this->view('products/import', [
+			'title' => 'Importar produtos',
+			'categories' => $category->getOptions(),
+			'batches' => $service->recentBatches(),
+			'importResult' => $result,
+			'formError' => $formError,
+			'selectedCategoryId' => (int) ($_POST['product_category_id'] ?? $_GET['product_category_id'] ?? 0),
+		]);
+		}
+
+	public function downloadImportTemplate(): void
+		{
+		$this->requirePermission('product.create');
+		$categoryId = (int) ($_GET['product_category_id'] ?? 0);
+		try
+			{
+			$content = (new ProductImportService())->templateCsv($categoryId);
+			header('Content-Type: text/csv; charset=UTF-8');
+			header('Content-Disposition: attachment; filename="modelo_importacao_produtos_categoria_' . $categoryId . '.csv"');
+			header('Content-Length: ' . strlen($content));
+			echo $content;
+			exit;
+			}
+		catch (\Throwable $e)
+			{
+			http_response_code(422);
+			echo htmlspecialchars($e->getMessage(), ENT_QUOTES, 'UTF-8');
+			exit;
+			}
 		}
 
 	/**
@@ -395,6 +467,14 @@ class ProductController extends TenantAwareController
 				if (isset($row[$field]) && trim((string) $row[$field]) !== '') return true;
 				}
 			return false;
+		}));
+		}
+
+	private function submittedPriceRules($submitted): array
+		{
+		if (!is_array($submitted)) return [];
+		return array_values(array_filter($submitted, static function ($row): bool {
+			return is_array($row) && (trim((string) ($row['minimum_quantity'] ?? '')) !== '' || trim((string) ($row['sale_price'] ?? '')) !== '');
 		}));
 		}
 	}

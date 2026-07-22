@@ -31,7 +31,7 @@ $editorHtml = trim(preg_replace('/<([a-z][a-z0-9]*)\b[^>]*>/i', '<$1>', strip_ta
   <?php endif; ?>
 
   <form action="<?= url('product_stock_movement/update/' . (int) ($movement['id'] ?? 0)); ?>" method="POST" class="needs-validation store-form" novalidate>
-    <section class="store-section">
+    <section class="store-section" data-stock-form>
       <div class="row g-3">
         <div class="col-12 col-lg-6">
           <label class="form-label" for="product_id">Produto</label>
@@ -45,6 +45,15 @@ $editorHtml = trim(preg_replace('/<([a-z][a-z0-9]*)\b[^>]*>/i', '<$1>', strip_ta
             <?php endforeach; ?>
           </select>
           <div class="invalid-feedback">Selecione o produto.</div>
+        </div>
+
+        <div class="col-12 col-lg-6">
+          <label class="form-label" for="variation_id">Item de estoque</label>
+          <input name="variation_id" type="hidden" value="<?= (int) $value('variation_id'); ?>">
+          <select class="form-select" id="variation_id" disabled>
+            <?php if ((int) $value('variation_id') > 0): ?><option selected value="<?= (int) $value('variation_id'); ?>"><?= htmlspecialchars((string) ($movement['variation_name'] ?? 'Variação'), ENT_QUOTES, 'UTF-8'); ?></option><?php else: ?><option selected value="">Produto principal</option><?php endif; ?>
+          </select>
+          <div class="form-text">O item de estoque não pode ser alterado após a criação.</div>
         </div>
 
         <div class="col-12 col-md-3">

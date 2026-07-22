@@ -10,13 +10,15 @@ class ProductStockMovement extends TenantModel
 	private function baseSelectSql(): string
 		{
 		return "SELECT Movement.id, Movement.product_item_id AS product_id,
-			Movement.movement_type, Movement.quantity, Movement.previous_quantity,
-			Movement.new_quantity, Movement.reference, Movement.notes AS observations,
-			Movement.movement_date, Movement.created, Product.name AS product_name,
-			Product.sku AS product_sku, Unit.code AS product_unit,
-			Unit.symbol AS product_unit_symbol
+			Movement.product_item_variation_id AS variation_id, Movement.movement_type,
+			Movement.quantity, Movement.previous_quantity, Movement.new_quantity,
+			Movement.reference, Movement.notes AS observations, Movement.movement_date,
+			Movement.created, Product.name AS product_name, Product.sku AS product_sku,
+			Variation.name AS variation_name, Variation.sku AS variation_sku,
+			Unit.code AS product_unit, Unit.symbol AS product_unit_symbol
 			FROM product_stock_movements AS Movement
 			INNER JOIN product_items AS Product ON Product.id = Movement.product_item_id
+			LEFT JOIN product_item_variations AS Variation ON Variation.id = Movement.product_item_variation_id
 			INNER JOIN product_units AS Unit ON Unit.id = Product.sale_unit_id";
 		}
 
@@ -26,18 +28,20 @@ class ProductStockMovement extends TenantModel
 		try
 			{
 			$this->db->beginTransaction();
-			$product = $this->lockProduct($payload['product_id']);
-			[$previous, $new] = $this->calculateBalance($product['stock_quantity'], $payload['movement_type'], $payload['quantity']);
+			$target = $this->lockTarget($payload['product_id'], $payload['variation_id']);
+			[$previous, $new] = $this->calculateBalance($target['stock_quantity'], $payload['movement_type'], $payload['quantity']);
 			$stmt = $this->db->prepare("INSERT INTO product_stock_movements
-				(product_item_id, movement_type, quantity, previous_quantity, new_quantity,
-				 reference, notes, movement_date, created)
-				VALUES (:product_id, :movement_type, :quantity, :previous_quantity, :new_quantity,
-				 :reference, :notes, :movement_date, NOW())");
+				(product_item_id, product_item_variation_id, movement_type, quantity,
+				 previous_quantity, new_quantity, reference, notes, movement_date, created)
+				VALUES (:product_id, :variation_id, :movement_type, :quantity,
+				 :previous_quantity, :new_quantity, :reference, :notes, :movement_date, NOW())");
 			$stmt->execute($payload + ['previous_quantity' => $previous, 'new_quantity' => $new]);
 			$id = (int) $this->db->lastInsertId();
-			$this->updateProductStock($payload['product_id'], $new);
+			$this->updateTargetStock($payload['product_id'], $payload['variation_id'], $new);
 			$this->auditCreate('product_stock_movement', 'product_stock_movements', $id, $this->findAllByProductStockMovementId($id), [
-				'affected_tables' => ['product_stock_movements', 'product_items'],
+				'affected_tables' => ['product_stock_movements', $payload['variation_id'] ? 'product_item_variations' : 'product_items'],
+				'product_item_id' => $payload['product_id'],
+				'product_item_variation_id' => $payload['variation_id'],
 			]);
 			$this->db->commit();
 			return ['product_stock_movement_id' => $id];
@@ -65,28 +69,29 @@ class ProductStockMovement extends TenantModel
 			$this->db->beginTransaction();
 			$before = $this->find($movementId);
 			if (!$before) throw new \InvalidArgumentException('Movimentação não encontrada.');
-
 			$oldProductId = (int) $before['product_id'];
-			if ($payload['product_id'] !== $oldProductId) throw new \RuntimeException('O produto da movimentação não pode ser alterado.');
-			$this->assertLatestMovement($movementId, $oldProductId);
-			$oldProduct = $this->lockProduct($oldProductId);
+			$oldVariationId = (int) ($before['variation_id'] ?? 0) ?: null;
+			if ($payload['product_id'] !== $oldProductId || $payload['variation_id'] !== $oldVariationId) throw new \RuntimeException('O produto ou a variação da movimentação não pode ser alterado.');
+			$this->assertLatestMovement($movementId, $oldProductId, $oldVariationId);
+			$target = $this->lockTarget($oldProductId, $oldVariationId);
 			$oldDelta = (float) $before['new_quantity'] - (float) $before['previous_quantity'];
-			$restoredOldBalance = (float) $oldProduct['stock_quantity'] - $oldDelta;
-			if ($restoredOldBalance < -0.0000005) throw new \RuntimeException('A alteração deixaria o estoque anterior negativo.');
-
-			$baseBalance = $this->formatQuantity(max(0, $restoredOldBalance));
-
-			[$previous, $new] = $this->calculateBalance($baseBalance, $payload['movement_type'], $payload['quantity']);
+			$restored = (float) $target['stock_quantity'] - $oldDelta;
+			if ($restored < -0.0000005) throw new \RuntimeException('A alteração deixaria o estoque anterior negativo.');
+			[$previous, $new] = $this->calculateBalance($this->formatQuantity(max(0, $restored)), $payload['movement_type'], $payload['quantity']);
 			$stmt = $this->db->prepare("UPDATE product_stock_movements SET
-				product_item_id = :product_id, movement_type = :movement_type, quantity = :quantity,
-				previous_quantity = :previous_quantity, new_quantity = :new_quantity,
-				reference = :reference, notes = :notes, movement_date = :movement_date
-				WHERE id = :id");
-			$stmt->execute($payload + ['previous_quantity' => $previous, 'new_quantity' => $new, 'id' => $movementId]);
-			$this->updateProductStock($payload['product_id'], $new);
+				movement_type = :movement_type, quantity = :quantity, previous_quantity = :previous_quantity,
+				new_quantity = :new_quantity, reference = :reference, notes = :notes,
+				movement_date = :movement_date WHERE id = :id");
+			$stmt->execute([
+				'movement_type' => $payload['movement_type'], 'quantity' => $payload['quantity'],
+				'previous_quantity' => $previous, 'new_quantity' => $new, 'reference' => $payload['reference'],
+				'notes' => $payload['notes'], 'movement_date' => $payload['movement_date'], 'id' => $movementId,
+			]);
+			$this->updateTargetStock($oldProductId, $oldVariationId, $new);
 			$after = $this->findAllByProductStockMovementId($movementId);
 			$this->auditUpdate('product_stock_movement', 'product_stock_movements', $movementId, $before, $after, [
-				'affected_tables' => ['product_stock_movements', 'product_items'],
+				'affected_tables' => ['product_stock_movements', $oldVariationId ? 'product_item_variations' : 'product_items'],
+				'product_item_id' => $oldProductId, 'product_item_variation_id' => $oldVariationId,
 			]);
 			$this->db->commit();
 			}
@@ -106,15 +111,17 @@ class ProductStockMovement extends TenantModel
 			$before = $this->find($movementId);
 			if (!$before) throw new \InvalidArgumentException('Movimentação não encontrada.');
 			$productId = (int) $before['product_id'];
-			$this->assertLatestMovement($movementId, $productId);
-			$product = $this->lockProduct($productId);
+			$variationId = (int) ($before['variation_id'] ?? 0) ?: null;
+			$this->assertLatestMovement($movementId, $productId, $variationId);
+			$target = $this->lockTarget($productId, $variationId);
 			$delta = (float) $before['new_quantity'] - (float) $before['previous_quantity'];
-			$restored = (float) $product['stock_quantity'] - $delta;
+			$restored = (float) $target['stock_quantity'] - $delta;
 			if ($restored < -0.0000005) throw new \RuntimeException('Não é possível excluir: o estoque resultante seria negativo.');
 			$this->db->prepare('DELETE FROM product_stock_movements WHERE id = :id')->execute(['id' => $movementId]);
-			$this->updateProductStock($productId, $this->formatQuantity(max(0, $restored)));
+			$this->updateTargetStock($productId, $variationId, $this->formatQuantity(max(0, $restored)));
 			$this->auditDelete('product_stock_movement', 'product_stock_movements', $movementId, $before, [
-				'affected_tables' => ['product_stock_movements', 'product_items'],
+				'affected_tables' => ['product_stock_movements', $variationId ? 'product_item_variations' : 'product_items'],
+				'product_item_id' => $productId, 'product_item_variation_id' => $variationId,
 			]);
 			$this->db->commit();
 			}
@@ -159,6 +166,7 @@ class ProductStockMovement extends TenantModel
 		{
 		$productId = (int) ($data['product_id'] ?? $data['product_item_id'] ?? 0);
 		if ($productId <= 0) throw new \InvalidArgumentException('Selecione um produto.');
+		$variationId = (int) ($data['variation_id'] ?? $data['product_item_variation_id'] ?? 0) ?: null;
 		$type = strtoupper(trim((string) ($data['movement_type'] ?? '')));
 		if (!in_array($type, ['IN', 'OUT', 'ADJUSTMENT'], true)) throw new \InvalidArgumentException('Selecione um tipo de movimentação válido.');
 		$quantity = $this->normalizeQuantity($data['quantity'] ?? '');
@@ -173,6 +181,7 @@ class ProductStockMovement extends TenantModel
 			}
 		return [
 			'product_id' => $productId,
+			'variation_id' => $variationId,
 			'movement_type' => $type,
 			'quantity' => $quantity,
 			'reference' => $this->nullableString($data['reference'] ?? null, 120),
@@ -181,14 +190,23 @@ class ProductStockMovement extends TenantModel
 		];
 		}
 
-	private function lockProduct(int $id): array
+	private function lockTarget(int $productId, ?int $variationId): array
 		{
-		$stmt = $this->db->prepare('SELECT id, stock_quantity, track_stock FROM product_items WHERE id = :id FOR UPDATE');
-		$stmt->execute(['id' => $id]);
-		$product = $stmt->fetch(PDO::FETCH_ASSOC);
+		$productStmt = $this->db->prepare('SELECT id, stock_quantity, track_stock FROM product_items WHERE id = :id FOR UPDATE');
+		$productStmt->execute(['id' => $productId]);
+		$product = $productStmt->fetch(PDO::FETCH_ASSOC);
 		if (!$product) throw new \InvalidArgumentException('Produto não encontrado.');
-		if ((int) $product['track_stock'] !== 1) throw new \RuntimeException('Este produto não possui controle de estoque.');
-		return $product;
+		if ($variationId === null)
+			{
+			if ((int) $product['track_stock'] !== 1) throw new \RuntimeException('O produto principal não possui controle de estoque. Selecione uma variação.');
+			return $product;
+			}
+		$stmt = $this->db->prepare('SELECT id, stock_quantity, track_stock FROM product_item_variations WHERE id = :id AND product_item_id = :product_id FOR UPDATE');
+		$stmt->execute(['id' => $variationId, 'product_id' => $productId]);
+		$variation = $stmt->fetch(PDO::FETCH_ASSOC);
+		if (!$variation) throw new \InvalidArgumentException('Variação não encontrada para o produto selecionado.');
+		if ((int) $variation['track_stock'] !== 1) throw new \RuntimeException('Esta variação não possui controle de estoque.');
+		return $variation;
 		}
 
 	private function calculateBalance($current, string $type, string $quantity): array
@@ -220,26 +238,30 @@ class ProductStockMovement extends TenantModel
 		return $value === '' ? null : mb_substr($value, 0, $length);
 		}
 
-	private function updateProductStock(int $productId, string $quantity): void
+	private function updateTargetStock(int $productId, ?int $variationId, string $quantity): void
 		{
+		if ($variationId !== null)
+			{
+			$this->db->prepare('UPDATE product_item_variations SET stock_quantity = :quantity, modified = NOW() WHERE id = :id AND product_item_id = :product_id')
+				->execute(['quantity' => $quantity, 'id' => $variationId, 'product_id' => $productId]);
+			return;
+			}
 		$this->db->prepare('UPDATE product_items SET stock_quantity = :quantity, modified = NOW() WHERE id = :id')
 			->execute(['quantity' => $quantity, 'id' => $productId]);
 		}
 
-	private function assertLatestMovement(int $movementId, int $productId): void
+	private function assertLatestMovement(int $movementId, int $productId, ?int $variationId): void
 		{
-		$stmt = $this->db->prepare('SELECT MAX(id) FROM product_stock_movements WHERE product_item_id = :product_id');
-		$stmt->execute(['product_id' => $productId]);
-		if ((int) $stmt->fetchColumn() !== $movementId)
-			{
-			throw new \RuntimeException('Somente a movimentação mais recente do produto pode ser alterada ou excluída.');
-			}
+		$stmt = $this->db->prepare('SELECT MAX(id) FROM product_stock_movements WHERE product_item_id = :product_id AND product_item_variation_id <=> :variation_id');
+		$stmt->execute(['product_id' => $productId, 'variation_id' => $variationId]);
+		if ((int) $stmt->fetchColumn() !== $movementId) throw new \RuntimeException('Somente a movimentação mais recente deste item de estoque pode ser alterada ou excluída.');
 		}
 
 	private function appendFilters(string &$sql, array &$params, array $filters): void
 		{
 		if (($filters['id'] ?? '') !== '') { $sql .= ' AND Movement.id = :id'; $params['id'] = (int) $filters['id']; }
 		if (($filters['product_id'] ?? '') !== '') { $sql .= ' AND Movement.product_item_id = :product_id'; $params['product_id'] = (int) $filters['product_id']; }
+		if (($filters['variation_id'] ?? '') !== '') { $sql .= ' AND Movement.product_item_variation_id = :variation_id'; $params['variation_id'] = (int) $filters['variation_id']; }
 		if (($filters['movement_type'] ?? '') !== '') { $sql .= ' AND Movement.movement_type = :movement_type'; $params['movement_type'] = strtoupper((string) $filters['movement_type']); }
 		if (($filters['reference'] ?? '') !== '') { $sql .= ' AND Movement.reference LIKE :reference'; $params['reference'] = '%' . trim((string) $filters['reference']) . '%'; }
 		}
@@ -249,3 +271,4 @@ class ProductStockMovement extends TenantModel
 		foreach ($params as $key => $value) $stmt->bindValue(':' . $key, $value, is_int($value) ? PDO::PARAM_INT : PDO::PARAM_STR);
 		}
 	}
+?>

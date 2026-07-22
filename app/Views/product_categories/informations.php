@@ -82,14 +82,14 @@ $conditionLabel = static function (array $attribute) use ($attributeNames): stri
     <div class="store-subheader"><h6>Características da categoria</h6></div>
     <div class="table-responsive">
       <table class="table table-hover align-middle mb-0">
-        <thead><tr><th>Característica</th><th>Tipo</th><th>Obrigatória</th><th>Condição</th><th>Opções</th></tr></thead>
+        <thead><tr><th>Característica</th><th>Tipo</th><th>Obrigatória</th><th>Uso em variações</th><th>Condição</th><th>Opções</th></tr></thead>
         <tbody>
           <?php if (!empty($attributes)): ?>
             <?php foreach ($attributes as $attribute): ?>
-              <tr><td><?= htmlspecialchars((string) $attribute['name'], ENT_QUOTES, 'UTF-8'); ?></td><td><?= htmlspecialchars((string) $attribute['data_type'], ENT_QUOTES, 'UTF-8'); ?><?= !empty($attribute['measurement_type']) ? ' · ' . htmlspecialchars((string) $attribute['measurement_type'], ENT_QUOTES, 'UTF-8') : ''; ?></td><td><?= (int) $attribute['required'] === 1 ? 'Sim' : 'Não'; ?></td><td><?= htmlspecialchars($conditionLabel($attribute), ENT_QUOTES, 'UTF-8'); ?></td><td><?= htmlspecialchars(str_replace("\n", ', ', (string) ($attribute['options_text'] ?? '')), ENT_QUOTES, 'UTF-8'); ?></td></tr>
+              <tr><td><?= htmlspecialchars((string) $attribute['name'], ENT_QUOTES, 'UTF-8'); ?></td><td><?= htmlspecialchars((string) $attribute['data_type'], ENT_QUOTES, 'UTF-8'); ?><?= !empty($attribute['measurement_type']) ? ' · ' . htmlspecialchars((string) $attribute['measurement_type'], ENT_QUOTES, 'UTF-8') : ''; ?></td><td><?= (int) $attribute['required'] === 1 ? 'Sim' : 'Não'; ?></td><td><?= (int) ($attribute['variation_axis'] ?? 0) === 1 ? 'Gera combinações' : ((int) ($attribute['variation_specific'] ?? 0) === 1 ? 'Valor por variação' : 'Valor do produto'); ?></td><td><?= htmlspecialchars($conditionLabel($attribute), ENT_QUOTES, 'UTF-8'); ?></td><td><?= htmlspecialchars(str_replace("\n", ', ', (string) ($attribute['options_text'] ?? '')), ENT_QUOTES, 'UTF-8'); ?></td></tr>
             <?php endforeach; ?>
           <?php else: ?>
-            <tr><td class="text-center text-muted" colspan="5">Nenhuma característica configurada.</td></tr>
+            <tr><td class="text-center text-muted" colspan="6">Nenhuma característica configurada.</td></tr>
           <?php endif; ?>
         </tbody>
       </table>

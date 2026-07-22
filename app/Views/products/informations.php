@@ -47,6 +47,11 @@ $attributeValue = static function (array $attribute) use ($formatQuantity): stri
 	$unit = trim((string) ($attribute['unit_symbol'] ?? ''));
 	return trim($value . ($unit !== '' ? ' ' . $unit : ''));
 };
+$history = $history ?? [];
+$priceRules = $priceRules ?? [];
+$historyAction = static function (string $action): string {
+	return ['create' => 'Produto criado', 'update' => 'Produto alterado', 'delete' => 'Produto excluído'][$action] ?? ucfirst($action);
+};
 ?>
 <link rel="stylesheet" href="<?= url('assets/css/rich_text_editor.css?v=1'); ?>">
 <link rel="stylesheet" href="<?= url('assets/css/products/informations.css?v=1'); ?>">
@@ -161,7 +166,7 @@ $attributeValue = static function (array $attribute) use ($formatQuantity): stri
           <tbody>
             <?php foreach ($variations as $variation): ?>
               <tr>
-                <td><?= htmlspecialchars((string) $variation['name'], ENT_QUOTES, 'UTF-8'); ?></td>
+                <td><div class="fw-semibold"><?= htmlspecialchars((string) $variation['name'], ENT_QUOTES, 'UTF-8'); ?></div><?php foreach ($variation['attributes'] ?? [] as $variationAttribute): ?><small class="badge text-bg-light border text-body me-1"><?= htmlspecialchars((string) $variationAttribute['name'] . ': ' . $attributeValue($variationAttribute), ENT_QUOTES, 'UTF-8'); ?></small><?php endforeach; ?></td>
                 <td><?= htmlspecialchars((string) ($variation['sku'] ?? ''), ENT_QUOTES, 'UTF-8'); ?></td>
                 <td><?= htmlspecialchars((string) ($variation['barcode'] ?? ''), ENT_QUOTES, 'UTF-8'); ?></td>
                 <td><?= htmlspecialchars($formatMoney($variation['sale_price'] ?? 0), ENT_QUOTES, 'UTF-8'); ?></td>
@@ -175,6 +180,18 @@ $attributeValue = static function (array $attribute) use ($formatQuantity): stri
     </section>
   <?php endif; ?>
 
+  <?php if (!empty($priceRules)): ?>
+    <section class="store-section">
+      <div class="store-subheader"><h6>Preços por quantidade e unidade</h6></div>
+      <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+          <thead><tr><th>Aplicação</th><th>Faixa</th><th>Unidade</th><th>Preço</th><th>Disponibilidade</th></tr></thead>
+          <tbody><?php foreach ($priceRules as $rule): ?><tr><td><?= htmlspecialchars((string) ($rule['variation_name'] ?: 'Produto principal'), ENT_QUOTES, 'UTF-8'); ?></td><td>De <?= htmlspecialchars($formatQuantity($rule['minimum_quantity']), ENT_QUOTES, 'UTF-8'); ?><?= $rule['maximum_quantity'] !== null ? ' até ' . htmlspecialchars($formatQuantity($rule['maximum_quantity']), ENT_QUOTES, 'UTF-8') : ' ou mais'; ?></td><td><?= htmlspecialchars((string) $rule['unit_name'] . ' (' . (string) $rule['unit_symbol'] . ')', ENT_QUOTES, 'UTF-8'); ?></td><td><?= htmlspecialchars($formatMoney($rule['sale_price']), ENT_QUOTES, 'UTF-8'); ?></td><td><span class="badge <?= ((int) $rule['active'] === 1 && (int) $rule['available'] === 1) ? 'text-bg-success' : 'text-bg-secondary'; ?>"><?= ((int) $rule['active'] === 1 && (int) $rule['available'] === 1) ? 'Disponível' : 'Indisponível'; ?></span></td></tr><?php endforeach; ?></tbody>
+        </table>
+      </div>
+    </section>
+  <?php endif; ?>
+
   <section class="store-section">
     <div class="store-subheader">
       <h6>Imagens</h6>
@@ -183,8 +200,9 @@ $attributeValue = static function (array $attribute) use ($formatQuantity): stri
     <?php if (!empty($images)): ?>
       <div class="product-image-grid">
         <?php foreach ($images as $image): ?>
-          <a class="product-image-item" href="<?= url($image['file_path']); ?>" target="_blank" rel="noopener">
+          <a class="product-image-item" href="<?= url($image['file_path']); ?>" target="_blank" rel="noopener" title="<?= htmlspecialchars((string) ($image['variation_name'] ?? 'Imagem geral'), ENT_QUOTES, 'UTF-8'); ?>">
             <img src="<?= url($image['thumb_path'] ?: $image['file_path']); ?>" alt="<?= htmlspecialchars((string) ($image['original_name'] ?? $product['name']), ENT_QUOTES, 'UTF-8'); ?>">
+            <?php if (!empty($image['variation_name'])): ?><span class="badge text-bg-dark position-absolute bottom-0 start-0 m-2"><?= htmlspecialchars((string) $image['variation_name'], ENT_QUOTES, 'UTF-8'); ?></span><?php endif; ?>
           </a>
         <?php endforeach; ?>
       </div>
@@ -193,7 +211,7 @@ $attributeValue = static function (array $attribute) use ($formatQuantity): stri
     <?php endif; ?>
   </section>
 
-  <?php if ((int) ($product['track_stock'] ?? 0) === 1): ?>
+  <?php if ((int) ($product['track_stock'] ?? 0) === 1 || (int) ($product['tracked_variation_count'] ?? 0) > 0 || !empty($stockMovements)): ?>
   <section class="store-section">
     <div class="store-subheader">
       <h6>Últimas movimentações</h6>
@@ -205,6 +223,7 @@ $attributeValue = static function (array $attribute) use ($formatQuantity): stri
           <tr>
             <th>#</th>
             <th>Tipo</th>
+            <th>Variação</th>
             <th>Quantidade</th>
             <th>Saldo anterior</th>
             <th>Novo saldo</th>
@@ -217,6 +236,7 @@ $attributeValue = static function (array $attribute) use ($formatQuantity): stri
               <tr>
                 <td style="width:1%;"><?= (int) $movement['id']; ?></td>
                 <td><?= htmlspecialchars($movementTypeLabel((string) $movement['movement_type']), ENT_QUOTES, 'UTF-8'); ?></td>
+                <td><?= htmlspecialchars((string) ($movement['variation_name'] ?? 'Produto principal'), ENT_QUOTES, 'UTF-8'); ?></td>
                 <td><?= htmlspecialchars($formatQuantity($movement['quantity'] ?? 0), ENT_QUOTES, 'UTF-8'); ?></td>
                 <td><?= htmlspecialchars($formatQuantity($movement['previous_quantity'] ?? 0), ENT_QUOTES, 'UTF-8'); ?></td>
                 <td><?= htmlspecialchars($formatQuantity($movement['new_quantity'] ?? 0), ENT_QUOTES, 'UTF-8'); ?></td>
@@ -225,7 +245,7 @@ $attributeValue = static function (array $attribute) use ($formatQuantity): stri
             <?php endforeach; ?>
           <?php else: ?>
             <tr>
-              <td colspan="6" class="text-center">Nenhuma movimentação encontrada.</td>
+              <td colspan="7" class="text-center">Nenhuma movimentação encontrada.</td>
             </tr>
           <?php endif; ?>
         </tbody>
@@ -233,6 +253,20 @@ $attributeValue = static function (array $attribute) use ($formatQuantity): stri
     </div>
   </section>
   <?php endif; ?>
+
+  <section class="store-section">
+    <div class="store-subheader"><div><h6>Histórico de alterações</h6><small class="text-muted">Eventos registrados no log central para este tenant.</small></div></div>
+    <div class="table-responsive">
+      <table class="table table-hover align-middle mb-0">
+        <thead><tr><th>Evento</th><th>Responsável</th><th>Data</th></tr></thead>
+        <tbody>
+          <?php if (!empty($history)): ?>
+            <?php foreach ($history as $event): ?><tr><td><?= htmlspecialchars($historyAction((string) $event['action']), ENT_QUOTES, 'UTF-8'); ?></td><td><?= htmlspecialchars((string) ($event['performed_by_name'] ?: $event['performed_by_username'] ?: 'Sistema'), ENT_QUOTES, 'UTF-8'); ?></td><td><?= htmlspecialchars($formatDateTime($event['occurred_at'] ?? ''), ENT_QUOTES, 'UTF-8'); ?></td></tr><?php endforeach; ?>
+          <?php else: ?><tr><td class="text-center text-muted" colspan="3">Nenhum evento encontrado.</td></tr><?php endif; ?>
+        </tbody>
+      </table>
+    </div>
+  </section>
 
   <div class="form-actions">
     <a href="<?= url('product'); ?>" class="btn btn-secondary"><i class="bi bi-arrow-left"></i> Voltar</a>

@@ -55,6 +55,10 @@ $movementTypeLabel = static function (string $type): string {
           <td><?= htmlspecialchars((string) ($movement['product_sku'] ?? ''), ENT_QUOTES, 'UTF-8'); ?></td>
         </tr>
         <tr>
+          <th class="text-muted">Variação</th>
+          <td><?= htmlspecialchars((string) ($movement['variation_name'] ?? 'Produto principal'), ENT_QUOTES, 'UTF-8'); ?><?php if (!empty($movement['variation_sku'])): ?> <small class="text-muted">(<?= htmlspecialchars((string) $movement['variation_sku'], ENT_QUOTES, 'UTF-8'); ?>)</small><?php endif; ?></td>
+        </tr>
+        <tr>
           <th class="text-muted">Tipo</th>
           <td><?= htmlspecialchars($movementTypeLabel((string) $movement['movement_type']), ENT_QUOTES, 'UTF-8'); ?></td>
         </tr>

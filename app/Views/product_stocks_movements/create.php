@@ -31,19 +31,27 @@ $editorHtml = trim(preg_replace('/<([a-z][a-z0-9]*)\b[^>]*>/i', '<$1>', strip_ta
   <?php endif; ?>
 
   <form action="<?= url('product_stock_movement/store'); ?>" method="POST" class="needs-validation store-form" novalidate>
-    <section class="store-section">
+    <section class="store-section" data-stock-form>
       <div class="row g-3">
         <div class="col-12 col-lg-6">
           <label class="form-label" for="product_id">Produto</label>
           <select class="form-select" id="product_id" name="product_id" required>
             <option value="">Selecione</option>
             <?php foreach ($products as $product): ?>
-              <option value="<?= (int) $product['id']; ?>" <?= ($value('product_id') === (string) $product['id']) ? 'selected' : ''; ?>>
+              <option value="<?= (int) $product['id']; ?>" data-track-stock="<?= (int) ($product['track_stock'] ?? 0); ?>" <?= ($value('product_id') === (string) $product['id']) ? 'selected' : ''; ?>>
                 <?= htmlspecialchars($productLabel($product), ENT_QUOTES, 'UTF-8'); ?>
               </option>
             <?php endforeach; ?>
           </select>
           <div class="invalid-feedback">Selecione o produto.</div>
+        </div>
+
+        <div class="col-12 col-lg-6">
+          <label class="form-label" for="variation_id">Item de estoque</label>
+          <select class="form-select" data-selected-value="<?= htmlspecialchars($value('variation_id'), ENT_QUOTES, 'UTF-8'); ?>" id="variation_id" name="variation_id" required disabled>
+            <option value="">Selecione primeiro o produto</option>
+          </select>
+          <div class="invalid-feedback">Selecione o produto principal ou uma variação.</div>
         </div>
 
         <div class="col-12 col-md-3">
@@ -94,4 +102,5 @@ $editorHtml = trim(preg_replace('/<([a-z][a-z0-9]*)\b[^>]*>/i', '<$1>', strip_ta
 </div>
 
 <script src="/assets/richtexteditor/rich_text_editor.js?v=2"></script>
-<script src="<?= url('assets/js/product_stocks_movements/create.js?v=1'); ?>"></script>
+<script type="application/json" id="productStockOptions"><?= json_encode($products, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT); ?></script>
+<script src="<?= url('assets/js/product_stocks_movements/create.js?v=2'); ?>"></script>

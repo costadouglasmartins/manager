@@ -19,6 +19,7 @@ class ProductStockMovementController extends TenantAwareController
 		$filters = [
 			'id'            => isset($_GET['id']) ? trim($_GET['id']) : '',
 			'product_id'    => isset($_GET['product_id']) ? trim($_GET['product_id']) : '',
+			'variation_id'  => isset($_GET['variation_id']) ? trim($_GET['variation_id']) : '',
 			'movement_type' => isset($_GET['movement_type']) ? trim($_GET['movement_type']) : '',
 			'reference'     => isset($_GET['reference']) ? trim($_GET['reference']) : '',
 		];
@@ -225,6 +226,7 @@ class ProductStockMovementController extends TenantAwareController
 			$filters = [
 				'id'            => isset($_GET['id']) ? trim($_GET['id']) : '',
 				'product_id'    => isset($_GET['product_id']) ? trim($_GET['product_id']) : '',
+				'variation_id'  => isset($_GET['variation_id']) ? trim($_GET['variation_id']) : '',
 				'movement_type' => isset($_GET['movement_type']) ? trim($_GET['movement_type']) : '',
 				'reference'     => isset($_GET['reference']) ? trim($_GET['reference']) : '',
 			];

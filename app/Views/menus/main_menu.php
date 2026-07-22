@@ -210,6 +210,9 @@
             <?php if (authCan('product.index')): ?>
               <li><a class="dropdown-item" href="<?= url('product'); ?>"><i class="bi bi-box-seam me-2"></i>Produtos</a></li>
             <?php endif; ?>
+            <?php if (authCan('product.create')): ?>
+              <li><a class="dropdown-item" href="<?= url('product/import-spreadsheet'); ?>"><i class="bi bi-file-earmark-spreadsheet me-2"></i>Importar produtos</a></li>
+            <?php endif; ?>
             <li><hr class="dropdown-divider" /></li>
             <?php if (authCan('product_stock_movement.index')): ?>
               <li><a class="dropdown-item" href="<?= url('product_stock_movement'); ?>"><i class="bi bi-arrow-left-right me-2"></i>Movimentações de estoque</a></li>

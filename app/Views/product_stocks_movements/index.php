@@ -1,5 +1,5 @@
 <?php
-$filters = $filters ?? ['id' => '', 'product_id' => '', 'movement_type' => '', 'reference' => ''];
+$filters = $filters ?? ['id' => '', 'product_id' => '', 'variation_id' => '', 'movement_type' => '', 'reference' => ''];
 $page = $page ?? 1;
 $totalPages = $totalPages ?? 1;
 $total = $total ?? (is_array($movements) ? count($movements) : 0);
@@ -7,6 +7,7 @@ $total = $total ?? (is_array($movements) ? count($movements) : 0);
 $queryFilters = http_build_query([
 	'id'            => $filters['id'],
 	'product_id'    => $filters['product_id'],
+	'variation_id'  => $filters['variation_id'],
 	'movement_type' => $filters['movement_type'],
 	'reference'     => $filters['reference'],
 ]);
@@ -57,6 +58,15 @@ $productLabel = static function (array $product): string {
       <div class="row g-3">
         <div class="col-12 col-md-2">
           <input class="form-control" id="id" name="id" type="text" placeholder="Código" value="<?= htmlspecialchars($filters['id'], ENT_QUOTES, 'UTF-8'); ?>">
+        </div>
+
+        <div class="col-12 col-md-4">
+          <select class="form-select" id="variation_id" name="variation_id">
+            <option value="">Todas as variações</option>
+            <?php foreach ($products as $product): foreach ($product['variations'] ?? [] as $variation): ?>
+              <option value="<?= (int) $variation['id']; ?>" <?= ((string) $filters['variation_id'] === (string) $variation['id']) ? 'selected' : ''; ?>><?= htmlspecialchars((string) $product['name'] . ' — ' . (string) $variation['name'], ENT_QUOTES, 'UTF-8'); ?></option>
+            <?php endforeach; endforeach; ?>
+          </select>
         </div>
 
         <div class="col-12 col-md-5">
@@ -110,6 +120,7 @@ $productLabel = static function (array $product): string {
           <th>#</th>
           <th>Produto</th>
           <th>Tipo</th>
+          <th>Variação</th>
           <th>Quantidade</th>
           <th>Saldo anterior</th>
           <th>Novo saldo</th>
@@ -127,6 +138,7 @@ $productLabel = static function (array $product): string {
                 <small class="text-muted"><?= htmlspecialchars((string) ($row['product_sku'] ?? ''), ENT_QUOTES, 'UTF-8'); ?></small>
               </td>
               <td><?= htmlspecialchars($movementTypeLabel((string) $row['movement_type']), ENT_QUOTES, 'UTF-8'); ?></td>
+              <td><?= htmlspecialchars((string) ($row['variation_name'] ?? 'Produto principal'), ENT_QUOTES, 'UTF-8'); ?></td>
               <td><?= htmlspecialchars($formatQuantity($row['quantity'] ?? 0), ENT_QUOTES, 'UTF-8'); ?></td>
               <td><?= htmlspecialchars($formatQuantity($row['previous_quantity'] ?? 0), ENT_QUOTES, 'UTF-8'); ?></td>
               <td><?= htmlspecialchars($formatQuantity($row['new_quantity'] ?? 0), ENT_QUOTES, 'UTF-8'); ?></td>
@@ -157,7 +169,7 @@ $productLabel = static function (array $product): string {
           <?php endforeach; ?>
         <?php else: ?>
           <tr>
-            <td colspan="8" class="text-center">Nenhum registro encontrado.</td>
+            <td colspan="9" class="text-center">Nenhum registro encontrado.</td>
           </tr>
         <?php endif; ?>
       </tbody>

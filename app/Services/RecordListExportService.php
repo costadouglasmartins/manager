@@ -396,7 +396,10 @@ class RecordListExportService
 				['label' => 'Status', 'callback' => fn (array $row): string => $this->activeLabel($row['active'] ?? null)],
 				['label' => 'Criado em', 'callback' => fn (array $row): string => $this->dateTime($row['created'] ?? '')],
 				['label' => 'Modificado em', 'callback' => fn (array $row): string => $this->dateTime($row['modified'] ?? '')],
-			], ['needsTenant' => true]),
+			], ['needsTenant' => true, 'normalizeFilters' => static function (array $filters, array $query): array {
+				$filters['attribute_filters'] = is_array($query['attribute_filters'] ?? null) ? $query['attribute_filters'] : [];
+				return $filters;
+			}]),
 			'product_category' => $this->standardDefinition(ProductCategory::class, 'Lista de categorias de produtos', 'categorias_produtos', ['id', 'name', 'active'], [
 				['label' => '#', 'field' => 'id', 'align' => 'right'],
 				['label' => 'Nome', 'field' => 'name'],
@@ -405,10 +408,11 @@ class RecordListExportService
 				['label' => 'Criado em', 'callback' => fn (array $row): string => $this->dateTime($row['created'] ?? '')],
 				['label' => 'Modificado em', 'callback' => fn (array $row): string => $this->dateTime($row['modified'] ?? '')],
 			], ['needsTenant' => true]),
-			'product_stock_movement' => $this->standardDefinition(ProductStockMovement::class, 'Lista de movimentações de estoque', 'movimentacoes_estoque', ['id', 'product_id', 'movement_type', 'reference'], [
+			'product_stock_movement' => $this->standardDefinition(ProductStockMovement::class, 'Lista de movimentações de estoque', 'movimentacoes_estoque', ['id', 'product_id', 'variation_id', 'movement_type', 'reference'], [
 				['label' => '#', 'field' => 'id', 'align' => 'right'],
 				['label' => 'Produto ID', 'field' => 'product_id', 'align' => 'right'],
 				['label' => 'Produto', 'callback' => fn (array $row): string => $this->productLabel($row)],
+				['label' => 'Variação', 'field' => 'variation_name'],
 				['label' => 'Tipo', 'callback' => fn (array $row): string => $this->movementTypeLabel($row['movement_type'] ?? '')],
 				['label' => 'Quantidade', 'callback' => fn (array $row): string => $this->quantity($row['quantity'] ?? 0), 'align' => 'right'],
 				['label' => 'Saldo anterior', 'callback' => fn (array $row): string => $this->quantity($row['previous_quantity'] ?? 0), 'align' => 'right'],

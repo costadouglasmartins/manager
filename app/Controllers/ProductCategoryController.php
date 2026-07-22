@@ -73,7 +73,8 @@ class ProductCategoryController extends TenantAwareController
 	public function create(): void
 		{
 		$this->requirePermission('product_category.create');
-		$this->view('product_categories/create', ['title' => 'Nova categoria de produto']);
+		$model = new ProductCategory();
+		$this->view('product_categories/create', ['title' => 'Nova categoria de produto', 'templates' => $model->getTemplates()]);
 		}
 
 	/**
@@ -94,6 +95,7 @@ class ProductCategoryController extends TenantAwareController
 			http_response_code(422);
 			$this->view('product_categories/create', [
 				'title' => 'Nova categoria de produto', 'formData' => $_POST, 'formError' => $e->getMessage(),
+				'templates' => $productCategory->getTemplates(),
 			]);
 			}
 		}
@@ -118,6 +120,7 @@ class ProductCategoryController extends TenantAwareController
 			'title'    => 'Editar categoria de produto',
 			'category' => $category,
 			'attributes' => $productCategory->getAttributes((int) $id),
+			'templates' => $productCategory->getTemplates(),
 		]);
 		}
 
@@ -143,6 +146,7 @@ class ProductCategoryController extends TenantAwareController
 			$this->view('product_categories/edit', [
 				'title' => 'Editar categoria de produto', 'category' => $category,
 				'attributes' => $productCategory->getAttributes((int) $id), 'formError' => $e->getMessage(),
+				'templates' => $productCategory->getTemplates(),
 			]);
 			}
 		}

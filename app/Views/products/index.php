@@ -1,5 +1,7 @@
 <?php
-$filters = $filters ?? ['id' => '', 'product_category_id' => '', 'sku' => '', 'name' => '', 'active' => '', 'stock_status' => ''];
+$filters = $filters ?? ['id' => '', 'product_category_id' => '', 'sku' => '', 'name' => '', 'active' => '', 'stock_status' => '', 'attribute_filters' => []];
+$filterAttributes = $filterAttributes ?? [];
+$attributeFilters = is_array($filters['attribute_filters'] ?? null) ? $filters['attribute_filters'] : [];
 $page = $page ?? 1;
 $totalPages = $totalPages ?? 1;
 $total = $total ?? (is_array($products) ? count($products) : 0);
@@ -11,6 +13,7 @@ $queryFilters = http_build_query([
 	'name'                => $filters['name'],
 	'active'              => $filters['active'],
 	'stock_status'        => $filters['stock_status'],
+	'attribute_filters'   => $attributeFilters,
 ]);
 
 $formatMoney = static function ($value): string {
@@ -22,9 +25,10 @@ $formatQuantity = static function ($value): string {
 };
 
 $stockClass = static function (array $row): string {
-	$quantity = (float) ($row['stock_quantity'] ?? 0);
+	$hasVariationStock = (int) ($row['tracked_variation_count'] ?? 0) > 0;
+	$quantity = (float) ($hasVariationStock ? ($row['variation_stock_quantity'] ?? 0) : ($row['stock_quantity'] ?? 0));
 	$minimum = (float) ($row['minimum_stock'] ?? 0);
-	if ((int) ($row['track_stock'] ?? 1) !== 1)
+	if (!$hasVariationStock && (int) ($row['track_stock'] ?? 1) !== 1)
 		{
 		return 'badge text-bg-secondary';
 		}
@@ -67,6 +71,23 @@ $stockClass = static function (array $row): string {
           </select>
         </div>
 
+        <?php foreach ($filterAttributes as $attribute):
+          $attributeId = (int) $attribute['product_attribute_id'];
+          $filterValue = is_array($attributeFilters[$attributeId] ?? null) ? $attributeFilters[$attributeId] : ['value' => $attributeFilters[$attributeId] ?? ''];
+          $type = strtoupper((string) $attribute['data_type']);
+        ?>
+          <?php if (in_array($type, ['INTEGER', 'INT', 'DECIMAL', 'NUMBER'], true)): ?>
+            <div class="col-12 col-md-3"><label class="form-label small text-muted" for="attribute_<?= $attributeId; ?>_min"><?= htmlspecialchars((string) $attribute['name'], ENT_QUOTES, 'UTF-8'); ?> mínima<?= (int) ($attribute['variation_specific'] ?? 0) === 1 ? ' (variação)' : ''; ?></label><input class="form-control" id="attribute_<?= $attributeId; ?>_min" inputmode="decimal" name="attribute_filters[<?= $attributeId; ?>][min]" type="text" value="<?= htmlspecialchars((string) ($filterValue['min'] ?? ''), ENT_QUOTES, 'UTF-8'); ?>"></div>
+            <div class="col-12 col-md-3"><label class="form-label small text-muted" for="attribute_<?= $attributeId; ?>_max"><?= htmlspecialchars((string) $attribute['name'], ENT_QUOTES, 'UTF-8'); ?> máxima<?= (int) ($attribute['variation_specific'] ?? 0) === 1 ? ' (variação)' : ''; ?></label><input class="form-control" id="attribute_<?= $attributeId; ?>_max" inputmode="decimal" name="attribute_filters[<?= $attributeId; ?>][max]" type="text" value="<?= htmlspecialchars((string) ($filterValue['max'] ?? ''), ENT_QUOTES, 'UTF-8'); ?>"></div>
+          <?php elseif (in_array($type, ['OPTION', 'SELECT'], true)): ?>
+            <div class="col-12 col-md-3"><label class="form-label small text-muted" for="attribute_<?= $attributeId; ?>"><?= htmlspecialchars((string) $attribute['name'], ENT_QUOTES, 'UTF-8'); ?><?= (int) ($attribute['variation_specific'] ?? 0) === 1 ? ' (variação)' : ''; ?></label><select class="form-select" id="attribute_<?= $attributeId; ?>" name="attribute_filters[<?= $attributeId; ?>][value]"><option value="">Todos</option><?php foreach ($attribute['options'] ?? [] as $option): ?><option value="<?= (int) $option['id']; ?>" <?= ((string) ($filterValue['value'] ?? '') === (string) $option['id']) ? 'selected' : ''; ?>><?= htmlspecialchars((string) $option['label'], ENT_QUOTES, 'UTF-8'); ?></option><?php endforeach; ?></select></div>
+          <?php elseif (in_array($type, ['BOOLEAN', 'BOOL'], true)): ?>
+            <div class="col-12 col-md-3"><label class="form-label small text-muted" for="attribute_<?= $attributeId; ?>"><?= htmlspecialchars((string) $attribute['name'], ENT_QUOTES, 'UTF-8'); ?><?= (int) ($attribute['variation_specific'] ?? 0) === 1 ? ' (variação)' : ''; ?></label><select class="form-select" id="attribute_<?= $attributeId; ?>" name="attribute_filters[<?= $attributeId; ?>][value]"><option value="">Todos</option><option value="1" <?= ((string) ($filterValue['value'] ?? '') === '1') ? 'selected' : ''; ?>>Sim</option><option value="0" <?= ((string) ($filterValue['value'] ?? '') === '0') ? 'selected' : ''; ?>>Não</option></select></div>
+          <?php else: ?>
+            <div class="col-12 col-md-3"><label class="form-label small text-muted" for="attribute_<?= $attributeId; ?>"><?= htmlspecialchars((string) $attribute['name'], ENT_QUOTES, 'UTF-8'); ?><?= (int) ($attribute['variation_specific'] ?? 0) === 1 ? ' (variação)' : ''; ?></label><input class="form-control" id="attribute_<?= $attributeId; ?>" name="attribute_filters[<?= $attributeId; ?>][value]" type="<?= $type === 'DATE' ? 'date' : 'text'; ?>" value="<?= htmlspecialchars((string) ($filterValue['value'] ?? ''), ENT_QUOTES, 'UTF-8'); ?>"></div>
+          <?php endif; ?>
+        <?php endforeach; ?>
+
         <div class="col-12 col-md-3">
           <input class="form-control" id="sku" maxlength="60" name="sku" type="text" placeholder="SKU" value="<?= htmlspecialchars($filters['sku'], ENT_QUOTES, 'UTF-8'); ?>">
         </div>
@@ -101,6 +122,7 @@ $stockClass = static function (array $row): string {
         <a href="<?= url('product'); ?>" class="btn btn-secondary w-100">Limpar</a>
         <?php if (authCan('product.create')): ?>
           <a href="<?= url('product/create'); ?>" class="btn btn-success w-100">Novo(a)</a>
+          <a href="<?= url('product/import-spreadsheet'); ?>" class="btn btn-outline-success w-100"><i class="bi bi-file-earmark-spreadsheet" aria-hidden="true"></i> Importar planilha</a>
         <?php endif; ?>
       </div>
     </div>
@@ -148,10 +170,12 @@ $stockClass = static function (array $row): string {
               <td><?= htmlspecialchars((string) ($row['product_category_name'] ?? ''), ENT_QUOTES, 'UTF-8'); ?></td>
               <td><?= htmlspecialchars($formatMoney($row['sale_price'] ?? 0), ENT_QUOTES, 'UTF-8'); ?></td>
               <td>
+                <?php $hasVariationStock = (int) ($row['tracked_variation_count'] ?? 0) > 0; ?>
                 <span class="<?= htmlspecialchars($stockClass($row), ENT_QUOTES, 'UTF-8'); ?>">
-                  <?= (int) ($row['track_stock'] ?? 1) === 1 ? htmlspecialchars($formatQuantity($row['stock_quantity'] ?? 0), ENT_QUOTES, 'UTF-8') : 'Não controlado'; ?>
+                  <?= ($hasVariationStock || (int) ($row['track_stock'] ?? 1) === 1) ? htmlspecialchars($formatQuantity($hasVariationStock ? ($row['variation_stock_quantity'] ?? 0) : ($row['stock_quantity'] ?? 0)), ENT_QUOTES, 'UTF-8') : 'Não controlado'; ?>
                 </span>
                 <small class="text-muted"><?= htmlspecialchars((string) ($row['sale_unit_symbol'] ?? $row['unit'] ?? 'un'), ENT_QUOTES, 'UTF-8'); ?></small>
+                <?php if ($hasVariationStock): ?><small class="d-block text-muted"><?= (int) $row['tracked_variation_count']; ?> variação(ões)</small><?php endif; ?>
               </td>
               <td><?= ((int) $row['active'] === 1) ? 'Ativo' : 'Inativo'; ?></td>
               <td style="width:1%;" class="text-nowrap text-end">

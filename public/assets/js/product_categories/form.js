@@ -6,6 +6,32 @@
   const template = document.getElementById("productAttributeTemplate");
   let nextIndex = 0;
 
+  document.querySelectorAll(".js-product-variation-axis").forEach(function (axis)
+    {
+    axis.addEventListener("change", function ()
+      {
+      if (!axis.checked) return;
+      const row = axis.closest("tr");
+      const specific = row ? row.querySelector(".js-product-variation-specific") : null;
+      if (specific) specific.checked = true;
+      });
+    });
+
+  const saveTemplate = document.querySelector(".js-save-category-template");
+  if (saveTemplate)
+    {
+    const syncTemplateFields = function ()
+      {
+      document.querySelectorAll(".js-category-template-field").forEach(function (field)
+        {
+        field.disabled = !saveTemplate.checked;
+        field.required = saveTemplate.checked && field.id === "template_name";
+        });
+      };
+    saveTemplate.addEventListener("change", syncTemplateFields);
+    syncTemplateFields();
+    }
+
   document.querySelectorAll(".needs-validation").forEach(function (form)
     {
     form.addEventListener("submit", function (event)
@@ -36,6 +62,10 @@
     row.querySelector("[data-field='name']").required = true;
     row.querySelector(".js-remove-product-attribute").addEventListener("click", function () { row.remove(); syncEmpty(); });
     row.querySelector(".js-product-attribute-type").addEventListener("change", function () { syncRow(row); });
+    row.querySelector(".js-new-variation-axis").addEventListener("change", function ()
+      {
+      if (row.querySelector(".js-new-variation-axis").checked) row.querySelector(".js-new-variation-specific").checked = true;
+      });
     list.appendChild(fragment);
     syncRow(row);
     syncEmpty();
@@ -48,11 +78,14 @@
     const measurement = row.querySelector(".js-product-attribute-measurement");
     const options = row.querySelector(".js-product-attribute-options");
     const optionsInput = options.querySelector("textarea");
+    const variationAxis = row.querySelector(".js-new-variation-axis");
     const measured = type === "INTEGER" || type === "DECIMAL";
     measurement.disabled = !measured;
     if (!measured) measurement.value = "";
     options.classList.toggle("d-none", type !== "OPTION");
     optionsInput.required = type === "OPTION";
+    variationAxis.disabled = type !== "OPTION";
+    if (type !== "OPTION") variationAxis.checked = false;
     }
 
   function syncEmpty() { empty.classList.toggle("d-none", list.children.length > 0); }

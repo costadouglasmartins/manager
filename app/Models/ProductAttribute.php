@@ -11,7 +11,8 @@ class ProductAttribute extends TenantModel
 		{
 		$stmt = $this->db->prepare("SELECT Link.id AS category_attribute_id,
 			Link.product_category_id, Link.product_attribute_id, Link.product_unit_id,
-			Link.required, Link.filterable, Link.show_on_list, Link.sort_order,
+			Link.required, Link.filterable, Link.show_on_list, Link.variation_axis,
+			Link.variation_specific, Link.sort_order,
 			Attribute.code, Attribute.name, UPPER(Attribute.data_type) AS data_type,
 			UPPER(Attribute.measurement_type) AS measurement_type
 			FROM product_category_attributes AS Link
@@ -64,6 +65,30 @@ class ProductAttribute extends TenantModel
 		$values = [];
 		foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) $values[(int) $row['product_attribute_id']] = $row;
 		return $values;
+		}
+
+	public function getVariationValueMaps(int $productItemId): array
+		{
+		if (!$this->tableExists('product_item_variation_attribute_values')) return [];
+		$stmt = $this->db->prepare("SELECT ValueRow.product_item_variation_id,
+			ValueRow.product_attribute_id, ValueRow.product_attribute_option_id,
+			ValueRow.product_unit_id, ValueRow.value_text, ValueRow.value_integer,
+			ValueRow.value_decimal, ValueRow.value_boolean, ValueRow.value_date,
+			Attribute.name, Attribute.data_type, OptionValue.label AS option_label,
+			Unit.symbol AS unit_symbol
+			FROM product_item_variation_attribute_values AS ValueRow
+			INNER JOIN product_item_variations AS Variation ON Variation.id = ValueRow.product_item_variation_id
+			INNER JOIN product_attributes AS Attribute ON Attribute.id = ValueRow.product_attribute_id
+			LEFT JOIN product_attribute_options AS OptionValue ON OptionValue.id = ValueRow.product_attribute_option_id
+			LEFT JOIN product_units AS Unit ON Unit.id = ValueRow.product_unit_id
+			WHERE Variation.product_item_id = :product_item_id");
+		$stmt->execute(['product_item_id' => $productItemId]);
+		$maps = [];
+		foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row)
+			{
+			$maps[(int) $row['product_item_variation_id']][(int) $row['product_attribute_id']] = $row;
+			}
+		return $maps;
 		}
 
 	private function getCategoryConditions(int $categoryId): array

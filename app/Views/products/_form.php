@@ -3,6 +3,7 @@ $formData = $formData ?? [];
 $product = $product ?? [];
 $images = $images ?? [];
 $variations = $variations ?? [];
+$priceRules = $priceRules ?? [];
 $units = $units ?? [];
 $categorySchemas = $categorySchemas ?? [];
 $attributeValues = $attributeValues ?? [];
@@ -24,6 +25,10 @@ $allSaleUnits = [];
 foreach ($units as $unitGroup) foreach ($unitGroup as $unit) $allSaleUnits[] = $unit;
 $variationValue = static function (array $variation, string $field, string $default = ''): string {
 	return (string) ($variation[$field] ?? $default);
+};
+$variationClientKey = static function (array $variation, int $index): string {
+	$id = (int) ($variation['id'] ?? 0);
+	return (string) ($variation['client_key'] ?? ($id > 0 ? 'id-' . $id : 'variation-' . $index));
 };
 ?>
 <link rel="stylesheet" href="<?= url('assets/css/rich_text_editor.css?v=1'); ?>">
@@ -145,12 +150,14 @@ $variationValue = static function (array $variation, string $field, string $defa
     <section class="store-section">
       <div class="store-subheader">
         <div><h6>Variações</h6><small class="text-muted">Use para tamanho, cor, comprimento ou outra combinação que precise de SKU/preço/estoque próprio.</small></div>
-        <button class="btn btn-outline-primary btn-sm js-add-product-variation" type="button"><i class="bi bi-plus-lg" aria-hidden="true"></i> Adicionar</button>
+        <div class="d-flex flex-wrap gap-2"><button class="btn btn-outline-primary btn-sm js-generate-product-variations d-none" type="button"><i class="bi bi-grid-3x3-gap" aria-hidden="true"></i> Gerar combinações</button><button class="btn btn-outline-primary btn-sm js-add-product-variation" type="button"><i class="bi bi-plus-lg" aria-hidden="true"></i> Adicionar manualmente</button></div>
       </div>
+      <div class="border rounded-3 p-3 mb-3 d-none js-product-variation-generator" aria-live="polite"></div>
       <div class="vstack gap-3 js-product-variations">
-        <?php foreach ($variations as $index => $variation): ?>
-          <div class="border rounded-3 p-3 js-product-variation-row">
+        <?php foreach ($variations as $index => $variation): $clientKey = $variationClientKey($variation, (int) $index); ?>
+          <div class="border rounded-3 p-3 js-product-variation-row" data-client-key="<?= htmlspecialchars($clientKey, ENT_QUOTES, 'UTF-8'); ?>">
             <input name="variations[<?= (int) $index; ?>][id]" type="hidden" value="<?= (int) ($variation['id'] ?? 0); ?>">
+            <input name="variations[<?= (int) $index; ?>][client_key]" type="hidden" value="<?= htmlspecialchars($clientKey, ENT_QUOTES, 'UTF-8'); ?>" data-variation-field="client_key">
             <div class="d-flex justify-content-between align-items-center mb-3">
               <strong>Variação</strong>
               <button class="btn btn-outline-danger btn-sm js-remove-product-variation" type="button" aria-label="Remover variação"><i class="bi bi-trash" aria-hidden="true"></i></button>
@@ -165,14 +172,35 @@ $variationValue = static function (array $variation, string $field, string $defa
                 <input name="variations[<?= (int) $index; ?>][track_stock]" type="hidden" value="0">
                 <label class="form-check"><input class="form-check-input js-product-variation-track-stock" name="variations[<?= (int) $index; ?>][track_stock]" type="checkbox" value="1" <?= ((int) ($variation['track_stock'] ?? 0) === 1) ? 'checked' : ''; ?>><span class="form-check-label">Controlar estoque</span></label>
               </div>
-              <div class="col-12 col-md-4 js-product-variation-stock-field"><label class="form-label">Estoque</label><input class="form-control" inputmode="decimal" name="variations[<?= (int) $index; ?>][stock_quantity]" type="text" value="<?= htmlspecialchars($variationValue($variation, 'stock_quantity', '0'), ENT_QUOTES, 'UTF-8'); ?>"></div>
+              <div class="col-12 col-md-4 js-product-variation-stock-field"><label class="form-label"><?= ((int) ($variation['movement_count'] ?? 0) > 0) ? 'Estoque atual' : 'Estoque inicial'; ?></label><input class="form-control" inputmode="decimal" name="variations[<?= (int) $index; ?>][stock_quantity]" type="text" value="<?= htmlspecialchars($variationValue($variation, 'stock_quantity', '0'), ENT_QUOTES, 'UTF-8'); ?>" <?= ((int) ($variation['movement_count'] ?? 0) > 0) ? 'readonly' : ''; ?>></div>
               <div class="col-12 col-md-4 js-product-variation-stock-field"><label class="form-label">Mínimo</label><input class="form-control" inputmode="decimal" name="variations[<?= (int) $index; ?>][minimum_stock]" type="text" value="<?= htmlspecialchars($variationValue($variation, 'minimum_stock', '0'), ENT_QUOTES, 'UTF-8'); ?>"></div>
               <div class="col-12 col-md-4"><label class="form-label">Status</label><select class="form-select" name="variations[<?= (int) $index; ?>][active]"><option value="1" <?= $variationValue($variation, 'active', '1') === '1' ? 'selected' : ''; ?>>Ativa</option><option value="0" <?= $variationValue($variation, 'active', '1') === '0' ? 'selected' : ''; ?>>Inativa</option></select></div>
+              <div class="col-12"><div class="row g-3 js-product-variation-attributes" data-variation-index="<?= (int) $index; ?>" data-variation-values="<?= htmlspecialchars(json_encode($variation['attributes'] ?? [], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), ENT_QUOTES, 'UTF-8'); ?>"></div></div>
             </div>
           </div>
         <?php endforeach; ?>
       </div>
       <p class="text-muted mb-0 js-product-variations-empty <?= empty($variations) ? '' : 'd-none'; ?>">Nenhuma variação adicionada.</p>
+    </section>
+
+    <section class="store-section">
+      <div class="store-subheader"><div><h6>Preços por quantidade e unidade</h6><small class="text-muted">Crie faixas para o produto ou para uma variação específica.</small></div><button class="btn btn-outline-primary btn-sm js-add-product-price-rule" type="button"><i class="bi bi-plus-lg" aria-hidden="true"></i> Adicionar faixa</button></div>
+      <div class="vstack gap-3 js-product-price-rules">
+        <?php foreach ($priceRules as $index => $rule): $targetKey = (string) ($rule['variation_key'] ?? (!empty($rule['product_item_variation_id']) ? 'id-' . (int) $rule['product_item_variation_id'] : '')); ?>
+          <div class="border rounded-3 p-3 js-product-price-rule-row">
+            <div class="d-flex justify-content-between align-items-center mb-3"><strong>Faixa de preço</strong><button class="btn btn-outline-danger btn-sm js-remove-product-price-rule" type="button" aria-label="Remover faixa"><i class="bi bi-trash" aria-hidden="true"></i></button></div>
+            <div class="row g-3">
+              <div class="col-12 col-lg-3"><label class="form-label">Aplicar em</label><select class="form-select js-price-rule-variation" data-selected-value="<?= htmlspecialchars($targetKey, ENT_QUOTES, 'UTF-8'); ?>" name="price_rules[<?= (int) $index; ?>][variation_key]"></select></div>
+              <div class="col-12 col-md-6 col-lg-2"><label class="form-label">Unidade</label><select class="form-select" name="price_rules[<?= (int) $index; ?>][product_unit_id]" required><?php foreach ($allSaleUnits as $unit): ?><option value="<?= (int) $unit['id']; ?>" <?= ((string) ($rule['product_unit_id'] ?? '') === (string) $unit['id']) ? 'selected' : ''; ?>><?= htmlspecialchars($unit['symbol'], ENT_QUOTES, 'UTF-8'); ?></option><?php endforeach; ?></select></div>
+              <div class="col-12 col-md-6 col-lg-2"><label class="form-label">Quantidade mínima</label><input class="form-control" inputmode="decimal" name="price_rules[<?= (int) $index; ?>][minimum_quantity]" required type="text" value="<?= htmlspecialchars((string) ($rule['minimum_quantity'] ?? '1'), ENT_QUOTES, 'UTF-8'); ?>"></div>
+              <div class="col-12 col-md-6 col-lg-2"><label class="form-label">Quantidade máxima</label><input class="form-control" inputmode="decimal" name="price_rules[<?= (int) $index; ?>][maximum_quantity]" type="text" value="<?= htmlspecialchars((string) ($rule['maximum_quantity'] ?? ''), ENT_QUOTES, 'UTF-8'); ?>" placeholder="sem limite"></div>
+              <div class="col-12 col-md-6 col-lg-2"><label class="form-label">Preço</label><div class="input-group"><span class="input-group-text">R$</span><input class="form-control" inputmode="decimal" name="price_rules[<?= (int) $index; ?>][sale_price]" required type="text" value="<?= htmlspecialchars((string) ($rule['sale_price'] ?? ''), ENT_QUOTES, 'UTF-8'); ?>"></div></div>
+              <div class="col-12 col-lg-1 d-flex flex-column justify-content-end gap-1"><input name="price_rules[<?= (int) $index; ?>][available]" type="hidden" value="0"><label class="form-check"><input class="form-check-input" name="price_rules[<?= (int) $index; ?>][available]" type="checkbox" value="1" <?= ((int) ($rule['available'] ?? 1) === 1) ? 'checked' : ''; ?>><span class="form-check-label">Disponível</span></label><input name="price_rules[<?= (int) $index; ?>][active]" type="hidden" value="0"><label class="form-check"><input class="form-check-input" name="price_rules[<?= (int) $index; ?>][active]" type="checkbox" value="1" <?= ((int) ($rule['active'] ?? 1) === 1) ? 'checked' : ''; ?>><span class="form-check-label">Ativa</span></label></div>
+            </div>
+          </div>
+        <?php endforeach; ?>
+      </div>
+      <p class="text-muted mb-0 js-product-price-rules-empty <?= empty($priceRules) ? '' : 'd-none'; ?>">Nenhuma faixa de preço cadastrada.</p>
     </section>
 
     <section class="store-section">
@@ -215,6 +243,7 @@ $variationValue = static function (array $variation, string $field, string $defa
               <div class="product-image-controls">
                 <label class="form-check"><input class="form-check-input" name="main_image_id" type="radio" value="<?= (int) $image['id']; ?>" <?= ((int) $image['is_main'] === 1) ? 'checked' : ''; ?>><span class="form-check-label">Principal</span></label>
                 <label class="form-check"><input class="form-check-input" name="remove_images[]" type="checkbox" value="<?= (int) $image['id']; ?>"><span class="form-check-label">Remover</span></label>
+                <label class="form-label small mb-0" for="image_variation_<?= (int) $image['id']; ?>">Variação</label><select class="form-select form-select-sm" id="image_variation_<?= (int) $image['id']; ?>" name="image_variation_ids[<?= (int) $image['id']; ?>]"><option value="">Imagem geral</option><?php foreach ($variations as $variation): if ((int) ($variation['id'] ?? 0) <= 0) continue; ?><option value="<?= (int) $variation['id']; ?>" <?= ((int) ($image['product_item_variation_id'] ?? 0) === (int) $variation['id']) ? 'selected' : ''; ?>><?= htmlspecialchars((string) $variation['name'], ENT_QUOTES, 'UTF-8'); ?></option><?php endforeach; ?></select>
               </div>
             </div>
           <?php endforeach; ?>
@@ -238,6 +267,7 @@ $variationValue = static function (array $variation, string $field, string $defa
 
 <template id="productVariationTemplate">
   <div class="border rounded-3 p-3 js-product-variation-row">
+    <input data-variation-field="client_key" type="hidden">
     <div class="d-flex justify-content-between align-items-center mb-3"><strong>Variação</strong><button class="btn btn-outline-danger btn-sm js-remove-product-variation" type="button" aria-label="Remover variação"><i class="bi bi-trash" aria-hidden="true"></i></button></div>
     <div class="row g-3">
       <div class="col-12 col-lg-4"><label class="form-label">Nome</label><input class="form-control" data-variation-field="name" maxlength="160" type="text"></div>
@@ -249,11 +279,25 @@ $variationValue = static function (array $variation, string $field, string $defa
       <div class="col-12 col-md-4 js-product-variation-stock-field"><label class="form-label">Estoque</label><input class="form-control" data-variation-field="stock_quantity" inputmode="decimal" type="text" value="0"></div>
       <div class="col-12 col-md-4 js-product-variation-stock-field"><label class="form-label">Mínimo</label><input class="form-control" data-variation-field="minimum_stock" inputmode="decimal" type="text" value="0"></div>
       <div class="col-12 col-md-4"><label class="form-label">Status</label><select class="form-select" data-variation-field="active"><option value="1">Ativa</option><option value="0">Inativa</option></select></div>
+      <div class="col-12"><div class="row g-3 js-product-variation-attributes"></div></div>
+    </div>
+  </div>
+</template>
+<template id="productPriceRuleTemplate">
+  <div class="border rounded-3 p-3 js-product-price-rule-row">
+    <div class="d-flex justify-content-between align-items-center mb-3"><strong>Faixa de preço</strong><button class="btn btn-outline-danger btn-sm js-remove-product-price-rule" type="button" aria-label="Remover faixa"><i class="bi bi-trash" aria-hidden="true"></i></button></div>
+    <div class="row g-3">
+      <div class="col-12 col-lg-3"><label class="form-label">Aplicar em</label><select class="form-select js-price-rule-variation" data-price-rule-field="variation_key"></select></div>
+      <div class="col-12 col-md-6 col-lg-2"><label class="form-label">Unidade</label><select class="form-select" data-price-rule-field="product_unit_id" required><?php foreach ($allSaleUnits as $unit): ?><option value="<?= (int) $unit['id']; ?>"><?= htmlspecialchars($unit['symbol'], ENT_QUOTES, 'UTF-8'); ?></option><?php endforeach; ?></select></div>
+      <div class="col-12 col-md-6 col-lg-2"><label class="form-label">Quantidade mínima</label><input class="form-control" data-price-rule-field="minimum_quantity" inputmode="decimal" required type="text" value="1"></div>
+      <div class="col-12 col-md-6 col-lg-2"><label class="form-label">Quantidade máxima</label><input class="form-control" data-price-rule-field="maximum_quantity" inputmode="decimal" placeholder="sem limite" type="text"></div>
+      <div class="col-12 col-md-6 col-lg-2"><label class="form-label">Preço</label><div class="input-group"><span class="input-group-text">R$</span><input class="form-control" data-price-rule-field="sale_price" inputmode="decimal" required type="text"></div></div>
+      <div class="col-12 col-lg-1 d-flex flex-column justify-content-end gap-1"><input data-price-rule-field="available_hidden" type="hidden" value="0"><label class="form-check"><input checked class="form-check-input" data-price-rule-field="available" type="checkbox" value="1"><span class="form-check-label">Disponível</span></label><input data-price-rule-field="active_hidden" type="hidden" value="0"><label class="form-check"><input checked class="form-check-input" data-price-rule-field="active" type="checkbox" value="1"><span class="form-check-label">Ativa</span></label></div>
     </div>
   </div>
 </template>
 <script type="application/json" id="productCategorySchemas"><?= json_encode($categorySchemas, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT); ?></script>
 <script type="application/json" id="productAttributeValues"><?= json_encode($attributeValues, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT); ?></script>
 <script src="/assets/richtexteditor/rich_text_editor.js?v=2"></script>
-<script src="<?= url('assets/js/products/form.js?v=1'); ?>"></script>
+<script src="<?= url('assets/js/products/form.js?v=2'); ?>"></script>
 <script src="<?= url($isEdit ? 'assets/js/products/edit.js?v=2' : 'assets/js/products/create.js?v=3'); ?>"></script>

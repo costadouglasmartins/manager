@@ -49,7 +49,10 @@ class ProductCategory extends TenantModel
 			]);
 
 			$categoryId = (int) $this->db->lastInsertId();
+			$templateId = (int) ($data['product_category_template_id'] ?? 0);
+			if ($templateId > 0) (new ProductCategoryTemplate())->applyToCategory($templateId, $categoryId);
 			$this->syncAttributes($categoryId, $data);
+			$this->saveTemplateWhenRequested($categoryId, $data);
 			$categorySnapshot = $this->find($categoryId);
 			$this->auditCreate('product_category', 'product_categories', $categoryId, $categorySnapshot);
 			$this->db->commit();
@@ -129,9 +132,11 @@ class ProductCategory extends TenantModel
 				'id' => $categoryId,
 			]);
 			$this->syncAttributes($categoryId, $data);
+			$this->saveTemplateWhenRequested($categoryId, $data);
 			$afterData = $this->findAllByProductCategoryId($categoryId);
 			$this->auditUpdate('product_category', 'product_categories', $categoryId, $beforeData, $afterData, [
-				'affected_tables' => ['product_categories', 'product_attributes', 'product_attribute_options', 'product_category_attributes'],
+				'affected_tables' => ['product_categories', 'product_attributes', 'product_attribute_options',
+					'product_category_attributes', 'product_category_attribute_conditions', 'product_category_templates'],
 			]);
 			$this->db->commit();
 			}
@@ -274,7 +279,8 @@ class ProductCategory extends TenantModel
 			         RequireCondition.id";
 			}
 		$stmt = $this->db->prepare("SELECT Link.product_attribute_id, Link.product_unit_id,
-			Link.required, Link.filterable, Link.show_on_list, Link.sort_order,
+			Link.required, Link.filterable, Link.show_on_list, Link.variation_axis,
+			Link.variation_specific, Link.sort_order,
 			Attribute.code, Attribute.name, Attribute.data_type, Attribute.measurement_type,
 			GROUP_CONCAT(OptionValue.label ORDER BY OptionValue.sort_order, OptionValue.id SEPARATOR '\n') AS options_text
 			{$conditionSelect}
@@ -284,7 +290,8 @@ class ProductCategory extends TenantModel
 			{$conditionJoin}
 			WHERE Link.product_category_id = :category_id
 			GROUP BY Link.product_attribute_id, Link.product_unit_id, Link.required, Link.filterable,
-			         Link.show_on_list, Link.sort_order, Attribute.code, Attribute.name,
+			         Link.show_on_list, Link.variation_axis, Link.variation_specific,
+			         Link.sort_order, Attribute.code, Attribute.name,
 			         Attribute.data_type, Attribute.measurement_type
 			         {$conditionGroup}
 			ORDER BY Link.sort_order, Attribute.name");
@@ -300,10 +307,11 @@ class ProductCategory extends TenantModel
 		$currentStmt->execute(['id' => $categoryId]);
 		$currentIds = array_map('intval', $currentStmt->fetchAll(PDO::FETCH_COLUMN));
 		$update = $this->db->prepare("UPDATE product_category_attributes SET required = :required,
-			filterable = :filterable, show_on_list = :show_on_list, sort_order = :sort_order
+			filterable = :filterable, show_on_list = :show_on_list, variation_axis = :variation_axis,
+			variation_specific = :variation_specific, sort_order = :sort_order
 			WHERE product_category_id = :category_id AND product_attribute_id = :attribute_id");
 		$delete = $this->db->prepare('DELETE FROM product_category_attributes WHERE product_category_id = :category_id AND product_attribute_id = :attribute_id');
-		foreach ($currentIds as $attributeId)
+		foreach (array_key_exists('attributes', $data) ? $currentIds : [] as $attributeId)
 			{
 			$input = is_array($existing[$attributeId] ?? null) ? $existing[$attributeId] : [];
 			if ((string) ($input['enabled'] ?? '0') !== '1')
@@ -318,10 +326,13 @@ class ProductCategory extends TenantModel
 				$delete->execute(['category_id' => $categoryId, 'attribute_id' => $attributeId]);
 				continue;
 				}
+			if ((string) ($input['variation_axis'] ?? '0') === '1' && $this->attributeType($attributeId) !== 'OPTION') throw new \InvalidArgumentException('Somente características do tipo lista de opções podem gerar combinações de variações.');
 			$update->execute([
 				'required' => (string) ($input['required'] ?? '0') === '1' ? 1 : 0,
 				'filterable' => (string) ($input['filterable'] ?? '0') === '1' ? 1 : 0,
 				'show_on_list' => (string) ($input['show_on_list'] ?? '0') === '1' ? 1 : 0,
+				'variation_axis' => (string) ($input['variation_axis'] ?? '0') === '1' ? 1 : 0,
+				'variation_specific' => ((string) ($input['variation_specific'] ?? '0') === '1' || (string) ($input['variation_axis'] ?? '0') === '1') ? 1 : 0,
 				'sort_order' => max(0, (int) ($input['sort_order'] ?? 0)),
 				'category_id' => $categoryId,
 				'attribute_id' => $attributeId,
@@ -341,6 +352,7 @@ class ProductCategory extends TenantModel
 			$measurement = strtoupper(trim((string) ($input['measurement_type'] ?? '')));
 			if (!in_array($measurement, ['LENGTH', 'WEIGHT'], true)) $measurement = null;
 			if (!in_array($type, ['INTEGER', 'DECIMAL'], true)) $measurement = null;
+			if ((string) ($input['variation_axis'] ?? '0') === '1' && $type !== 'OPTION') throw new \InvalidArgumentException('Somente características do tipo lista de opções podem gerar combinações de variações.');
 
 			$code = $this->uniqueAttributeCode($categoryId, $name, (int) $index);
 			$attributeStmt = $this->db->prepare("INSERT INTO product_attributes
@@ -350,18 +362,41 @@ class ProductCategory extends TenantModel
 			$attributeId = (int) $this->db->lastInsertId();
 			$unitId = $this->defaultUnitId($measurement);
 			$this->db->prepare("INSERT INTO product_category_attributes
-				(product_category_id, product_attribute_id, product_unit_id, required, filterable, show_on_list, sort_order)
-				VALUES (:category_id, :attribute_id, :unit_id, :required, :filterable, :show_on_list, :sort_order)")
+				(product_category_id, product_attribute_id, product_unit_id, required, filterable,
+				 show_on_list, variation_axis, variation_specific, sort_order)
+				VALUES (:category_id, :attribute_id, :unit_id, :required, :filterable,
+				 :show_on_list, :variation_axis, :variation_specific, :sort_order)")
 				->execute([
 					'category_id' => $categoryId, 'attribute_id' => $attributeId, 'unit_id' => $unitId,
 					'required' => (string) ($input['required'] ?? '0') === '1' ? 1 : 0,
 					'filterable' => (string) ($input['filterable'] ?? '0') === '1' ? 1 : 0,
 					'show_on_list' => (string) ($input['show_on_list'] ?? '0') === '1' ? 1 : 0,
+					'variation_axis' => (string) ($input['variation_axis'] ?? '0') === '1' ? 1 : 0,
+					'variation_specific' => ((string) ($input['variation_specific'] ?? '0') === '1' || (string) ($input['variation_axis'] ?? '0') === '1') ? 1 : 0,
 					'sort_order' => $sortOrder++,
 				]);
 
 			if ($type === 'OPTION') $this->insertAttributeOptions($attributeId, $name, (string) ($input['options'] ?? ''));
 			}
+		}
+
+	public function getTemplates(): array
+		{
+		if (!$this->tableExists('product_category_templates')) return [];
+		return (new ProductCategoryTemplate())->getOptions();
+		}
+
+	private function saveTemplateWhenRequested(int $categoryId, array $data): void
+		{
+		if ((string) ($data['save_as_template'] ?? '0') !== '1') return;
+		if (!$this->tableExists('product_category_templates')) throw new \RuntimeException('A tabela product_category_templates ainda não existe neste tenant.');
+		$name = trim((string) ($data['template_name'] ?? ''));
+		(new ProductCategoryTemplate())->saveFromCategory(
+			$categoryId,
+			$name,
+			isset($data['template_description']) ? (string) $data['template_description'] : null,
+			(int) ($_SESSION['manager']['user']['id'] ?? 0)
+		);
 		}
 
 	private function syncAttributeCondition(int $categoryId, int $targetAttributeId, array $input): void
@@ -380,6 +415,11 @@ class ProductCategory extends TenantModel
 		$sourceAttributeId = (int) ($input['condition_source_attribute_id'] ?? 0);
 		if ($sourceAttributeId <= 0 || $sourceAttributeId === $targetAttributeId) return;
 		if (!$this->categoryHasAttribute($categoryId, $sourceAttributeId)) throw new \InvalidArgumentException('A característica usada na condição não pertence à categoria.');
+		if (!$this->categoryAttributeIsVariationSpecific($categoryId, $targetAttributeId)
+			&& $this->categoryAttributeIsVariationSpecific($categoryId, $sourceAttributeId))
+			{
+			throw new \InvalidArgumentException('Uma característica do produto não pode depender de um valor específico de variação. Inverta a regra ou mantenha as duas características no mesmo nível.');
+			}
 
 		$operator = strtoupper(trim((string) ($input['condition_operator'] ?? 'EQUALS')));
 		if (!in_array($operator, ['EQUALS', 'NOT_EQUALS', 'FILLED', 'EMPTY'], true)) $operator = 'EQUALS';
@@ -412,6 +452,20 @@ class ProductCategory extends TenantModel
 		$stmt = $this->db->prepare('SELECT 1 FROM product_category_attributes WHERE product_category_id = :category_id AND product_attribute_id = :attribute_id');
 		$stmt->execute(['category_id' => $categoryId, 'attribute_id' => $attributeId]);
 		return $stmt->fetchColumn() !== false;
+		}
+
+	private function categoryAttributeIsVariationSpecific(int $categoryId, int $attributeId): bool
+		{
+		$stmt = $this->db->prepare('SELECT variation_specific FROM product_category_attributes WHERE product_category_id = :category_id AND product_attribute_id = :attribute_id');
+		$stmt->execute(['category_id' => $categoryId, 'attribute_id' => $attributeId]);
+		return (int) $stmt->fetchColumn() === 1;
+		}
+
+	private function attributeType(int $attributeId): string
+		{
+		$stmt = $this->db->prepare('SELECT UPPER(data_type) FROM product_attributes WHERE id = :id');
+		$stmt->execute(['id' => $attributeId]);
+		return (string) $stmt->fetchColumn();
 		}
 
 	private function insertAttributeOptions(int $attributeId, string $name, string $optionsText): void
