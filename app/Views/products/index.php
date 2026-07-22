@@ -24,6 +24,10 @@ $formatQuantity = static function ($value): string {
 $stockClass = static function (array $row): string {
 	$quantity = (float) ($row['stock_quantity'] ?? 0);
 	$minimum = (float) ($row['minimum_stock'] ?? 0);
+	if ((int) ($row['track_stock'] ?? 1) !== 1)
+		{
+		return 'badge text-bg-secondary';
+		}
 	if ($quantity <= 0)
 		{
 		return 'stock-badge stock-badge-out';
@@ -73,6 +77,7 @@ $stockClass = static function (array $row): string {
             <option value="AVAILABLE" <?= $filters['stock_status'] === 'AVAILABLE' ? 'selected' : ''; ?>>Com estoque</option>
             <option value="LOW" <?= $filters['stock_status'] === 'LOW' ? 'selected' : ''; ?>>Estoque baixo</option>
             <option value="OUT" <?= $filters['stock_status'] === 'OUT' ? 'selected' : ''; ?>>Sem estoque</option>
+            <option value="NOT_TRACKED" <?= $filters['stock_status'] === 'NOT_TRACKED' ? 'selected' : ''; ?>>Sem controle</option>
           </select>
         </div>
 
@@ -144,9 +149,9 @@ $stockClass = static function (array $row): string {
               <td><?= htmlspecialchars($formatMoney($row['sale_price'] ?? 0), ENT_QUOTES, 'UTF-8'); ?></td>
               <td>
                 <span class="<?= htmlspecialchars($stockClass($row), ENT_QUOTES, 'UTF-8'); ?>">
-                  <?= htmlspecialchars($formatQuantity($row['stock_quantity'] ?? 0), ENT_QUOTES, 'UTF-8'); ?>
+                  <?= (int) ($row['track_stock'] ?? 1) === 1 ? htmlspecialchars($formatQuantity($row['stock_quantity'] ?? 0), ENT_QUOTES, 'UTF-8') : 'Não controlado'; ?>
                 </span>
-                <small class="text-muted"><?= htmlspecialchars((string) ($row['unit'] ?? 'UN'), ENT_QUOTES, 'UTF-8'); ?></small>
+                <small class="text-muted"><?= htmlspecialchars((string) ($row['sale_unit_symbol'] ?? $row['unit'] ?? 'un'), ENT_QUOTES, 'UTF-8'); ?></small>
               </td>
               <td><?= ((int) $row['active'] === 1) ? 'Ativo' : 'Inativo'; ?></td>
               <td style="width:1%;" class="text-nowrap text-end">

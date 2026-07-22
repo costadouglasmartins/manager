@@ -8,11 +8,11 @@ $productLabel = static function (array $product): string {
 	$sku = trim((string) ($product['sku'] ?? ''));
 	$name = trim((string) ($product['name'] ?? ''));
 	$stock = number_format((float) ($product['stock_quantity'] ?? 0), 3, ',', '.');
-	$unit = trim((string) ($product['unit'] ?? 'UN'));
+	$unit = trim((string) ($product['unit_symbol'] ?? $product['unit'] ?? 'un'));
 	return ($sku !== '' ? $sku . ' - ' : '') . $name . ' - estoque: ' . $stock . ' ' . $unit;
 };
 
-$observations = $value('observations');
+$observations = $value('notes', $value('observations'));
 $editorHtml = trim(preg_replace('/<([a-z][a-z0-9]*)\b[^>]*>/i', '<$1>', strip_tags($observations, '<b><strong><i><em><u><br><p><div><ul><ol><li>')) ?? '');
 ?>
 <link rel="stylesheet" href="<?= url('assets/css/rich_text_editor.css?v=1'); ?>">
@@ -35,7 +35,8 @@ $editorHtml = trim(preg_replace('/<([a-z][a-z0-9]*)\b[^>]*>/i', '<$1>', strip_ta
       <div class="row g-3">
         <div class="col-12 col-lg-6">
           <label class="form-label" for="product_id">Produto</label>
-          <select class="form-select" id="product_id" name="product_id" required>
+          <input name="product_id" type="hidden" value="<?= (int) $value('product_id'); ?>">
+          <select class="form-select" id="product_id" disabled required>
             <option value="">Selecione</option>
             <?php foreach ($products as $product): ?>
               <option value="<?= (int) $product['id']; ?>" <?= ($value('product_id') === (string) $product['id']) ? 'selected' : ''; ?>>
@@ -61,17 +62,7 @@ $editorHtml = trim(preg_replace('/<([a-z][a-z0-9]*)\b[^>]*>/i', '<$1>', strip_ta
           <div class="invalid-feedback">Informe a quantidade.</div>
         </div>
 
-        <div class="col-12 col-md-3">
-          <label class="form-label" for="unit_cost">Custo unitário</label>
-          <input class="form-control" id="unit_cost" inputmode="decimal" name="unit_cost" type="text" value="<?= htmlspecialchars($value('unit_cost'), ENT_QUOTES, 'UTF-8'); ?>">
-        </div>
-
-        <div class="col-12 col-md-3">
-          <label class="form-label" for="unit_price">Preço unitário</label>
-          <input class="form-control" id="unit_price" inputmode="decimal" name="unit_price" type="text" value="<?= htmlspecialchars($value('unit_price'), ENT_QUOTES, 'UTF-8'); ?>">
-        </div>
-
-        <div class="col-12 col-md-3">
+        <div class="col-12 col-md-4">
           <label class="form-label" for="movement_date">Data</label>
           <?php
           $movementDateValue = $value('movement_date', date('Y-m-d\TH:i'));
@@ -83,13 +74,13 @@ $editorHtml = trim(preg_replace('/<([a-z][a-z0-9]*)\b[^>]*>/i', '<$1>', strip_ta
           <input class="form-control" id="movement_date" name="movement_date" type="datetime-local" value="<?= htmlspecialchars($movementDateValue, ENT_QUOTES, 'UTF-8'); ?>">
         </div>
 
-        <div class="col-12 col-md-3">
+        <div class="col-12 col-md-8">
           <label class="form-label" for="reference">Referência</label>
           <input class="form-control" id="reference" maxlength="120" name="reference" type="text" value="<?= htmlspecialchars($value('reference'), ENT_QUOTES, 'UTF-8'); ?>">
         </div>
 
         <div class="col-12">
-          <label class="form-label" for="observationsEditor">Observações</label>
+          <label class="form-label" for="observationsEditor">Notas</label>
           <div class="rich-editor" data-rich-editor>
             <div class="rich-editor-toolbar" role="toolbar">
               <button class="btn btn-outline-secondary btn-sm" data-editor-command="bold" type="button"><i class="bi bi-type-bold"></i></button>
@@ -97,7 +88,7 @@ $editorHtml = trim(preg_replace('/<([a-z][a-z0-9]*)\b[^>]*>/i', '<$1>', strip_ta
               <button class="btn btn-outline-secondary btn-sm" data-editor-command="underline" type="button"><i class="bi bi-type-underline"></i></button>
             </div>
             <div class="form-control rich-editor-surface" contenteditable="true" data-rich-editor-surface id="observationsEditor"><?= $editorHtml; ?></div>
-            <textarea class="d-none" data-rich-editor-source name="observations"><?= htmlspecialchars($observations, ENT_QUOTES, 'UTF-8'); ?></textarea>
+            <textarea class="d-none" data-rich-editor-source name="notes"><?= htmlspecialchars($observations, ENT_QUOTES, 'UTF-8'); ?></textarea>
           </div>
         </div>
       </div>

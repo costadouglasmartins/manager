@@ -31,6 +31,22 @@ $movementTypeLabel = static function (string $type): string {
 		'ADJUSTMENT' => 'Ajuste',
 	][$type] ?? $type;
 };
+
+$attributeValue = static function (array $attribute) use ($formatQuantity): string {
+	$type = strtoupper((string) ($attribute['data_type'] ?? 'TEXT'));
+	if (in_array($type, ['OPTION', 'SELECT'], true)) $value = (string) ($attribute['option_label'] ?? '');
+	elseif (in_array($type, ['INTEGER', 'INT'], true)) $value = (string) ($attribute['value_integer'] ?? '');
+	elseif (in_array($type, ['DECIMAL', 'NUMBER'], true)) $value = $formatQuantity($attribute['value_decimal'] ?? 0);
+	elseif (in_array($type, ['BOOLEAN', 'BOOL'], true)) $value = ((int) ($attribute['value_boolean'] ?? 0) === 1) ? 'Sim' : 'Não';
+	elseif ($type === 'DATE' && !empty($attribute['value_date']))
+		{
+		try { $value = (new DateTimeImmutable((string) $attribute['value_date']))->format('d/m/Y'); }
+		catch (Throwable $e) { $value = (string) $attribute['value_date']; }
+		}
+	else $value = (string) ($attribute['value_text'] ?? '');
+	$unit = trim((string) ($attribute['unit_symbol'] ?? ''));
+	return trim($value . ($unit !== '' ? ' ' . $unit : ''));
+};
 ?>
 <link rel="stylesheet" href="<?= url('assets/css/rich_text_editor.css?v=1'); ?>">
 <link rel="stylesheet" href="<?= url('assets/css/products/informations.css?v=1'); ?>">
@@ -72,12 +88,16 @@ $movementTypeLabel = static function (string $type): string {
             <td><?= htmlspecialchars($formatMoney($product['sale_price'] ?? 0), ENT_QUOTES, 'UTF-8'); ?></td>
           </tr>
           <tr>
+            <th class="text-muted">Unidade de venda</th>
+            <td><?= htmlspecialchars((string) ($product['sale_unit_name'] ?? ''), ENT_QUOTES, 'UTF-8'); ?> (<?= htmlspecialchars((string) ($product['sale_unit_symbol'] ?? ''), ENT_QUOTES, 'UTF-8'); ?>), incremento <?= htmlspecialchars($formatQuantity($product['sale_quantity_step'] ?? 1), ENT_QUOTES, 'UTF-8'); ?></td>
+          </tr>
+          <tr>
             <th class="text-muted">Custo</th>
             <td><?= htmlspecialchars($formatMoney($product['cost_price'] ?? 0), ENT_QUOTES, 'UTF-8'); ?></td>
           </tr>
           <tr>
             <th class="text-muted">Estoque</th>
-            <td><?= htmlspecialchars($formatQuantity($product['stock_quantity'] ?? 0), ENT_QUOTES, 'UTF-8'); ?> <?= htmlspecialchars((string) ($product['unit'] ?? 'UN'), ENT_QUOTES, 'UTF-8'); ?></td>
+            <td><?= (int) ($product['track_stock'] ?? 0) === 1 ? htmlspecialchars($formatQuantity($product['stock_quantity'] ?? 0) . ' ' . (string) ($product['sale_unit_symbol'] ?? ''), ENT_QUOTES, 'UTF-8') : 'Não controlado'; ?></td>
           </tr>
           <tr>
             <th class="text-muted">Estoque mínimo</th>
@@ -87,6 +107,12 @@ $movementTypeLabel = static function (string $type): string {
             <th class="text-muted">Status</th>
             <td><?= ((int) $product['active'] === 1) ? 'Ativo' : 'Inativo'; ?></td>
           </tr>
+          <?php if ($product['length_value'] !== null || $product['width_value'] !== null || $product['height_value'] !== null): ?>
+            <tr><th class="text-muted">Dimensões (C × L × A)</th><td><?= htmlspecialchars(implode(' × ', array_map(static fn ($value) => $value === null ? '—' : $formatQuantity($value), [$product['length_value'], $product['width_value'], $product['height_value']])) . ' ' . (string) ($product['dimension_unit_symbol'] ?? ''), ENT_QUOTES, 'UTF-8'); ?></td></tr>
+          <?php endif; ?>
+          <?php if ($product['weight_value'] !== null): ?>
+            <tr><th class="text-muted">Peso</th><td><?= htmlspecialchars($formatQuantity($product['weight_value']) . ' ' . (string) ($product['weight_unit_symbol'] ?? ''), ENT_QUOTES, 'UTF-8'); ?></td></tr>
+          <?php endif; ?>
           <tr>
             <th class="text-muted">Descrição</th>
             <td><div class="rich-editor-content"><?= (string) ($product['description'] ?? ''); ?></div></td>
@@ -103,6 +129,51 @@ $movementTypeLabel = static function (string $type): string {
       </table>
     </div>
   </section>
+
+  <?php if (!empty($attributes)): ?>
+    <section class="store-section">
+      <div class="store-subheader"><h6>Características</h6></div>
+      <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0"><tbody>
+          <?php foreach ($attributes as $attribute): ?>
+            <tr><th class="text-muted" style="width: 220px;"><?= htmlspecialchars((string) $attribute['name'], ENT_QUOTES, 'UTF-8'); ?></th><td><?= htmlspecialchars($attributeValue($attribute), ENT_QUOTES, 'UTF-8'); ?></td></tr>
+          <?php endforeach; ?>
+        </tbody></table>
+      </div>
+    </section>
+  <?php endif; ?>
+
+  <?php if (!empty($variations)): ?>
+    <section class="store-section">
+      <div class="store-subheader"><h6>Variações</h6></div>
+      <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+          <thead>
+            <tr>
+              <th>Nome</th>
+              <th>SKU</th>
+              <th>Código de barras</th>
+              <th>Preço</th>
+              <th>Estoque</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            <?php foreach ($variations as $variation): ?>
+              <tr>
+                <td><?= htmlspecialchars((string) $variation['name'], ENT_QUOTES, 'UTF-8'); ?></td>
+                <td><?= htmlspecialchars((string) ($variation['sku'] ?? ''), ENT_QUOTES, 'UTF-8'); ?></td>
+                <td><?= htmlspecialchars((string) ($variation['barcode'] ?? ''), ENT_QUOTES, 'UTF-8'); ?></td>
+                <td><?= htmlspecialchars($formatMoney($variation['sale_price'] ?? 0), ENT_QUOTES, 'UTF-8'); ?></td>
+                <td><?= ((int) ($variation['track_stock'] ?? 0) === 1) ? htmlspecialchars($formatQuantity($variation['stock_quantity'] ?? 0), ENT_QUOTES, 'UTF-8') : 'Não controlado'; ?></td>
+                <td><?= ((int) ($variation['active'] ?? 0) === 1) ? 'Ativa' : 'Inativa'; ?></td>
+              </tr>
+            <?php endforeach; ?>
+          </tbody>
+        </table>
+      </div>
+    </section>
+  <?php endif; ?>
 
   <section class="store-section">
     <div class="store-subheader">
@@ -122,6 +193,7 @@ $movementTypeLabel = static function (string $type): string {
     <?php endif; ?>
   </section>
 
+  <?php if ((int) ($product['track_stock'] ?? 0) === 1): ?>
   <section class="store-section">
     <div class="store-subheader">
       <h6>Últimas movimentações</h6>
@@ -160,6 +232,7 @@ $movementTypeLabel = static function (string $type): string {
       </table>
     </div>
   </section>
+  <?php endif; ?>
 
   <div class="form-actions">
     <a href="<?= url('product'); ?>" class="btn btn-secondary"><i class="bi bi-arrow-left"></i> Voltar</a>

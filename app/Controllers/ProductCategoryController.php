@@ -84,8 +84,18 @@ class ProductCategoryController extends TenantAwareController
 		$this->requirePermission('product_category.store');
 
 		$productCategory = new ProductCategory();
-		$productCategory->create($_POST);
-		$this->redirect('product_category');
+		try
+			{
+			$productCategory->create($_POST);
+			$this->redirect('product_category');
+			}
+		catch (\Throwable $e)
+			{
+			http_response_code(422);
+			$this->view('product_categories/create', [
+				'title' => 'Nova categoria de produto', 'formData' => $_POST, 'formError' => $e->getMessage(),
+			]);
+			}
 		}
 
 	/**
@@ -107,6 +117,7 @@ class ProductCategoryController extends TenantAwareController
 		$this->view('product_categories/edit', [
 			'title'    => 'Editar categoria de produto',
 			'category' => $category,
+			'attributes' => $productCategory->getAttributes((int) $id),
 		]);
 		}
 
@@ -120,8 +131,20 @@ class ProductCategoryController extends TenantAwareController
 		$this->requirePermission('product_category.update');
 
 		$productCategory = new ProductCategory();
-		$productCategory->update($id, $_POST);
-		$this->redirect('product_category');
+		try
+			{
+			$productCategory->update($id, $_POST);
+			$this->redirect('product_category');
+			}
+		catch (\Throwable $e)
+			{
+			$category = array_merge($productCategory->find($id) ?: [], $_POST);
+			http_response_code(422);
+			$this->view('product_categories/edit', [
+				'title' => 'Editar categoria de produto', 'category' => $category,
+				'attributes' => $productCategory->getAttributes((int) $id), 'formError' => $e->getMessage(),
+			]);
+			}
 		}
 
 	/**
@@ -143,6 +166,7 @@ class ProductCategoryController extends TenantAwareController
 		$this->view('product_categories/informations', [
 			'title'    => 'Informações da categoria de produto',
 			'category' => $data['product_category'],
+			'attributes' => $data['attributes'] ?? [],
 		]);
 		}
 

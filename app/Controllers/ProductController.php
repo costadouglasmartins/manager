@@ -4,7 +4,9 @@ namespace App\Controllers;
 
 use App\Core\TenantAwareController;
 use App\Models\Product;
+use App\Models\ProductAttribute;
 use App\Models\ProductCategory;
+use App\Models\ProductUnit;
 use App\Services\ChunkedUploadService;
 
 class ProductController extends TenantAwareController
@@ -92,9 +94,13 @@ class ProductController extends TenantAwareController
 		$this->requirePermission('product.create');
 
 		$category = new ProductCategory();
+		$categories = $category->getOptions();
 		$this->view('products/create', [
-			'title'      => 'Novo produto',
-			'categories' => $category->getOptions(),
+			'title'           => 'Novo produto',
+			'categories'      => $categories,
+			'units'           => (new ProductUnit())->groupedOptions(),
+			'categorySchemas' => $this->categorySchemas($categories),
+			'attributeValues' => [],
 		]);
 		}
 
@@ -126,11 +132,16 @@ class ProductController extends TenantAwareController
 				}
 
 			http_response_code(422);
+			$categories = $category->getOptions();
 			$this->view('products/create', [
-				'title'      => 'Novo produto',
-				'categories' => $category->getOptions(),
-				'formData'   => $_POST,
-				'formError'  => $e->getMessage(),
+				'title'           => 'Novo produto',
+				'categories'      => $categories,
+				'units'           => (new ProductUnit())->groupedOptions(),
+				'categorySchemas' => $this->categorySchemas($categories),
+				'attributeValues' => $this->submittedAttributeValues($_POST['attributes'] ?? []),
+				'variations'       => $this->submittedVariations($_POST['variations'] ?? []),
+				'formData'        => $_POST,
+				'formError'       => $e->getMessage(),
 			]);
 			return;
 			}
@@ -181,11 +192,16 @@ class ProductController extends TenantAwareController
 			}
 
 		$category = new ProductCategory();
+		$categories = $category->getOptions(false);
 		$this->view('products/edit', [
-			'title'      => 'Editar produto',
-			'product'    => $data['product'],
-			'images'     => $data['images'],
-			'categories' => $category->getOptions(false),
+			'title'           => 'Editar produto',
+			'product'         => $data['product'],
+			'images'          => $data['images'],
+			'categories'      => $categories,
+			'units'           => (new ProductUnit())->groupedOptions(),
+			'categorySchemas' => $this->categorySchemas($categories),
+			'attributeValues' => (new ProductAttribute())->getItemValueMap((int) $id),
+			'variations'      => $data['variations'] ?? [],
 		]);
 		}
 
@@ -215,13 +231,18 @@ class ProductController extends TenantAwareController
 				}
 
 			http_response_code(422);
+			$categories = $category->getOptions(false);
 			$this->view('products/edit', [
-				'title'      => 'Editar produto',
-				'product'    => $data['product'] ?? [],
-				'images'     => $data['images'] ?? [],
-				'categories' => $category->getOptions(false),
-				'formData'   => $_POST,
-				'formError'  => $e->getMessage(),
+				'title'           => 'Editar produto',
+				'product'         => $data['product'] ?? [],
+				'images'          => $data['images'] ?? [],
+				'categories'      => $categories,
+				'units'           => (new ProductUnit())->groupedOptions(),
+				'categorySchemas' => $this->categorySchemas($categories),
+				'attributeValues' => $this->submittedAttributeValues($_POST['attributes'] ?? []),
+				'variations'       => $this->submittedVariations($_POST['variations'] ?? []),
+				'formData'        => $_POST,
+				'formError'       => $e->getMessage(),
 			]);
 			}
 		}
@@ -246,6 +267,8 @@ class ProductController extends TenantAwareController
 			'title'          => 'Informações do produto',
 			'product'        => $data['product'],
 			'images'         => $data['images'],
+			'attributes'     => $data['attributes'],
+			'variations'     => $data['variations'] ?? [],
 			'stockMovements' => $data['stock_movements'],
 		]);
 		}
@@ -331,6 +354,48 @@ class ProductController extends TenantAwareController
 			}
 
 		return $_FILES['images'] ?? [];
+		}
+
+	/** Returns the dynamic attribute definition for each visible category. */
+	private function categorySchemas(array $categories): array
+		{
+		$model = new ProductAttribute();
+		$schemas = [];
+		foreach ($categories as $category)
+			{
+			$id = (int) ($category['id'] ?? 0);
+			if ($id > 0) $schemas[$id] = $model->getCategorySchema($id);
+			}
+		return $schemas;
+		}
+
+	/** Converts submitted form attributes to the same map used by persisted values. */
+	private function submittedAttributeValues($submitted): array
+		{
+		$values = [];
+		if (!is_array($submitted)) return $values;
+		foreach ($submitted as $attributeId => $input)
+			{
+			$input = is_array($input) ? $input : ['value' => $input];
+			$values[(int) $attributeId] = [
+				'submitted_value' => $input['value'] ?? '',
+				'product_unit_id' => $input['unit_id'] ?? null,
+			];
+			}
+		return $values;
+		}
+
+	private function submittedVariations($submitted): array
+		{
+		if (!is_array($submitted)) return [];
+		return array_values(array_filter($submitted, static function ($row): bool {
+			if (!is_array($row)) return false;
+			foreach (['id', 'name', 'sku', 'barcode', 'cost_price', 'sale_price', 'stock_quantity', 'minimum_stock', 'track_stock', 'active'] as $field)
+				{
+				if (isset($row[$field]) && trim((string) $row[$field]) !== '') return true;
+				}
+			return false;
+		}));
 		}
 	}
 ?>

@@ -16,15 +16,6 @@ $formatDateTime = static function ($value): string {
 		}
 };
 
-$formatMoney = static function ($value): string {
-	if ($value === null || $value === '')
-		{
-		return '';
-		}
-
-	return 'R$ ' . number_format((float) $value, 2, ',', '.');
-};
-
 $formatQuantity = static function ($value): string {
 	return number_format((float) $value, 3, ',', '.');
 };
@@ -80,19 +71,11 @@ $movementTypeLabel = static function (string $type): string {
           <td><?= htmlspecialchars($formatQuantity($movement['new_quantity'] ?? 0), ENT_QUOTES, 'UTF-8'); ?></td>
         </tr>
         <tr>
-          <th class="text-muted">Custo unitário</th>
-          <td><?= htmlspecialchars($formatMoney($movement['unit_cost'] ?? null), ENT_QUOTES, 'UTF-8'); ?></td>
-        </tr>
-        <tr>
-          <th class="text-muted">Preço unitário</th>
-          <td><?= htmlspecialchars($formatMoney($movement['unit_price'] ?? null), ENT_QUOTES, 'UTF-8'); ?></td>
-        </tr>
-        <tr>
           <th class="text-muted">Referência</th>
           <td><?= htmlspecialchars((string) ($movement['reference'] ?? ''), ENT_QUOTES, 'UTF-8'); ?></td>
         </tr>
         <tr>
-          <th class="text-muted">Observações</th>
+          <th class="text-muted">Notas</th>
           <td><div class="rich-editor-content"><?= (string) ($movement['observations'] ?? ''); ?></div></td>
         </tr>
         <tr>
