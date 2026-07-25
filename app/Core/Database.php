@@ -65,7 +65,7 @@ class Database
 	 */
 	public static function getManagerDatabaseName(): string
 	  {
-		return defined('DB_DATABASE_MANAGER') ? DB_DATABASE_MANAGER	: 'manager_main';
+		return DB_DATABASE_MANAGER;
 	  }
 
 	/**
@@ -73,40 +73,50 @@ class Database
 	 */
 	private static function getConnection(string $databaseName): PDO
 	  {
-		$databaseName = trim($databaseName);
+		$databaseName = self::validateDatabaseName($databaseName);
 
 		if (isset(self::$instances[$databaseName]))
 		  {
 			return self::$instances[$databaseName];
 		  }
 
-		$host = defined('DB_HOST') ? DB_HOST : 'mysql';
-		$port = defined('DB_PORT') ? DB_PORT : '3306';
-		$username = defined('DB_USERNAME') ? DB_USERNAME : 'root';
-		$password = defined('DB_PASSWORD') ? DB_PASSWORD : 'rootpassword';
-		$charset = defined('DB_CHARSET') ? DB_CHARSET : 'utf8mb4';
-
 		$dsn = sprintf(
 			'mysql:host=%s;port=%s;dbname=%s;charset=%s',
-			$host,
-			$port,
+			DB_HOST,
+			DB_PORT,
 			$databaseName,
-			$charset
+			DB_CHARSET
 		);
 
 		try
 		  {
-			$pdo = new PDO($dsn, $username, $password);
+			$pdo = new PDO($dsn, DB_USERNAME, DB_PASSWORD);
 			$pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 			$pdo->setAttribute(PDO::ATTR_DEFAULT_FETCH_MODE, PDO::FETCH_ASSOC);
 			self::$instances[$databaseName] = $pdo;
 		  }
 		catch (PDOException $e)
 		  {
-			die('Erro de conexao com o banco "' . $databaseName . '": ' . $e->getMessage());
+			error_log(sprintf('Database connection failed for "%s": %s', $databaseName, $e->getMessage()));
+			throw new PDOException('Não foi possível conectar ao banco de dados.');
 		  }
 
 		return self::$instances[$databaseName];
+	  }
+
+	/**
+	 * Validates a database identifier before including it in a DSN.
+	 */
+	private static function validateDatabaseName(string $databaseName): string
+	  {
+		$databaseName = trim($databaseName);
+
+		if ($databaseName === '' || !preg_match('/^[A-Za-z0-9_]+$/', $databaseName))
+		  {
+			throw new \InvalidArgumentException('Nome de banco de dados inválido.');
+		  }
+
+		return $databaseName;
 	  }
   }
 ?>

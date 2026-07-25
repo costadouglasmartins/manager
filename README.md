@@ -44,24 +44,24 @@ chown -R www-data:www-data /var/www/html/manager/public/tenant_files
 chmod -R 775 /var/www/html/manager/public/tenant_files
 ```
 
-### Variáveis de ambiente
+### Configuração do banco de dados e do chat
 
-Configure as variáveis no PHP-FPM, no serviço da aplicação ou no gerenciador de processos usado pelo servidor. Os valores abaixo seguem os nomes esperados pelo código e pelos serviços definidos no Docker:
+As credenciais do banco de dados e a chave compartilhada do chat ficam centralizadas no arquivo:
+
+```text
+app/Core/Config.php
+```
+
+Edite nesse arquivo as constantes `DB_HOST`, `DB_PORT`, `DB_DATABASE_MANAGER`, `DB_USERNAME`, `DB_PASSWORD`, `DB_CHARSET`, `SUPPORT_CHAT_SECRET`, `SUPPORT_CHAT_WS_HOST` e `SUPPORT_CHAT_WS_PORT`. Mantenha os mesmos dados no arquivo correspondente do `manager_main`.
+
+As demais configurações continuam disponíveis por variáveis de ambiente:
 
 ```env
-DB_HOST=127.0.0.1
-DB_PORT=3306
-DB_DATABASE_MANAGER=manager_main
-DB_USERNAME=usuario_do_banco
-DB_PASSWORD=senha_do_banco
-DB_CHARSET=utf8mb4
-
-SUPPORT_CHAT_SECRET=troque_por_um_segredo_forte
 SUPPORT_CHAT_WS_URL=wss://seu-dominio.com/ws
 SHARED_ASSETS_PATH=/var/www/html/assets
 ```
 
-No Docker local, o host do banco é `mysql`, a porta é `3306` e o Redis fica disponível no host `redis`. Em um servidor tradicional, ajuste `DB_HOST` e a conexão do Redis conforme a infraestrutura instalada.
+No Docker local, o host do banco é `mysql`, a porta é `3306` e o Redis fica disponível no host `redis`. Em um servidor tradicional, ajuste as constantes e a conexão do Redis conforme a infraestrutura instalada.
 
 ### Banco de dados
 

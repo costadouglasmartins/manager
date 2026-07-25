@@ -2,12 +2,6 @@
 $scriptDir = rtrim(str_replace('\\', '/', dirname($_SERVER['SCRIPT_NAME'])), '/');
 define('ROOT_PATH', dirname(__DIR__));
 define('PUBLIC_PATH', __DIR__);
-define('DB_HOST', getenv('DB_HOST') ?: 'mysql');
-define('DB_PORT', getenv('DB_PORT') ?: '3306');
-define('DB_DATABASE_MANAGER', getenv('DB_DATABASE_MANAGER') ?: 'manager_main');
-define('DB_USERNAME', getenv('DB_USERNAME') ?: 'root');
-define('DB_PASSWORD', getenv('DB_PASSWORD') ?: 'rootpassword');
-define('DB_CHARSET', getenv('DB_CHARSET') ?: 'utf8mb4');
 
 /**
  * Detecta protocolo (http/https), respeitando proxy/reverso se existir.
@@ -58,6 +52,7 @@ if (!is_file($composerAutoload))
 require_once $composerAutoload;
 require_once ROOT_PATH . '/app/Core/App.php';
 require_once ROOT_PATH . '/app/Core/Controller.php';
+require_once ROOT_PATH . '/app/Core/Config.php';
 require_once ROOT_PATH . '/app/Core/Database.php';
 require_once ROOT_PATH . '/app/Core/AuditsChanges.php';
 require_once ROOT_PATH . '/app/Core/Model.php';
