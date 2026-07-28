@@ -259,7 +259,7 @@ class PersonController extends TenantAwareController
 		{
 		$this->requirePermission('person.edit');
 		$person = new Person();
-		$data = $person->findAllByPersonId($id);
+		$data = $person->findAllByPersonId($id, $this->currentTenantId());
 
 		if (empty($data['person']))
 			{
@@ -284,7 +284,13 @@ class PersonController extends TenantAwareController
 		{
 		$this->requirePermission('person.update');
 		$person = new Person();
-		$person->update($id, $_POST);
+		$data = $person->findAllByPersonId($id, $this->currentTenantId());
+		if (empty($data['person']))
+			{
+			$this->redirect('person');
+			}
+
+		$person->update($id, $_POST, $this->currentTenantId());
 		$this->redirect('person');
 		}
 
@@ -297,11 +303,16 @@ class PersonController extends TenantAwareController
 		{
 		$this->requirePermission('person.informations');
 		$person = new Person();
-		$data = $person->findAllByPersonId($id);
+		$data = $person->findAllByPersonId($id, $this->currentTenantId());
+		if (empty($data['person']))
+			{
+			$this->redirect('person');
+			}
 		$this->view('people/informations', [
 			'title'  => 'Informações sobre a pessoa',
 			'person' => $data['person'],
 			'user'   => $data['user'],
+			'crm' => $data['crm'],
 			'phones' => $data['phones'],
 			'emails' => $data['emails'],
 			'addresses' => $data['addresses'],

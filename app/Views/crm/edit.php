@@ -2,6 +2,8 @@
 $formData = (isset($formData) && is_array($formData)) ? $formData : [];
 $crmForm = is_array($formData['crm'] ?? null) ? $formData['crm'] : [];
 $statusValue = (string) ($crmForm['crm_status_id'] ?? $crmRecord['crm_status_id'] ?? '');
+$sourceValue = (string) ($crmForm['crm_source_id'] ?? $crmRecord['crm_source_id'] ?? '');
+$inactivityReasonValue = (string) ($crmForm['crm_inactivity_reason_id'] ?? $crmRecord['crm_inactivity_reason_id'] ?? '');
 $activeValue = (string) ($crmForm['active'] ?? $crmRecord['active'] ?? '1');
 $ownerValue = (string) ($crmForm['owner_user_id'] ?? $crmRecord['owner_user_id'] ?? '');
 ?>
@@ -79,7 +81,13 @@ $ownerValue = (string) ($crmForm['owner_user_id'] ?? $crmRecord['owner_user_id']
 
         <div class="col-12 col-md-4">
           <label class="form-label" for="crmSource">Origem</label>
-          <input autocomplete="off" class="form-control" id="crmSource" maxlength="120" name="crm[source]" type="text" value="<?= htmlspecialchars((string) ($crmForm['source'] ?? $crmRecord['source'] ?? ''), ENT_QUOTES, 'UTF-8'); ?>">
+          <select class="form-select" id="crmSource" name="crm[crm_source_id]">
+            <option value="">Sem origem informada</option>
+            <?php foreach ($sources as $source): ?>
+              <?php $sourceLabel = (string) ($source['name'] ?? '') . ((int) ($source['active'] ?? 0) === 1 ? '' : ' (inativa)'); ?>
+              <option value="<?= (int) $source['id']; ?>" <?= $sourceValue === (string) $source['id'] ? 'selected' : ''; ?>><?= htmlspecialchars($sourceLabel, ENT_QUOTES, 'UTF-8'); ?></option>
+            <?php endforeach; ?>
+          </select>
         </div>
 
         <div class="col-12 col-md-4">
@@ -88,6 +96,18 @@ $ownerValue = (string) ($crmForm['owner_user_id'] ?? $crmRecord['owner_user_id']
             <option value="1" <?= $activeValue === '1' ? 'selected' : ''; ?>>Ativo</option>
             <option value="0" <?= $activeValue === '0' ? 'selected' : ''; ?>>Inativo</option>
           </select>
+        </div>
+
+        <div class="col-12 col-md-4">
+          <label class="form-label" for="crmInactivityReason">Motivo de inatividade</label>
+          <select class="form-select" id="crmInactivityReason" name="crm[crm_inactivity_reason_id]">
+            <option value="">Selecione quando o vínculo estiver inativo</option>
+            <?php foreach ($inactivityReasons as $reason): ?>
+              <?php $reasonLabel = (string) ($reason['name'] ?? '') . ((int) ($reason['active'] ?? 0) === 1 ? '' : ' (inativo)'); ?>
+              <option value="<?= (int) $reason['id']; ?>" <?= $inactivityReasonValue === (string) $reason['id'] ? 'selected' : ''; ?>><?= htmlspecialchars($reasonLabel, ENT_QUOTES, 'UTF-8'); ?></option>
+            <?php endforeach; ?>
+          </select>
+          <div class="form-text">Obrigatório somente para vínculos inativos.</div>
         </div>
 
         <div class="col-12">

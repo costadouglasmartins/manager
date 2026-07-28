@@ -7,7 +7,8 @@ use App\Models\Permission;
 /**
  * Authorization helper (user-only permissions).
  *
- * Permissions are cached in session at: $_SESSION['manager']['permissions'].
+ * The current permissions are mirrored in the session for presentation purposes.
+ * Authorization reloads them from the central database once per request.
  *
  * Notes:
  * - Permissions are evaluated only from user_permissions (no groups/roles).
@@ -16,6 +17,11 @@ use App\Models\Permission;
  */
 class Authorization
 	{
+	private static ?int $requestUserId = null;
+
+	/** @var array<int, string>|null */
+	private static ?array $requestAbilities = null;
+
 	/**
 	 * Returns current authenticated user array from session, or null.
 	 */
@@ -30,6 +36,8 @@ class Authorization
 	public static function clearCache(): void
 		{
 		unset($_SESSION['manager']['permissions']);
+		self::$requestUserId = null;
+		self::$requestAbilities = null;
 		}
 
 	/**
@@ -43,14 +51,14 @@ class Authorization
 			return [];
 			}
 
-		$cached = $_SESSION['manager']['permissions'] ?? null;
-		if (is_array($cached))
+		$userId = (int) ($user['id'] ?? 0);
+		if (self::$requestUserId === $userId && self::$requestAbilities !== null)
 			{
-			return $cached;
+			return self::$requestAbilities;
 			}
 
 		$permissionModel = new Permission();
-		$abilities = $permissionModel->getAbilitiesForUser((int) ($user['id'] ?? 0));
+		$abilities = $permissionModel->getAbilitiesForUser($userId);
 
 		// Normalize
 		$out = [];
@@ -63,6 +71,8 @@ class Authorization
 			}
 
 		$_SESSION['manager']['permissions'] = $out;
+		self::$requestUserId = $userId;
+		self::$requestAbilities = $out;
 		return $out;
 		}
 

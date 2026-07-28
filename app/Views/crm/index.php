@@ -5,6 +5,8 @@ $filters = $filters ?? [
 	'document' => '',
 	'type' => '',
 	'crm_status_id' => '',
+	'crm_source_id' => '',
+	'crm_inactivity_reason_id' => '',
 	'owner_user_id' => '',
 	'source' => '',
 	'next_activity_from' => '',
@@ -23,8 +25,9 @@ $queryFilters = http_build_query([
 	'document' => $filters['document'],
 	'type' => $filters['type'],
 	'crm_status_id' => $filters['crm_status_id'],
+	'crm_source_id' => $filters['crm_source_id'],
+	'crm_inactivity_reason_id' => $filters['crm_inactivity_reason_id'],
 	'owner_user_id' => $filters['owner_user_id'],
-	'source' => $filters['source'],
 	'next_activity_from' => $filters['next_activity_from'],
 	'next_activity_to' => $filters['next_activity_to'],
 	'activity_scope' => $filters['activity_scope'],
@@ -40,8 +43,9 @@ $sortUrl = static function (string $column) use ($filters, $sort, $direction): s
 		'document' => $filters['document'],
 		'type' => $filters['type'],
 		'crm_status_id' => $filters['crm_status_id'],
+		'crm_source_id' => $filters['crm_source_id'],
+		'crm_inactivity_reason_id' => $filters['crm_inactivity_reason_id'],
 		'owner_user_id' => $filters['owner_user_id'],
-		'source' => $filters['source'],
 		'next_activity_from' => $filters['next_activity_from'],
 		'next_activity_to' => $filters['next_activity_to'],
 		'activity_scope' => $filters['activity_scope'],
@@ -119,15 +123,29 @@ $sortIcon = static function (string $column) use ($sort, $direction): string {
         </div>
 
         <div class="col-12 col-md-4">
+          <select class="form-select" id="crm_source_id" name="crm_source_id">
+            <option value="">Todas as origens</option>
+            <?php foreach ($sources as $source): ?>
+              <option value="<?= (int) $source['id']; ?>" <?= $filters['crm_source_id'] === (string) $source['id'] ? 'selected' : ''; ?>><?= htmlspecialchars((string) ($source['name'] ?? ''), ENT_QUOTES, 'UTF-8'); ?></option>
+            <?php endforeach; ?>
+          </select>
+        </div>
+
+        <div class="col-12 col-md-4">
+          <select class="form-select" id="crm_inactivity_reason_id" name="crm_inactivity_reason_id">
+            <option value="">Todos os motivos de inatividade</option>
+            <?php foreach ($inactivityReasons as $reason): ?>
+              <option value="<?= (int) $reason['id']; ?>" <?= $filters['crm_inactivity_reason_id'] === (string) $reason['id'] ? 'selected' : ''; ?>><?= htmlspecialchars((string) ($reason['name'] ?? ''), ENT_QUOTES, 'UTF-8'); ?></option>
+            <?php endforeach; ?>
+          </select>
+        </div>
+
+        <div class="col-12 col-md-4">
           <select class="form-select" id="active" name="active">
             <option value="" <?= $filters['active'] === '' ? 'selected' : ''; ?>>Ativos e inativos</option>
             <option value="1" <?= $filters['active'] === '1' ? 'selected' : ''; ?>>Ativos</option>
             <option value="0" <?= $filters['active'] === '0' ? 'selected' : ''; ?>>Inativos</option>
           </select>
-        </div>
-
-        <div class="col-12 col-md-4">
-          <input class="form-control" id="source" maxlength="120" name="source" placeholder="Origem" type="text" value="<?= htmlspecialchars($filters['source'], ENT_QUOTES, 'UTF-8'); ?>">
         </div>
 
         <div class="col-12 col-md-4">
@@ -177,6 +195,7 @@ $sortIcon = static function (string $column) use ($sort, $direction): string {
           <th><a class="sort-link" href="<?= $sortUrl('name'); ?>">Pessoa <i class="bi <?= htmlspecialchars($sortIcon('name'), ENT_QUOTES, 'UTF-8'); ?>"></i></a></th>
           <th><a class="sort-link" href="<?= $sortUrl('document'); ?>">Documento <i class="bi <?= htmlspecialchars($sortIcon('document'), ENT_QUOTES, 'UTF-8'); ?>"></i></a></th>
           <th><a class="sort-link" href="<?= $sortUrl('crm_status'); ?>">Situação <i class="bi <?= htmlspecialchars($sortIcon('crm_status'), ENT_QUOTES, 'UTF-8'); ?>"></i></a></th>
+          <th>Origem</th>
           <th><a class="sort-link" href="<?= $sortUrl('owner'); ?>">Responsável <i class="bi <?= htmlspecialchars($sortIcon('owner'), ENT_QUOTES, 'UTF-8'); ?>"></i></a></th>
           <th>Contato</th>
           <th><a class="sort-link" href="<?= $sortUrl('next_activity'); ?>">Próxima atividade <i class="bi <?= htmlspecialchars($sortIcon('next_activity'), ENT_QUOTES, 'UTF-8'); ?>"></i></a></th>
@@ -195,7 +214,17 @@ $sortIcon = static function (string $column) use ($sort, $direction): string {
                 <small class="text-muted"><?= htmlspecialchars(\App\Models\Crm::personTypeLabel((string) ($row['type'] ?? '')), ENT_QUOTES, 'UTF-8'); ?></small>
               </td>
               <td><?= htmlspecialchars(maskCpfCnpj((string) ($row['document'] ?? '')), ENT_QUOTES, 'UTF-8'); ?></td>
-              <td><span class="badge <?= htmlspecialchars((string) ($row['crm_status_bootstrap_class'] ?? 'text-bg-secondary'), ENT_QUOTES, 'UTF-8'); ?>"><?= htmlspecialchars((string) ($row['crm_status_name'] ?? ''), ENT_QUOTES, 'UTF-8'); ?></span></td>
+              <td>
+                <span class="badge <?= htmlspecialchars((string) ($row['crm_status_bootstrap_class'] ?? 'text-bg-secondary'), ENT_QUOTES, 'UTF-8'); ?>"><?= htmlspecialchars((string) ($row['crm_status_name'] ?? ''), ENT_QUOTES, 'UTF-8'); ?></span>
+                <?php if ((int) ($row['active'] ?? 0) === 0 && trim((string) ($row['crm_inactivity_reason_name'] ?? '')) !== ''): ?>
+                  <small class="d-block text-muted mt-1"><?= htmlspecialchars((string) $row['crm_inactivity_reason_name'], ENT_QUOTES, 'UTF-8'); ?></small>
+                <?php endif; ?>
+              </td>
+              <td>
+                <?php if (trim((string) ($row['crm_source_name'] ?? '')) !== ''): ?>
+                  <span class="badge <?= htmlspecialchars((string) ($row['crm_source_bootstrap_class'] ?? 'text-bg-secondary'), ENT_QUOTES, 'UTF-8'); ?>"><?= htmlspecialchars((string) $row['crm_source_name'], ENT_QUOTES, 'UTF-8'); ?></span>
+                <?php endif; ?>
+              </td>
               <td><?= htmlspecialchars($ownerName, ENT_QUOTES, 'UTF-8'); ?></td>
               <td>
                 <div><?= htmlspecialchars((string) ($row['primary_email'] ?? ''), ENT_QUOTES, 'UTF-8'); ?></div>
@@ -234,7 +263,7 @@ $sortIcon = static function (string $column) use ($sort, $direction): string {
           <?php endforeach; ?>
         <?php else: ?>
           <tr>
-            <td colspan="9" class="text-center">Nenhum registro encontrado.</td>
+            <td colspan="10" class="text-center">Nenhum registro encontrado.</td>
           </tr>
         <?php endif; ?>
       </tbody>

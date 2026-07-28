@@ -127,7 +127,34 @@
           </ul>
         </li>
         <!-- /Menu financeiro -->
-        <?php if (authCan('crm.dashboard') || authCan('crm.index') || authCan('crm.create') || authCan('crm_activity.index') || authCan('crm_activity.create') || authCan('crm_status.index') || authCan('crm_status.create') || authCan('crm_activity_type.index') || authCan('crm_activity_type.create') || authCan('crm_activity_status.index') || authCan('crm_activity_status.create')): ?>
+        <?php
+        $crmOperationalMenu = authCan('crm.dashboard')
+          || authCan('crm.index')
+          || authCan('crm.create')
+          || authCan('crm_activity.index')
+          || authCan('crm_activity.create')
+          || authCan('crm_opportunity.index')
+          || authCan('crm_opportunity.create')
+          || authCan('crm_opportunity.kanban')
+          || authCan('crm_opportunity.report');
+        $crmConfigurationMenu = authCan('crm_status.index')
+          || authCan('crm_status.create')
+          || authCan('crm_activity_type.index')
+          || authCan('crm_activity_type.create')
+          || authCan('crm_activity_status.index')
+          || authCan('crm_activity_status.create')
+          || authCan('crm_source.index')
+          || authCan('crm_source.create')
+          || authCan('crm_inactivity_reason.index')
+          || authCan('crm_inactivity_reason.create')
+          || authCan('crm_loss_reason.index')
+          || authCan('crm_loss_reason.create')
+          || authCan('crm_opportunity_type.index')
+          || authCan('crm_opportunity_type.create')
+          || authCan('crm_pipeline_stage.index')
+          || authCan('crm_pipeline_stage.create');
+        ?>
+        <?php if ($crmOperationalMenu || $crmConfigurationMenu): ?>
           <!-- Menu CRM -->
           <li class="nav-item dropdown">
             <a class="nav-link dropdown-toggle" href="#" id="crmMenu" role="button" data-bs-toggle="dropdown" aria-expanded="false">
@@ -147,12 +174,19 @@
               <?php if (authCan('crm_activity.index') || authCan('crm_activity.create')): ?>
                 <li><a class="dropdown-item" href="<?= authCan('crm_activity.index') ? url('crm_activity') : url('crm_activity/create'); ?>"><i class="bi bi-clock-history me-2"></i>Atividades</a></li>
               <?php endif; ?>
-              <?php if (authCan('crm.index') || authCan('crm_activity.index') || authCan('crm_activity.create')): ?>
-                <?php if (authCan('crm_status.index') || authCan('crm_status.create') || authCan('crm_activity_type.index') || authCan('crm_activity_type.create') || authCan('crm_activity_status.index') || authCan('crm_activity_status.create')): ?>
-                  <li><hr class="dropdown-divider" /></li>
-                <?php endif; ?>
+              <?php if (authCan('crm_opportunity.index') || authCan('crm_opportunity.create')): ?>
+                <li><a class="dropdown-item" href="<?= authCan('crm_opportunity.index') ? url('crm_opportunity') : url('crm_opportunity/create'); ?>"><i class="bi bi-currency-dollar me-2"></i>Oportunidades</a></li>
               <?php endif; ?>
-              <?php if (authCan('crm_status.index') || authCan('crm_status.create') || authCan('crm_activity_type.index') || authCan('crm_activity_type.create') || authCan('crm_activity_status.index') || authCan('crm_activity_status.create')): ?>
+              <?php if (authCan('crm_opportunity.kanban')): ?>
+                <li><a class="dropdown-item" href="<?= url('crm_opportunity/kanban'); ?>"><i class="bi bi-kanban me-2"></i>Funil Kanban</a></li>
+              <?php endif; ?>
+              <?php if (authCan('crm_opportunity.report')): ?>
+                <li><a class="dropdown-item" href="<?= url('crm_opportunity/report'); ?>"><i class="bi bi-graph-up-arrow me-2"></i>Relatório comercial</a></li>
+              <?php endif; ?>
+              <?php if ($crmOperationalMenu && $crmConfigurationMenu): ?>
+                <li><hr class="dropdown-divider" /></li>
+              <?php endif; ?>
+              <?php if ($crmConfigurationMenu): ?>
                 <li class="dropdown-submenu">
                   <a class="dropdown-item submenu-toggle" href="#"><i class="bi bi-gear me-2"></i>Configurações</a>
                   <ul class="dropdown-menu">
@@ -164,6 +198,21 @@
                     <?php endif; ?>
                     <?php if (authCan('crm_activity_status.index') || authCan('crm_activity_status.create')): ?>
                       <li><a class="dropdown-item" href="<?= authCan('crm_activity_status.index') ? url('crm_activity_status') : url('crm_activity_status/create'); ?>"><i class="bi bi-check2-circle me-2"></i>Status de atividade</a></li>
+                    <?php endif; ?>
+                    <?php if (authCan('crm_source.index') || authCan('crm_source.create')): ?>
+                      <li><a class="dropdown-item" href="<?= authCan('crm_source.index') ? url('crm_source') : url('crm_source/create'); ?>"><i class="bi bi-signpost-split me-2"></i>Origens</a></li>
+                    <?php endif; ?>
+                    <?php if (authCan('crm_inactivity_reason.index') || authCan('crm_inactivity_reason.create')): ?>
+                      <li><a class="dropdown-item" href="<?= authCan('crm_inactivity_reason.index') ? url('crm_inactivity_reason') : url('crm_inactivity_reason/create'); ?>"><i class="bi bi-pause-circle me-2"></i>Motivos de inatividade</a></li>
+                    <?php endif; ?>
+                    <?php if (authCan('crm_loss_reason.index') || authCan('crm_loss_reason.create')): ?>
+                      <li><a class="dropdown-item" href="<?= authCan('crm_loss_reason.index') ? url('crm_loss_reason') : url('crm_loss_reason/create'); ?>"><i class="bi bi-x-octagon me-2"></i>Motivos de perda</a></li>
+                    <?php endif; ?>
+                    <?php if (authCan('crm_opportunity_type.index') || authCan('crm_opportunity_type.create')): ?>
+                      <li><a class="dropdown-item" href="<?= authCan('crm_opportunity_type.index') ? url('crm_opportunity_type') : url('crm_opportunity_type/create'); ?>"><i class="bi bi-diagram-2 me-2"></i>Tipos de oportunidade</a></li>
+                    <?php endif; ?>
+                    <?php if (authCan('crm_pipeline_stage.index') || authCan('crm_pipeline_stage.create')): ?>
+                      <li><a class="dropdown-item" href="<?= authCan('crm_pipeline_stage.index') ? url('crm_pipeline_stage') : url('crm_pipeline_stage/create'); ?>"><i class="bi bi-funnel me-2"></i>Etapas do funil</a></li>
                     <?php endif; ?>
                   </ul>
                 </li>

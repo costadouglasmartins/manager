@@ -119,14 +119,18 @@ class Person extends Model
 	 * @param mixed $id
 	 * @param array $data
 	 */
-	public function update($id, $data)
+	public function update($id, $data, ?int $tenantId = null)
 		{
 		$personId = (int) $id;
 		$personData = (isset($data['person']) && is_array($data['person'])) ? $data['person'] : $data;
 		$normalizedPersonData = $this->normalizePersonPayload($personData);
 		$emails = (is_array($data['emails'] ?? null) ? $data['emails'] : []);
 		$now = date('Y-m-d H:i:s');
-		$beforeData = $this->findAllByPersonId($personId);
+		$beforeData = $this->findAllByPersonId($personId, $tenantId);
+		if (empty($beforeData['person']))
+			{
+			throw new \InvalidArgumentException('Pessoa não encontrada neste tenant.');
+			}
 
 		try
 			{
@@ -330,13 +334,13 @@ class Person extends Model
 	 * @param mixed $id
 	 * @return array
 	 */
-	public function findAllByPersonId($id)
+	public function findAllByPersonId($id, ?int $tenantId = null)
 		{
 		$neighborhoodsTable = $this->managerTable('neighborhoods');
 		$citiesTable = $this->managerTable('cities');
 
-		$stmt = $this->db->prepare("
-			SELECT p.*,
+		$sql = "
+				SELECT p.*,
 			       COALESCE(
 			       	(
 			       		SELECT JSON_ARRAYAGG(
@@ -418,16 +422,20 @@ class Person extends Model
 			       	),
 			       	JSON_ARRAY()
 			       ) AS addresses_json
-			FROM people p
-			WHERE p.id = :person_id
-			LIMIT 1
-		");
-		$stmt->execute([
-			'person_id' => $id,
-			'phones_person_id' => $id,
-			'emails_person_id' => $id,
-			'addresses_person_id' => $id,
-		]);
+				FROM people p
+				WHERE p.id = :person_id
+			";
+		$params = [
+				'person_id' => $id,
+				'phones_person_id' => $id,
+				'emails_person_id' => $id,
+				'addresses_person_id' => $id,
+			];
+		$this->appendTenantScope($sql, $params, $tenantId, 'p');
+		$sql .= " LIMIT 1";
+
+		$stmt = $this->db->prepare($sql);
+		$stmt->execute($params);
 		$row = $stmt->fetch(PDO::FETCH_ASSOC);
 
 		$person = is_array($row) ? $row : null;
@@ -444,18 +452,24 @@ class Person extends Model
 			}
 
 		$user = null;
+		$crm = null;
 
 		if (is_array($person))
 			{
 			$user = $this->findUserByPersonId(
 				(int) ($person['id'] ?? 0),
-				$this->currentTenantId()
-			);
+					$this->currentTenantId()
+				);
+			if ($tenantId !== null)
+				{
+				$crm = $this->findCrmLinkByPersonId((int) ($person['id'] ?? 0), $tenantId);
+				}
 			}
 
 		return [
 			'person' => $person,
 			'user' => $user,
+			'crm' => $crm,
 			'phones' => $phones,
 			'emails' => $emails,
 			'addresses' => $addresses,
@@ -495,9 +509,9 @@ class Person extends Model
 		}
 
 	/**
-	 * Restricts person queries to the requested tenant through manager users.
+	 * Restricts person queries to users or CRM contacts linked to the requested tenant.
 	 */
-	private function appendTenantScope(string &$sql, array &$params, ?int $tenantId): void
+	private function appendTenantScope(string &$sql, array &$params, ?int $tenantId, string $personAlias = 'Person'): void
 		{
 		if ($tenantId === null)
 			{
@@ -506,17 +520,49 @@ class Person extends Model
 
 		$usersTable = $this->managerTable('users');
 		$tenantUsersTable = $this->managerTable('tenant_users');
+		$tenantPeopleTable = $this->managerTable('tenant_people');
 		$sql .= "
-			AND EXISTS (
-				SELECT 1
-				FROM {$usersTable} AS User
-				INNER JOIN {$tenantUsersTable} AS TenantUser
-					ON TenantUser.user_id = User.id
-					AND TenantUser.tenant_id = :tenant_id
-				WHERE User.person_id = Person.id
+			AND (
+				EXISTS (
+					SELECT 1
+					FROM {$usersTable} AS User
+					INNER JOIN {$tenantUsersTable} AS TenantUser
+						ON TenantUser.user_id = User.id
+						AND TenantUser.tenant_id = :tenant_user_tenant_id
+					WHERE User.person_id = {$personAlias}.id
+				)
+				OR EXISTS (
+					SELECT 1
+					FROM {$tenantPeopleTable} AS TenantPerson
+					WHERE TenantPerson.person_id = {$personAlias}.id
+					  AND TenantPerson.tenant_id = :tenant_person_tenant_id
+				)
 			)
 		";
-		$params['tenant_id'] = $tenantId;
+		$params['tenant_user_tenant_id'] = $tenantId;
+		$params['tenant_person_tenant_id'] = $tenantId;
+		}
+
+	/**
+	 * Finds the tenant CRM link for a person, when present.
+	 */
+	private function findCrmLinkByPersonId(int $personId, int $tenantId): ?array
+		{
+		$stmt = $this->db->prepare("
+			SELECT id, tenant_id, person_id, crm_status_id, crm_source_id,
+			       crm_inactivity_reason_id, owner_user_id, active, created, modified
+			FROM " . $this->managerTable('tenant_people') . "
+			WHERE person_id = :person_id
+			  AND tenant_id = :tenant_id
+			LIMIT 1
+		");
+		$stmt->execute([
+			'person_id' => $personId,
+			'tenant_id' => $tenantId,
+		]);
+		$row = $stmt->fetch(PDO::FETCH_ASSOC);
+
+		return $row ?: null;
 		}
 
 	/**

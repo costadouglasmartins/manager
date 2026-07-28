@@ -189,6 +189,9 @@
 
 <div class="form-actions">
   <a href="<?= url('person'); ?>" class="btn btn-secondary"><i class="bi bi-arrow-left"></i> Voltar</a>
+  <?php if (!empty($crm) && authCan('crm.informations')): ?>
+    <a href="<?= url('crm/informations/' . (int) $crm['id']); ?>" class="btn btn-outline-success"><i class="bi bi-briefcase"></i> Abrir no CRM</a>
+  <?php endif; ?>
   <?php if (authCan('person.edit')): ?>
     <a href="<?= url('person/edit/' . $person['id']); ?>" class="btn btn-outline-primary"><i class="bi bi-pencil-square"></i> Editar</a>
   <?php endif; ?>

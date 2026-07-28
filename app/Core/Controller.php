@@ -11,6 +11,10 @@ use App\Services\AuditLogService;
 
 class Controller
 	{
+	private const SESSION_VALID = 'valid';
+	private const SESSION_USER_INVALID = 'user_invalid';
+	private const SESSION_TENANT_INVALID = 'tenant_invalid';
+
 	/**
 	 * Route aliases accepted by the controller.
 	 *
@@ -423,20 +427,153 @@ class Controller
 		{
 		if (!$this->isAuthenticated())
 			{
+			$this->respondAuthenticationRequired();
+			}
 
-			// If the request expects JSON, return JSON instead of redirecting with HTML.
+		$sessionStatus = $this->liveSessionStatus();
+
+		if ($sessionStatus === self::SESSION_USER_INVALID)
+			{
+			unset($_SESSION['manager']);
+			$this->respondAuthenticationRequired();
+			}
+
+		if ($sessionStatus === self::SESSION_TENANT_INVALID)
+			{
+			TenantContext::clear();
+			Authorization::clearCache();
+			unset($_SESSION['manager']['chunked_uploads']);
+
 			if ($this->wantsJson())
 				{
 				$this->json([
-					'error' => 'unauthorized',
-					'message' => 'Authentication required'
-					], 401);
+					'error' => 'tenant_invalid',
+					'message' => 'O tenant selecionado não existe mais, está inativo ou o acesso foi removido.',
+				], 409);
 				}
 
-			// Otherwise, follow the standard HTML redirect flow.
-			$this->redirect('user/login');
+			$this->redirect('tenant/select');
 			exit;
 			}
+		}
+
+	/**
+	 * Confirms that the authenticated user and selected tenant still exist in the manager database.
+	 */
+	private function liveSessionStatus(): string
+		{
+		$userId = (int) ($_SESSION['manager']['user']['id'] ?? 0);
+		if ($userId <= 0)
+			{
+			return self::SESSION_USER_INVALID;
+			}
+
+		$db = Database::getManagerConnection();
+		$userStatement = $db->prepare(
+			"SELECT User.id,
+			        User.tenant_id
+			 FROM users AS User
+			 WHERE User.id = :user_id
+			   AND User.active = 1
+			 LIMIT 1"
+		);
+		$userStatement->execute(['user_id' => $userId]);
+		$liveUser = $userStatement->fetch(\PDO::FETCH_ASSOC);
+
+		if (!$liveUser)
+			{
+			return self::SESSION_USER_INVALID;
+			}
+
+		$_SESSION['manager']['user']['tenant_id'] = (int) ($liveUser['tenant_id'] ?? 0);
+
+		$selectedTenant = TenantContext::tenant();
+		if ($selectedTenant === null)
+			{
+			return self::SESSION_VALID;
+			}
+
+		$tenantId = (int) ($selectedTenant['id'] ?? 0);
+		$sessionDatabaseNumber = $this->normalizeTenantDatabaseNumber(
+			(string) ($selectedTenant['database_number'] ?? '')
+		);
+
+		if ($tenantId <= 0 || $sessionDatabaseNumber === null)
+			{
+			return self::SESSION_TENANT_INVALID;
+			}
+
+		$tenantStatement = $db->prepare(
+			"SELECT Tenant.database_number
+			 FROM tenants AS Tenant
+			 WHERE Tenant.id = :tenant_id
+			   AND Tenant.status = 'active'
+			   AND (
+			        EXISTS (
+			            SELECT 1
+			            FROM users AS PrimaryUser
+			            WHERE PrimaryUser.id = :primary_user_id
+			              AND PrimaryUser.tenant_id = Tenant.id
+			        )
+			        OR EXISTS (
+			            SELECT 1
+			            FROM tenant_users AS TenantUser
+			            WHERE TenantUser.user_id = :linked_user_id
+			              AND TenantUser.tenant_id = Tenant.id
+			        )
+			   )
+			 LIMIT 1"
+		);
+		$tenantStatement->execute([
+			'tenant_id' => $tenantId,
+			'primary_user_id' => $userId,
+			'linked_user_id' => $userId,
+		]);
+		$databaseNumber = $tenantStatement->fetchColumn();
+
+		if ($databaseNumber === false)
+			{
+			return self::SESSION_TENANT_INVALID;
+			}
+
+		$liveDatabaseNumber = $this->normalizeTenantDatabaseNumber((string) $databaseNumber);
+		if ($liveDatabaseNumber === null || !hash_equals($liveDatabaseNumber, $sessionDatabaseNumber))
+			{
+			return self::SESSION_TENANT_INVALID;
+			}
+
+		return self::SESSION_VALID;
+		}
+
+	/**
+	 * Converts a tenant database number to the canonical four-digit representation.
+	 */
+	private function normalizeTenantDatabaseNumber(string $databaseNumber): ?string
+		{
+		$databaseNumber = trim($databaseNumber);
+		if (!preg_match('/^[0-9]{1,4}$/', $databaseNumber))
+			{
+			return null;
+			}
+
+		return str_pad($databaseNumber, 4, '0', STR_PAD_LEFT);
+		}
+
+	/**
+	 * Returns the standard unauthorized response for HTML and JSON requests.
+	 */
+	private function respondAuthenticationRequired(): void
+		{
+		if ($this->wantsJson())
+			{
+			$this->json([
+				'error' => 'unauthorized',
+				'message' => 'Authentication required',
+			], 401);
+			}
+
+		$this->redirect('user/login');
+		exit;
 		}
 
 	/**

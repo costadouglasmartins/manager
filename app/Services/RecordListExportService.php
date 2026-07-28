@@ -20,6 +20,7 @@ use App\Models\Neighborhood;
 use App\Models\Permission;
 use App\Models\Person;
 use App\Models\PhoneNumber;
+use App\Models\CrmOpportunity;
 use App\Models\Product;
 use App\Models\ProductCategory;
 use App\Models\ProductStockMovement;
@@ -275,7 +276,7 @@ class RecordListExportService
 				['label' => 'Criado em', 'callback' => fn (array $row): string => $this->dateTime($row['created'] ?? '')],
 				['label' => 'Modificado em', 'callback' => fn (array $row): string => $this->dateTime($row['modified'] ?? '')],
 			]),
-			'crm' => $this->standardDefinition(Crm::class, 'Lista do CRM', 'crm', ['id', 'name', 'document', 'type', 'crm_status_id', 'owner_user_id', 'source', 'next_activity_from', 'next_activity_to', 'activity_scope', 'active'], [
+			'crm' => $this->standardDefinition(Crm::class, 'Lista do CRM', 'crm', ['id', 'name', 'document', 'type', 'crm_status_id', 'crm_source_id', 'crm_inactivity_reason_id', 'owner_user_id', 'next_activity_from', 'next_activity_to', 'activity_scope', 'active'], [
 				['label' => '#', 'field' => 'id', 'align' => 'right'],
 				['label' => 'Pessoa ID', 'field' => 'person_id', 'align' => 'right'],
 				['label' => 'Nome', 'field' => 'name'],
@@ -284,7 +285,8 @@ class RecordListExportService
 				['label' => 'Tipo', 'callback' => fn (array $row): string => Crm::personTypeLabel((string) ($row['type'] ?? ''))],
 				['label' => 'Situação CRM', 'field' => 'crm_status_name'],
 				['label' => 'Responsável', 'callback' => fn (array $row): string => trim((string) ($row['owner_name'] ?? '')) ?: (string) ($row['owner_username'] ?? '')],
-				['label' => 'Origem', 'field' => 'source'],
+				['label' => 'Origem', 'field' => 'crm_source_name'],
+				['label' => 'Motivo de inatividade', 'field' => 'crm_inactivity_reason_name'],
 				['label' => 'E-mail', 'field' => 'primary_email'],
 				['label' => 'Telefone', 'callback' => fn (array $row): string => \maskPhoneBr((string) ($row['primary_phone'] ?? ''))],
 				['label' => 'Próxima atividade', 'callback' => fn (array $row): string => trim(Crm::formatDateTime($row['next_activity_at'] ?? '') . ' ' . (string) ($row['next_activity_title'] ?? ''))],
@@ -292,6 +294,30 @@ class RecordListExportService
 				['label' => 'Observações', 'field' => 'notes'],
 				['label' => 'Criado em', 'callback' => fn (array $row): string => Crm::formatDateTime($row['created'] ?? '')],
 				['label' => 'Modificado em', 'callback' => fn (array $row): string => Crm::formatDateTime($row['modified'] ?? '')],
+			], [
+				'needsTenant' => true,
+				'tenantIdArgument' => true,
+				'searchArguments' => fn (array $filters, array $query, int $total): array => [$filters, max(1, $total), 0, $this->currentTenantId(), $this->crmSort($query), $this->crmDirection($query)],
+			]),
+			'crm_opportunity' => $this->standardDefinition(CrmOpportunity::class, 'Lista de oportunidades CRM', 'crm_oportunidades', ['id', 'tenant_person_id', 'person_name', 'crm_source_id', 'opportunity_type_id', 'pipeline_stage_id', 'loss_reason_id', 'responsible_user_id', 'expected_from', 'expected_to', 'result', 'active'], [
+				['label' => '#', 'field' => 'id', 'align' => 'right'],
+				['label' => 'Contato CRM', 'field' => 'tenant_person_id', 'align' => 'right'],
+				['label' => 'Pessoa', 'field' => 'person_name'],
+				['label' => 'Documento', 'callback' => fn (array $row): string => \maskCpfCnpj((string) ($row['person_document'] ?? ''))],
+				['label' => 'Título', 'field' => 'title'],
+				['label' => 'Origem', 'field' => 'crm_source_name'],
+				['label' => 'Tipo', 'field' => 'opportunity_type_name'],
+				['label' => 'Etapa', 'field' => 'pipeline_stage_name'],
+				['label' => 'Motivo de perda', 'field' => 'loss_reason_name'],
+				['label' => 'Responsável', 'callback' => fn (array $row): string => trim((string) ($row['responsible_name'] ?? '')) ?: (string) ($row['responsible_username'] ?? '')],
+				['label' => 'Valor estimado', 'callback' => fn (array $row): string => $this->money($row['estimated_value'] ?? 0), 'align' => 'right'],
+				['label' => 'Probabilidade', 'callback' => fn (array $row): string => ((int) ($row['probability'] ?? 0)) . '%', 'align' => 'right'],
+				['label' => 'Fechamento previsto', 'callback' => fn (array $row): string => $this->date($row['expected_close_date'] ?? '')],
+				['label' => 'Fechada em', 'callback' => fn (array $row): string => $this->dateTime($row['closed_at'] ?? '')],
+				['label' => 'Registro', 'callback' => fn (array $row): string => $this->activeLabel($row['active'] ?? null)],
+				['label' => 'Descrição', 'field' => 'description'],
+				['label' => 'Criado em', 'callback' => fn (array $row): string => $this->dateTime($row['created'] ?? '')],
+				['label' => 'Modificado em', 'callback' => fn (array $row): string => $this->dateTime($row['modified'] ?? '')],
 			], [
 				'needsTenant' => true,
 				'tenantIdArgument' => true,

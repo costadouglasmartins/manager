@@ -112,6 +112,8 @@ class Crm extends Model
 		{
 		$tenantPeopleTable = $this->managerTable('tenant_people');
 		$crmStatusesTable = $this->tenantTable('crm_statuses');
+		$crmSourcesTable = $this->tenantTable('crm_sources');
+		$crmInactivityReasonsTable = $this->tenantTable('crm_inactivity_reasons');
 		$peopleTable = $this->managerTable('people');
 		$sql = "
 			SELECT COUNT(*) AS total
@@ -119,6 +121,10 @@ class Crm extends Model
 			INNER JOIN {$peopleTable} AS Person ON Person.id = TenantPerson.person_id
 			LEFT JOIN {$crmStatusesTable} AS CrmStatus
 				ON CrmStatus.id = TenantPerson.crm_status_id
+			LEFT JOIN {$crmSourcesTable} AS CrmSource
+				ON CrmSource.id = TenantPerson.crm_source_id
+			LEFT JOIN {$crmInactivityReasonsTable} AS CrmInactivityReason
+				ON CrmInactivityReason.id = TenantPerson.crm_inactivity_reason_id
 			WHERE TenantPerson.tenant_id = :tenant_id
 		";
 		$params = ['tenant_id' => (int) $tenantId];
@@ -211,7 +217,14 @@ class Crm extends Model
 			throw new \InvalidArgumentException('Registro CRM não encontrado.');
 			}
 
-		$crm = $this->normalizeCrmPayload((array) ($data['crm'] ?? []), $tenantId, (int) ($beforeData['crm']['crm_status_id'] ?? 0));
+		$crm = $this->normalizeCrmPayload(
+			(array) ($data['crm'] ?? []),
+			$tenantId,
+			(int) ($beforeData['crm']['crm_status_id'] ?? 0),
+			(int) ($beforeData['crm']['crm_source_id'] ?? 0),
+			(int) ($beforeData['crm']['crm_inactivity_reason_id'] ?? 0),
+			(string) ($beforeData['crm']['source'] ?? '')
+		);
 		$this->assertAssignableOwner($crm['owner_user_id'], $tenantId, (int) ($beforeData['crm']['owner_user_id'] ?? 0));
 
 		try
@@ -256,10 +269,16 @@ class Crm extends Model
 			{
 			$this->db->beginTransaction();
 			$inactiveStatusId = (new CrmStatus())->inactiveStatusId();
+			$inactivityReasonId = (new CrmCatalog('inactivity_reason'))->defaultId('sem_relacionamento_ativo');
+			if ($inactivityReasonId === null)
+				{
+				throw new \InvalidArgumentException('Cadastre um motivo de inatividade ativo antes de desativar o vínculo CRM.');
+				}
 			$stmt = $this->db->prepare("
 				UPDATE " . $this->managerTable('tenant_people') . "
 				SET active = 0,
 				    crm_status_id = COALESCE(:crm_status_id, crm_status_id),
+				    crm_inactivity_reason_id = :crm_inactivity_reason_id,
 				    updated_by_user_id = :updated_by_user_id,
 				    modified = :modified
 				WHERE id = :id
@@ -267,6 +286,7 @@ class Crm extends Model
 			");
 			$stmt->execute([
 				'crm_status_id' => $inactiveStatusId,
+				'crm_inactivity_reason_id' => $inactivityReasonId,
 				'updated_by_user_id' => $userId,
 				'modified' => date('Y-m-d H:i:s'),
 				'id' => $crmId,
@@ -371,6 +391,22 @@ class Crm extends Model
 		}
 
 	/**
+	 * Returns dynamic CRM source options from the selected tenant.
+	 */
+	public function sourceOptions(?int $includeSourceId = null): array
+		{
+		return (new CrmCatalog('source'))->getOptions(true, $includeSourceId);
+		}
+
+	/**
+	 * Returns dynamic inactivity reason options from the selected tenant.
+	 */
+	public function inactivityReasonOptions(?int $includeReasonId = null): array
+		{
+		return (new CrmCatalog('inactivity_reason'))->getOptions(true, $includeReasonId);
+		}
+
+	/**
 	 * Returns a table qualified with the current tenant database name.
 	 */
 	private function tenantTable(string $table): string
@@ -391,6 +427,8 @@ class Crm extends Model
 		{
 		$tenantPeopleTable = $this->managerTable('tenant_people');
 		$crmStatusesTable = $this->tenantTable('crm_statuses');
+		$crmSourcesTable = $this->tenantTable('crm_sources');
+		$crmInactivityReasonsTable = $this->tenantTable('crm_inactivity_reasons');
 		$peopleTable = $this->managerTable('people');
 		$usersTable = $this->managerTable('users');
 		$emailsTable = $this->managerTable('emails');
@@ -403,6 +441,8 @@ class Crm extends Model
 			       TenantPerson.tenant_id,
 			       TenantPerson.person_id,
 			       TenantPerson.crm_status_id,
+			       TenantPerson.crm_source_id,
+			       TenantPerson.crm_inactivity_reason_id,
 			       TenantPerson.owner_user_id,
 			       TenantPerson.source,
 			       TenantPerson.notes,
@@ -421,6 +461,14 @@ class Crm extends Model
 			       CrmStatus.slug AS crm_status_slug,
 			       CrmStatus.bootstrap_class AS crm_status_bootstrap_class,
 			       CrmStatus.active AS crm_status_active,
+			       COALESCE(CrmSource.name, TenantPerson.source) AS crm_source_name,
+			       CrmSource.slug AS crm_source_slug,
+			       CrmSource.bootstrap_class AS crm_source_bootstrap_class,
+			       CrmSource.active AS crm_source_active,
+			       CrmInactivityReason.name AS crm_inactivity_reason_name,
+			       CrmInactivityReason.slug AS crm_inactivity_reason_slug,
+			       CrmInactivityReason.bootstrap_class AS crm_inactivity_reason_bootstrap_class,
+			       CrmInactivityReason.active AS crm_inactivity_reason_active,
 			       OwnerUser.username AS owner_username,
 			       OwnerPerson.name AS owner_name,
 			       (
@@ -463,6 +511,10 @@ class Crm extends Model
 			INNER JOIN {$peopleTable} AS Person ON Person.id = TenantPerson.person_id
 			LEFT JOIN {$crmStatusesTable} AS CrmStatus
 				ON CrmStatus.id = TenantPerson.crm_status_id
+			LEFT JOIN {$crmSourcesTable} AS CrmSource
+				ON CrmSource.id = TenantPerson.crm_source_id
+			LEFT JOIN {$crmInactivityReasonsTable} AS CrmInactivityReason
+				ON CrmInactivityReason.id = TenantPerson.crm_inactivity_reason_id
 			LEFT JOIN {$usersTable} AS OwnerUser ON OwnerUser.id = TenantPerson.owner_user_id
 			LEFT JOIN {$peopleTable} AS OwnerPerson ON OwnerPerson.id = OwnerUser.person_id
 		";
@@ -509,9 +561,22 @@ class Crm extends Model
 			$params['owner_user_id'] = (int) $filters['owner_user_id'];
 			}
 
+		if (isset($filters['crm_source_id']) && $filters['crm_source_id'] !== '')
+			{
+			$sql .= " AND TenantPerson.crm_source_id = :crm_source_id";
+			$params['crm_source_id'] = (int) $filters['crm_source_id'];
+			}
+
+		if (isset($filters['crm_inactivity_reason_id']) && $filters['crm_inactivity_reason_id'] !== '')
+			{
+			$sql .= " AND TenantPerson.crm_inactivity_reason_id = :crm_inactivity_reason_id";
+			$params['crm_inactivity_reason_id'] = (int) $filters['crm_inactivity_reason_id'];
+			}
+
+		// Backward-compatible textual search for records created before the dynamic source catalog.
 		if (isset($filters['source']) && $filters['source'] !== '')
 			{
-			$sql .= " AND TenantPerson.source LIKE :source";
+			$sql .= " AND COALESCE(CrmSource.name, TenantPerson.source) LIKE :source";
 			$params['source'] = '%' . trim((string) $filters['source']) . '%';
 			}
 
@@ -685,7 +750,14 @@ class Crm extends Model
 	/**
 	 * Normalizes CRM metadata.
 	 */
-	private function normalizeCrmPayload(array $data, int $tenantId, ?int $currentStatusId = null): array
+	private function normalizeCrmPayload(
+		array $data,
+		int $tenantId,
+		?int $currentStatusId = null,
+		?int $currentSourceId = null,
+		?int $currentInactivityReasonId = null,
+		?string $currentLegacySource = null
+	): array
 		{
 		$statusModel = new CrmStatus();
 		$statusId = (int) ($data['crm_status_id'] ?? 0);
@@ -701,13 +773,46 @@ class Crm extends Model
 
 		$ownerUserId = (int) ($data['owner_user_id'] ?? 0);
 		$active = isset($data['active']) ? (int) $data['active'] : 1;
+		$active = $active === 0 ? 0 : 1;
+
+		$sourceModel = new CrmCatalog('source');
+		$sourceId = (int) ($data['crm_source_id'] ?? 0);
+		if ($sourceId > 0 && !$sourceModel->isAssignable($sourceId, $currentSourceId))
+			{
+			throw new \InvalidArgumentException('Selecione uma origem válida para este tenant.');
+			}
+		$source = $sourceId > 0 ? $sourceModel->find($sourceId) : false;
+
+		$inactivityReasonId = (int) ($data['crm_inactivity_reason_id'] ?? 0);
+		if ($active === 0)
+			{
+			$inactivityModel = new CrmCatalog('inactivity_reason');
+			if ($inactivityReasonId <= 0)
+				{
+				$inactivityReasonId = (int) ($inactivityModel->defaultId('sem_relacionamento_ativo') ?? 0);
+				}
+			if (!$inactivityModel->isAssignable($inactivityReasonId, $currentInactivityReasonId))
+				{
+				throw new \InvalidArgumentException('Selecione um motivo de inatividade válido para este tenant.');
+				}
+			}
+		else
+			{
+			$inactivityReasonId = 0;
+			}
 
 		return [
 			'crm_status_id' => $statusId,
+			'crm_source_id' => $sourceId > 0 ? $sourceId : null,
+			'crm_inactivity_reason_id' => $inactivityReasonId > 0 ? $inactivityReasonId : null,
 			'owner_user_id' => $ownerUserId > 0 ? $ownerUserId : null,
-			'source' => substr(trim((string) ($data['source'] ?? '')), 0, 120),
+			'source' => $source
+				? substr((string) ($source['name'] ?? ''), 0, 120)
+				: ($currentSourceId === null || $currentSourceId <= 0
+					? substr(trim((string) ($currentLegacySource ?? '')), 0, 120) ?: null
+					: null),
 			'notes' => substr(trim((string) ($data['notes'] ?? '')), 0, 2000),
-			'active' => $active === 0 ? 0 : 1,
+			'active' => $active,
 		];
 		}
 
@@ -831,14 +936,18 @@ class Crm extends Model
 		{
 		$stmt = $this->db->prepare("
 			INSERT INTO " . $this->managerTable('tenant_people') . "
-				(tenant_id, person_id, crm_status_id, owner_user_id, source, notes, active, created_by_user_id, updated_by_user_id, created, modified)
+				(tenant_id, person_id, crm_status_id, crm_source_id, crm_inactivity_reason_id,
+				 owner_user_id, source, notes, active, created_by_user_id, updated_by_user_id, created, modified)
 			VALUES
-				(:tenant_id, :person_id, :crm_status_id, :owner_user_id, :source, :notes, :active, :created_by_user_id, :updated_by_user_id, :created, :modified)
+				(:tenant_id, :person_id, :crm_status_id, :crm_source_id, :crm_inactivity_reason_id,
+				 :owner_user_id, :source, :notes, :active, :created_by_user_id, :updated_by_user_id, :created, :modified)
 		");
 		$stmt->execute([
 			'tenant_id' => $tenantId,
 			'person_id' => $personId,
 			'crm_status_id' => $crm['crm_status_id'],
+			'crm_source_id' => $crm['crm_source_id'],
+			'crm_inactivity_reason_id' => $crm['crm_inactivity_reason_id'],
 			'owner_user_id' => $crm['owner_user_id'],
 			'source' => $crm['source'],
 			'notes' => $crm['notes'],
@@ -860,6 +969,8 @@ class Crm extends Model
 		$stmt = $this->db->prepare("
 			UPDATE " . $this->managerTable('tenant_people') . "
 			SET crm_status_id = :crm_status_id,
+			    crm_source_id = :crm_source_id,
+			    crm_inactivity_reason_id = :crm_inactivity_reason_id,
 			    owner_user_id = :owner_user_id,
 			    source = :source,
 			    notes = :notes,
@@ -871,6 +982,8 @@ class Crm extends Model
 		");
 		$stmt->execute([
 			'crm_status_id' => $crm['crm_status_id'],
+			'crm_source_id' => $crm['crm_source_id'],
+			'crm_inactivity_reason_id' => $crm['crm_inactivity_reason_id'],
 			'owner_user_id' => $crm['owner_user_id'],
 			'source' => $crm['source'],
 			'notes' => $crm['notes'],

@@ -2,6 +2,8 @@
 $ownerName = trim((string) ($crmRecord['owner_name'] ?? '')) ?: (string) ($crmRecord['owner_username'] ?? '');
 $notes = trim((string) ($crmRecord['notes'] ?? ''));
 $activities = (isset($activities) && is_array($activities)) ? $activities : [];
+$opportunities = (isset($opportunities) && is_array($opportunities)) ? $opportunities : [];
+$money = static fn ($value): string => 'R$ ' . number_format((float) ($value ?? 0), 2, ',', '.');
 ?>
 
 <div class="app-page">
@@ -28,12 +30,26 @@ $activities = (isset($activities) && is_array($activities)) ? $activities : [];
           </tr>
           <tr>
             <th class="text-muted">Origem</th>
-            <td><?= htmlspecialchars((string) ($crmRecord['source'] ?? ''), ENT_QUOTES, 'UTF-8'); ?></td>
+            <td>
+              <?php if (trim((string) ($crmRecord['crm_source_name'] ?? '')) !== ''): ?>
+                <span class="badge <?= htmlspecialchars((string) ($crmRecord['crm_source_bootstrap_class'] ?? 'text-bg-secondary'), ENT_QUOTES, 'UTF-8'); ?>"><?= htmlspecialchars((string) $crmRecord['crm_source_name'], ENT_QUOTES, 'UTF-8'); ?></span>
+              <?php endif; ?>
+            </td>
           </tr>
           <tr>
             <th class="text-muted">Vínculo</th>
             <td><?= ((int) ($crmRecord['active'] ?? 0) === 1) ? 'Ativo' : 'Inativo'; ?></td>
           </tr>
+          <?php if ((int) ($crmRecord['active'] ?? 0) === 0): ?>
+            <tr>
+              <th class="text-muted">Motivo de inatividade</th>
+              <td>
+                <?php if (trim((string) ($crmRecord['crm_inactivity_reason_name'] ?? '')) !== ''): ?>
+                  <span class="badge <?= htmlspecialchars((string) ($crmRecord['crm_inactivity_reason_bootstrap_class'] ?? 'text-bg-secondary'), ENT_QUOTES, 'UTF-8'); ?>"><?= htmlspecialchars((string) $crmRecord['crm_inactivity_reason_name'], ENT_QUOTES, 'UTF-8'); ?></span>
+                <?php endif; ?>
+              </td>
+            </tr>
+          <?php endif; ?>
           <tr>
             <th class="text-muted">Criado em</th>
             <td><?= htmlspecialchars(\App\Models\Crm::formatDateTime($crmRecord['created'] ?? ''), ENT_QUOTES, 'UTF-8'); ?></td>
@@ -168,6 +184,56 @@ $activities = (isset($activities) && is_array($activities)) ? $activities : [];
         </tbody>
       </table>
     </div>
+  </section>
+
+  <section class="border rounded p-3 mb-3">
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+      <h6 class="mb-0">Oportunidades</h6>
+      <?php if (authCan('crm_opportunity.create')): ?>
+        <a href="<?= url('crm_opportunity/create/' . (int) ($crmRecord['id'] ?? 0)); ?>" class="btn btn-sm btn-success"><i class="bi bi-plus-lg"></i> Nova oportunidade</a>
+      <?php endif; ?>
+    </div>
+
+    <?php if (!empty($opportunities)): ?>
+      <div class="table-responsive">
+        <table class="table table-sm table-hover align-middle mb-0">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Título</th>
+              <th>Etapa</th>
+              <th class="text-end">Valor</th>
+              <th>Previsão</th>
+              <th class="text-end">Ações</th>
+            </tr>
+          </thead>
+          <tbody>
+            <?php foreach ($opportunities as $opportunity): ?>
+              <tr>
+                <td style="width:1%;"><?= (int) ($opportunity['id'] ?? 0); ?></td>
+                <td>
+                  <div class="fw-semibold"><?= htmlspecialchars((string) ($opportunity['title'] ?? ''), ENT_QUOTES, 'UTF-8'); ?></div>
+                  <small class="text-muted"><?= (int) ($opportunity['probability'] ?? 0); ?>%</small>
+                </td>
+                <td><span class="badge <?= htmlspecialchars((string) ($opportunity['pipeline_stage_bootstrap_class'] ?? 'text-bg-secondary'), ENT_QUOTES, 'UTF-8'); ?>"><?= htmlspecialchars((string) ($opportunity['pipeline_stage_name'] ?? ''), ENT_QUOTES, 'UTF-8'); ?></span></td>
+                <td class="text-end"><?= htmlspecialchars($money($opportunity['estimated_value'] ?? 0), ENT_QUOTES, 'UTF-8'); ?></td>
+                <td><?= htmlspecialchars(maskDateBr((string) ($opportunity['expected_close_date'] ?? '')) ?? '', ENT_QUOTES, 'UTF-8'); ?></td>
+                <td class="text-end text-nowrap">
+                  <?php if (authCan('crm_opportunity.informations')): ?>
+                    <a href="<?= url('crm_opportunity/informations/' . (int) ($opportunity['id'] ?? 0)); ?>" class="btn btn-sm btn-outline-secondary"><i class="bi bi-search"></i></a>
+                  <?php endif; ?>
+                  <?php if (authCan('crm_opportunity.edit')): ?>
+                    <a href="<?= url('crm_opportunity/edit/' . (int) ($opportunity['id'] ?? 0)); ?>" class="btn btn-sm btn-outline-primary"><i class="bi bi-pencil-square"></i></a>
+                  <?php endif; ?>
+                </td>
+              </tr>
+            <?php endforeach; ?>
+          </tbody>
+        </table>
+      </div>
+    <?php else: ?>
+      <p class="text-muted mb-0">Nenhuma oportunidade registrada para este contato CRM.</p>
+    <?php endif; ?>
   </section>
 
   <section class="border rounded p-3 mb-3">

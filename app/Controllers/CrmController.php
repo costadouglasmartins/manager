@@ -6,6 +6,7 @@ use App\Core\TenantAwareController;
 use App\Core\TenantContext;
 use App\Models\Crm;
 use App\Models\CrmActivity;
+use App\Models\CrmOpportunity;
 
 class CrmController extends TenantAwareController
 	{
@@ -45,6 +46,8 @@ class CrmController extends TenantAwareController
 			'crmPeople' => $rows,
 			'filters' => $filters,
 			'statuses' => $crm->statusOptions($tenantId),
+			'sources' => $crm->sourceOptions(),
+			'inactivityReasons' => $crm->inactivityReasonOptions(),
 			'personTypes' => Crm::personTypes(),
 			'owners' => $crm->ownerOptions($tenantId),
 			'activityScopes' => CrmActivity::activityScopes(),
@@ -91,6 +94,8 @@ class CrmController extends TenantAwareController
 		$this->view('crm/create', [
 			'title' => 'Novo registro CRM',
 			'statuses' => $crm->statusOptions($this->currentTenantId()),
+			'sources' => $crm->sourceOptions(),
+			'inactivityReasons' => $crm->inactivityReasonOptions(),
 			'personTypes' => Crm::personTypes(),
 			'owners' => $crm->ownerOptions($this->currentTenantId()),
 		]);
@@ -131,7 +136,6 @@ class CrmController extends TenantAwareController
 		$this->requirePermission('crm.edit');
 
 		$crm = new Crm();
-		$activity = new CrmActivity();
 		$data = $crm->findAllByCrmId($id, $this->currentTenantId());
 		if (empty($data['crm']))
 			{
@@ -142,6 +146,8 @@ class CrmController extends TenantAwareController
 			'title' => 'Editar registro CRM',
 			'crmRecord' => $data['crm'],
 			'statuses' => $crm->statusOptions($this->currentTenantId(), (int) ($data['crm']['crm_status_id'] ?? 0)),
+			'sources' => $crm->sourceOptions((int) ($data['crm']['crm_source_id'] ?? 0)),
+			'inactivityReasons' => $crm->inactivityReasonOptions((int) ($data['crm']['crm_inactivity_reason_id'] ?? 0)),
 			'owners' => $crm->ownerOptions($this->currentTenantId(), (int) ($data['crm']['owner_user_id'] ?? 0)),
 		]);
 		}
@@ -175,6 +181,8 @@ class CrmController extends TenantAwareController
 				'title' => 'Editar registro CRM',
 				'crmRecord' => $data['crm'] ?? [],
 				'statuses' => $crm->statusOptions($this->currentTenantId(), (int) ($data['crm']['crm_status_id'] ?? 0)),
+				'sources' => $crm->sourceOptions((int) ($data['crm']['crm_source_id'] ?? 0)),
+				'inactivityReasons' => $crm->inactivityReasonOptions((int) ($data['crm']['crm_inactivity_reason_id'] ?? 0)),
 				'owners' => $crm->ownerOptions($this->currentTenantId(), (int) ($data['crm']['owner_user_id'] ?? 0)),
 				'formData' => $_POST,
 				'formError' => $e->getMessage(),
@@ -202,6 +210,8 @@ class CrmController extends TenantAwareController
 		$this->requirePermission('crm.informations');
 
 		$crm = new Crm();
+		$activity = new CrmActivity();
+		$opportunity = new CrmOpportunity();
 		$data = $crm->findAllByCrmId($id, $this->currentTenantId());
 		if (empty($data['crm']))
 			{
@@ -215,6 +225,7 @@ class CrmController extends TenantAwareController
 			'phones' => $data['phones'],
 			'addresses' => $data['addresses'],
 			'activities' => $activity->timelineByCrmId((int) $id, $this->currentTenantId()),
+			'opportunities' => $opportunity->byCrmId((int) $id, $this->currentTenantId()),
 		]);
 		}
 
@@ -255,6 +266,8 @@ class CrmController extends TenantAwareController
 		$this->view('crm/create', [
 			'title' => 'Novo registro CRM',
 			'statuses' => $crm->statusOptions($this->currentTenantId()),
+			'sources' => $crm->sourceOptions(),
+			'inactivityReasons' => $crm->inactivityReasonOptions(),
 			'personTypes' => Crm::personTypes(),
 			'owners' => $crm->ownerOptions($this->currentTenantId()),
 			'formData' => $_POST,
@@ -270,6 +283,8 @@ class CrmController extends TenantAwareController
 			'document' => isset($_GET['document']) ? trim((string) $_GET['document']) : '',
 			'type' => isset($_GET['type']) ? trim((string) $_GET['type']) : '',
 			'crm_status_id' => isset($_GET['crm_status_id']) ? trim((string) $_GET['crm_status_id']) : '',
+			'crm_source_id' => isset($_GET['crm_source_id']) ? trim((string) $_GET['crm_source_id']) : '',
+			'crm_inactivity_reason_id' => isset($_GET['crm_inactivity_reason_id']) ? trim((string) $_GET['crm_inactivity_reason_id']) : '',
 			'owner_user_id' => isset($_GET['owner_user_id']) ? trim((string) $_GET['owner_user_id']) : '',
 			'source' => isset($_GET['source']) ? trim((string) $_GET['source']) : '',
 			'next_activity_from' => isset($_GET['next_activity_from']) ? trim((string) $_GET['next_activity_from']) : '',
