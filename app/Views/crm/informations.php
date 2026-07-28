@@ -9,7 +9,7 @@ $notes = trim((string) ($crmRecord['notes'] ?? ''));
       <span class="app-page-kicker"><i class="bi bi-search"></i> CRM</span>
       <h5><?= htmlspecialchars((string) ($crmRecord['name'] ?? ''), ENT_QUOTES, 'UTF-8'); ?></h5>
     </div>
-    <span class="badge <?= htmlspecialchars(\App\Models\Crm::statusBadgeClass((string) ($crmRecord['crm_status'] ?? '')), ENT_QUOTES, 'UTF-8'); ?>"><?= htmlspecialchars(\App\Models\Crm::statusLabel((string) ($crmRecord['crm_status'] ?? '')), ENT_QUOTES, 'UTF-8'); ?></span>
+    <span class="badge <?= htmlspecialchars((string) ($crmRecord['crm_status_bootstrap_class'] ?? 'text-bg-secondary'), ENT_QUOTES, 'UTF-8'); ?>"><?= htmlspecialchars((string) ($crmRecord['crm_status_name'] ?? ''), ENT_QUOTES, 'UTF-8'); ?></span>
   </div>
 
   <section class="border rounded p-3 mb-3">

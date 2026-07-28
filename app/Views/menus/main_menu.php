@@ -127,7 +127,7 @@
           </ul>
         </li>
         <!-- /Menu financeiro -->
-        <?php if (authCan('crm.index') || authCan('crm.create')): ?>
+        <?php if (authCan('crm.index') || authCan('crm.create') || authCan('crm_status.index') || authCan('crm_status.create')): ?>
           <!-- Menu CRM -->
           <li class="nav-item dropdown">
             <a class="nav-link dropdown-toggle" href="#" id="crmMenu" role="button" data-bs-toggle="dropdown" aria-expanded="false">
@@ -140,6 +140,23 @@
               <?php endif; ?>
               <?php if (authCan('crm.index')): ?>
                 <li><a class="dropdown-item" href="<?= url('crm'); ?>"><i class="bi bi-list-ul me-2"></i>Listar</a></li>
+                <?php if (authCan('crm_status.index') || authCan('crm_status.create')): ?>
+                  <li><hr class="dropdown-divider" /></li>
+                <?php endif; ?>
+              <?php endif; ?>
+              <?php if (authCan('crm_status.index') || authCan('crm_status.create')): ?>
+                <li class="dropdown-submenu">
+                  <a class="dropdown-item submenu-toggle" href="#"><i class="bi bi-tags me-2"></i>Status</a>
+                  <ul class="dropdown-menu">
+                    <?php if (authCan('crm_status.create')): ?>
+                      <li><a class="dropdown-item" href="<?= url('crm_status/create'); ?>"><i class="bi bi-tag me-2"></i>Cadastrar</a></li>
+                    <?php endif; ?>
+                    <li><hr class="dropdown-divider" /></li>
+                    <?php if (authCan('crm_status.index')): ?>
+                      <li><a class="dropdown-item" href="<?= url('crm_status'); ?>"><i class="bi bi-list me-2"></i>Listar</a></li>
+                    <?php endif; ?>
+                  </ul>
+                </li>
               <?php endif; ?>
             </ul>
           </li>

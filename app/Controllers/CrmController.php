@@ -43,7 +43,7 @@ class CrmController extends TenantAwareController
 			'title' => 'CRM',
 			'crmPeople' => $rows,
 			'filters' => $filters,
-			'statuses' => Crm::statuses(),
+			'statuses' => $crm->statusOptions($tenantId),
 			'personTypes' => Crm::personTypes(),
 			'owners' => $crm->ownerOptions($tenantId),
 			'sort' => $order['sort'],
@@ -74,7 +74,7 @@ class CrmController extends TenantAwareController
 		$crm = new Crm();
 		$this->view('crm/create', [
 			'title' => 'Novo registro CRM',
-			'statuses' => Crm::statuses(),
+			'statuses' => $crm->statusOptions($this->currentTenantId()),
 			'personTypes' => Crm::personTypes(),
 			'owners' => $crm->ownerOptions($this->currentTenantId()),
 		]);
@@ -124,7 +124,7 @@ class CrmController extends TenantAwareController
 		$this->view('crm/edit', [
 			'title' => 'Editar registro CRM',
 			'crmRecord' => $data['crm'],
-			'statuses' => Crm::statuses(),
+			'statuses' => $crm->statusOptions($this->currentTenantId(), (int) ($data['crm']['crm_status_id'] ?? 0)),
 			'owners' => $crm->ownerOptions($this->currentTenantId(), (int) ($data['crm']['owner_user_id'] ?? 0)),
 		]);
 		}
@@ -157,7 +157,7 @@ class CrmController extends TenantAwareController
 			$this->view('crm/edit', [
 				'title' => 'Editar registro CRM',
 				'crmRecord' => $data['crm'] ?? [],
-				'statuses' => Crm::statuses(),
+				'statuses' => $crm->statusOptions($this->currentTenantId(), (int) ($data['crm']['crm_status_id'] ?? 0)),
 				'owners' => $crm->ownerOptions($this->currentTenantId(), (int) ($data['crm']['owner_user_id'] ?? 0)),
 				'formData' => $_POST,
 				'formError' => $e->getMessage(),
@@ -236,7 +236,7 @@ class CrmController extends TenantAwareController
 		http_response_code($status);
 		$this->view('crm/create', [
 			'title' => 'Novo registro CRM',
-			'statuses' => Crm::statuses(),
+			'statuses' => $crm->statusOptions($this->currentTenantId()),
 			'personTypes' => Crm::personTypes(),
 			'owners' => $crm->ownerOptions($this->currentTenantId()),
 			'formData' => $_POST,
@@ -251,7 +251,7 @@ class CrmController extends TenantAwareController
 			'name' => isset($_GET['name']) ? trim((string) $_GET['name']) : '',
 			'document' => isset($_GET['document']) ? trim((string) $_GET['document']) : '',
 			'type' => isset($_GET['type']) ? trim((string) $_GET['type']) : '',
-			'crm_status' => isset($_GET['crm_status']) ? trim((string) $_GET['crm_status']) : '',
+			'crm_status_id' => isset($_GET['crm_status_id']) ? trim((string) $_GET['crm_status_id']) : '',
 			'owner_user_id' => isset($_GET['owner_user_id']) ? trim((string) $_GET['owner_user_id']) : '',
 			'active' => isset($_GET['active']) ? trim((string) $_GET['active']) : '1',
 		];

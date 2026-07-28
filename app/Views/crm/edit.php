@@ -1,7 +1,7 @@
 <?php
 $formData = (isset($formData) && is_array($formData)) ? $formData : [];
 $crmForm = is_array($formData['crm'] ?? null) ? $formData['crm'] : [];
-$statusValue = (string) ($crmForm['crm_status'] ?? $crmRecord['crm_status'] ?? \App\Models\Crm::STATUS_LEAD);
+$statusValue = (string) ($crmForm['crm_status_id'] ?? $crmRecord['crm_status_id'] ?? '');
 $activeValue = (string) ($crmForm['active'] ?? $crmRecord['active'] ?? '1');
 $ownerValue = (string) ($crmForm['owner_user_id'] ?? $crmRecord['owner_user_id'] ?? '');
 ?>
@@ -44,11 +44,20 @@ $ownerValue = (string) ($crmForm['owner_user_id'] ?? $crmRecord['owner_user_id']
       <div class="row g-3">
         <div class="col-12 col-md-4">
           <label class="form-label" for="crmStatus">Situação *</label>
-          <select class="form-select" id="crmStatus" name="crm[crm_status]" required>
-            <?php foreach ($statuses as $value => $config): ?>
-              <option value="<?= htmlspecialchars((string) $value, ENT_QUOTES, 'UTF-8'); ?>" <?= $statusValue === (string) $value ? 'selected' : ''; ?>><?= htmlspecialchars((string) ($config['label'] ?? $value), ENT_QUOTES, 'UTF-8'); ?></option>
+          <select class="form-select" id="crmStatus" name="crm[crm_status_id]" required>
+            <option value="" disabled <?= $statusValue === '' ? 'selected' : ''; ?>>Cadastre um status CRM ativo...</option>
+            <?php foreach ($statuses as $status): ?>
+              <?php
+              $statusLabel = (string) ($status['name'] ?? '');
+              if ((int) ($status['active'] ?? 0) !== 1)
+                {
+                $statusLabel .= ' (inativo)';
+                }
+              ?>
+              <option value="<?= (int) $status['id']; ?>" <?= $statusValue === (string) $status['id'] ? 'selected' : ''; ?>><?= htmlspecialchars($statusLabel, ENT_QUOTES, 'UTF-8'); ?></option>
             <?php endforeach; ?>
           </select>
+          <div class="invalid-feedback">Selecione uma situação de CRM.</div>
         </div>
 
         <div class="col-12 col-md-4">

@@ -4,7 +4,7 @@ $filters = $filters ?? [
 	'name' => '',
 	'document' => '',
 	'type' => '',
-	'crm_status' => '',
+	'crm_status_id' => '',
 	'owner_user_id' => '',
 	'active' => '1',
 ];
@@ -18,7 +18,7 @@ $queryFilters = http_build_query([
 	'name' => $filters['name'],
 	'document' => $filters['document'],
 	'type' => $filters['type'],
-	'crm_status' => $filters['crm_status'],
+	'crm_status_id' => $filters['crm_status_id'],
 	'owner_user_id' => $filters['owner_user_id'],
 	'active' => $filters['active'],
 	'sort' => $sort,
@@ -31,7 +31,7 @@ $sortUrl = static function (string $column) use ($filters, $sort, $direction): s
 		'name' => $filters['name'],
 		'document' => $filters['document'],
 		'type' => $filters['type'],
-		'crm_status' => $filters['crm_status'],
+		'crm_status_id' => $filters['crm_status_id'],
 		'owner_user_id' => $filters['owner_user_id'],
 		'active' => $filters['active'],
 		'sort' => $column,
@@ -88,10 +88,10 @@ $sortIcon = static function (string $column) use ($sort, $direction): string {
         </div>
 
         <div class="col-12 col-md-4">
-          <select class="form-select" id="crm_status" name="crm_status">
-            <option value="" <?= $filters['crm_status'] === '' ? 'selected' : ''; ?>>Todas as situações</option>
-            <?php foreach ($statuses as $value => $config): ?>
-              <option value="<?= htmlspecialchars((string) $value, ENT_QUOTES, 'UTF-8'); ?>" <?= $filters['crm_status'] === (string) $value ? 'selected' : ''; ?>><?= htmlspecialchars((string) ($config['label'] ?? $value), ENT_QUOTES, 'UTF-8'); ?></option>
+          <select class="form-select" id="crm_status_id" name="crm_status_id">
+            <option value="" <?= $filters['crm_status_id'] === '' ? 'selected' : ''; ?>>Todas as situações</option>
+            <?php foreach ($statuses as $status): ?>
+              <option value="<?= (int) $status['id']; ?>" <?= $filters['crm_status_id'] === (string) $status['id'] ? 'selected' : ''; ?>><?= htmlspecialchars((string) ($status['name'] ?? ''), ENT_QUOTES, 'UTF-8'); ?></option>
             <?php endforeach; ?>
           </select>
         </div>
@@ -161,7 +161,7 @@ $sortIcon = static function (string $column) use ($sort, $direction): string {
                 <small class="text-muted"><?= htmlspecialchars(\App\Models\Crm::personTypeLabel((string) ($row['type'] ?? '')), ENT_QUOTES, 'UTF-8'); ?></small>
               </td>
               <td><?= htmlspecialchars(maskCpfCnpj((string) ($row['document'] ?? '')), ENT_QUOTES, 'UTF-8'); ?></td>
-              <td><span class="badge <?= htmlspecialchars(\App\Models\Crm::statusBadgeClass((string) ($row['crm_status'] ?? '')), ENT_QUOTES, 'UTF-8'); ?>"><?= htmlspecialchars(\App\Models\Crm::statusLabel((string) ($row['crm_status'] ?? '')), ENT_QUOTES, 'UTF-8'); ?></span></td>
+              <td><span class="badge <?= htmlspecialchars((string) ($row['crm_status_bootstrap_class'] ?? 'text-bg-secondary'), ENT_QUOTES, 'UTF-8'); ?>"><?= htmlspecialchars((string) ($row['crm_status_name'] ?? ''), ENT_QUOTES, 'UTF-8'); ?></span></td>
               <td><?= htmlspecialchars($ownerName, ENT_QUOTES, 'UTF-8'); ?></td>
               <td>
                 <div><?= htmlspecialchars((string) ($row['primary_email'] ?? ''), ENT_QUOTES, 'UTF-8'); ?></div>

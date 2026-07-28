@@ -3,7 +3,7 @@ $formData = (isset($formData) && is_array($formData)) ? $formData : [];
 $personForm = is_array($formData['person'] ?? null) ? $formData['person'] : [];
 $crmForm = is_array($formData['crm'] ?? null) ? $formData['crm'] : [];
 $contactForm = is_array($formData['contact'] ?? null) ? $formData['contact'] : [];
-$statusValue = (string) ($crmForm['crm_status'] ?? \App\Models\Crm::STATUS_LEAD);
+$statusValue = (string) ($crmForm['crm_status_id'] ?? ($statuses[0]['id'] ?? ''));
 $activeValue = (string) ($crmForm['active'] ?? '1');
 ?>
 
@@ -80,11 +80,13 @@ $activeValue = (string) ($crmForm['active'] ?? '1');
       <div class="row g-3">
         <div class="col-12 col-md-4">
           <label class="form-label" for="crmStatus">Situação *</label>
-          <select class="form-select" id="crmStatus" name="crm[crm_status]" required>
-            <?php foreach ($statuses as $value => $config): ?>
-              <option value="<?= htmlspecialchars((string) $value, ENT_QUOTES, 'UTF-8'); ?>" <?= $statusValue === (string) $value ? 'selected' : ''; ?>><?= htmlspecialchars((string) ($config['label'] ?? $value), ENT_QUOTES, 'UTF-8'); ?></option>
+          <select class="form-select" id="crmStatus" name="crm[crm_status_id]" required>
+            <option value="" disabled <?= $statusValue === '' ? 'selected' : ''; ?>>Cadastre um status CRM ativo...</option>
+            <?php foreach ($statuses as $status): ?>
+              <option value="<?= (int) $status['id']; ?>" <?= $statusValue === (string) $status['id'] ? 'selected' : ''; ?>><?= htmlspecialchars((string) ($status['name'] ?? ''), ENT_QUOTES, 'UTF-8'); ?></option>
             <?php endforeach; ?>
           </select>
+          <div class="invalid-feedback">Selecione uma situação de CRM.</div>
         </div>
 
         <div class="col-12 col-md-4">

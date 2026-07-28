@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Core\Model;
+use App\Core\TenantContext;
 use PDO;
 
 class Crm extends Model
@@ -110,11 +111,14 @@ class Crm extends Model
 	public function count(array $filters = [], ?int $tenantId = null): int
 		{
 		$tenantPeopleTable = $this->managerTable('tenant_people');
+		$crmStatusesTable = $this->tenantTable('crm_statuses');
 		$peopleTable = $this->managerTable('people');
 		$sql = "
 			SELECT COUNT(*) AS total
 			FROM {$tenantPeopleTable} AS TenantPerson
 			INNER JOIN {$peopleTable} AS Person ON Person.id = TenantPerson.person_id
+			LEFT JOIN {$crmStatusesTable} AS CrmStatus
+				ON CrmStatus.id = TenantPerson.crm_status_id
 			WHERE TenantPerson.tenant_id = :tenant_id
 		";
 		$params = ['tenant_id' => (int) $tenantId];
@@ -134,7 +138,7 @@ class Crm extends Model
 	public function create(array $data, int $tenantId, int $userId): array
 		{
 		$person = $this->normalizePersonPayload((array) ($data['person'] ?? []));
-		$crm = $this->normalizeCrmPayload((array) ($data['crm'] ?? []));
+		$crm = $this->normalizeCrmPayload((array) ($data['crm'] ?? []), $tenantId);
 		$contact = (array) ($data['contact'] ?? []);
 		$now = date('Y-m-d H:i:s');
 
@@ -207,7 +211,7 @@ class Crm extends Model
 			throw new \InvalidArgumentException('Registro CRM não encontrado.');
 			}
 
-		$crm = $this->normalizeCrmPayload((array) ($data['crm'] ?? []));
+		$crm = $this->normalizeCrmPayload((array) ($data['crm'] ?? []), $tenantId, (int) ($beforeData['crm']['crm_status_id'] ?? 0));
 		$this->assertAssignableOwner($crm['owner_user_id'], $tenantId, (int) ($beforeData['crm']['owner_user_id'] ?? 0));
 
 		try
@@ -251,17 +255,18 @@ class Crm extends Model
 		try
 			{
 			$this->db->beginTransaction();
+			$inactiveStatusId = (new CrmStatus())->inactiveStatusId();
 			$stmt = $this->db->prepare("
 				UPDATE " . $this->managerTable('tenant_people') . "
 				SET active = 0,
-				    crm_status = :crm_status,
+				    crm_status_id = COALESCE(:crm_status_id, crm_status_id),
 				    updated_by_user_id = :updated_by_user_id,
 				    modified = :modified
 				WHERE id = :id
 				  AND tenant_id = :tenant_id
 			");
 			$stmt->execute([
-				'crm_status' => self::STATUS_INACTIVE,
+				'crm_status_id' => $inactiveStatusId,
 				'updated_by_user_id' => $userId,
 				'modified' => date('Y-m-d H:i:s'),
 				'id' => $crmId,
@@ -358,11 +363,34 @@ class Crm extends Model
 		}
 
 	/**
+	 * Returns CRM status options available for the current tenant.
+	 */
+	public function statusOptions(int $tenantId, ?int $includeStatusId = null): array
+		{
+		return (new CrmStatus())->getOptions(true, $includeStatusId);
+		}
+
+	/**
+	 * Returns a table qualified with the current tenant database name.
+	 */
+	private function tenantTable(string $table): string
+		{
+		$databaseName = TenantContext::databaseName();
+		if (!$databaseName || !preg_match('/^[A-Za-z0-9_]+$/', $databaseName))
+			{
+			throw new \InvalidArgumentException('Tenant inválido para consulta do CRM.');
+			}
+
+		return sprintf('`%s`.`%s`', $databaseName, trim($table));
+		}
+
+	/**
 	 * Builds the base CRM select query.
 	 */
 	private function baseSelectSql(): string
 		{
 		$tenantPeopleTable = $this->managerTable('tenant_people');
+		$crmStatusesTable = $this->tenantTable('crm_statuses');
 		$peopleTable = $this->managerTable('people');
 		$usersTable = $this->managerTable('users');
 		$emailsTable = $this->managerTable('emails');
@@ -372,7 +400,7 @@ class Crm extends Model
 			SELECT TenantPerson.id,
 			       TenantPerson.tenant_id,
 			       TenantPerson.person_id,
-			       TenantPerson.crm_status,
+			       TenantPerson.crm_status_id,
 			       TenantPerson.owner_user_id,
 			       TenantPerson.source,
 			       TenantPerson.notes,
@@ -387,6 +415,10 @@ class Crm extends Model
 			       Person.document,
 			       Person.birthdate,
 			       Person.active AS person_active,
+			       CrmStatus.name AS crm_status_name,
+			       CrmStatus.slug AS crm_status_slug,
+			       CrmStatus.bootstrap_class AS crm_status_bootstrap_class,
+			       CrmStatus.active AS crm_status_active,
 			       OwnerUser.username AS owner_username,
 			       OwnerPerson.name AS owner_name,
 			       (
@@ -405,6 +437,8 @@ class Crm extends Model
 			       ) AS primary_phone
 			FROM {$tenantPeopleTable} AS TenantPerson
 			INNER JOIN {$peopleTable} AS Person ON Person.id = TenantPerson.person_id
+			LEFT JOIN {$crmStatusesTable} AS CrmStatus
+				ON CrmStatus.id = TenantPerson.crm_status_id
 			LEFT JOIN {$usersTable} AS OwnerUser ON OwnerUser.id = TenantPerson.owner_user_id
 			LEFT JOIN {$peopleTable} AS OwnerPerson ON OwnerPerson.id = OwnerUser.person_id
 		";
@@ -439,10 +473,10 @@ class Crm extends Model
 			$params['type'] = (string) $filters['type'];
 			}
 
-		if (isset($filters['crm_status']) && $filters['crm_status'] !== '' && isset(self::statuses()[$filters['crm_status']]))
+		if (isset($filters['crm_status_id']) && $filters['crm_status_id'] !== '')
 			{
-			$sql .= " AND TenantPerson.crm_status = :crm_status";
-			$params['crm_status'] = (string) $filters['crm_status'];
+			$sql .= " AND TenantPerson.crm_status_id = :crm_status_id";
+			$params['crm_status_id'] = (int) $filters['crm_status_id'];
 			}
 
 		if (isset($filters['owner_user_id']) && $filters['owner_user_id'] !== '')
@@ -471,7 +505,7 @@ class Crm extends Model
 			'id' => 'TenantPerson.id',
 			'name' => 'Person.name',
 			'document' => 'Person.document',
-			'crm_status' => 'TenantPerson.crm_status',
+			'crm_status' => 'CrmStatus.name',
 			'owner' => 'OwnerPerson.name',
 			'created' => 'TenantPerson.created',
 			'modified' => 'TenantPerson.modified',
@@ -529,10 +563,16 @@ class Crm extends Model
 	/**
 	 * Normalizes CRM metadata.
 	 */
-	private function normalizeCrmPayload(array $data): array
+	private function normalizeCrmPayload(array $data, int $tenantId, ?int $currentStatusId = null): array
 		{
-		$status = trim((string) ($data['crm_status'] ?? self::STATUS_LEAD));
-		if (!isset(self::statuses()[$status]))
+		$statusModel = new CrmStatus();
+		$statusId = (int) ($data['crm_status_id'] ?? 0);
+		if ($statusId <= 0)
+			{
+			$statusId = (int) ($statusModel->defaultStatusId() ?? 0);
+			}
+
+		if (!$statusModel->isAssignable($statusId, $currentStatusId))
 			{
 			throw new \InvalidArgumentException('Selecione uma situação de CRM válida.');
 			}
@@ -541,7 +581,7 @@ class Crm extends Model
 		$active = isset($data['active']) ? (int) $data['active'] : 1;
 
 		return [
-			'crm_status' => $status,
+			'crm_status_id' => $statusId,
 			'owner_user_id' => $ownerUserId > 0 ? $ownerUserId : null,
 			'source' => substr(trim((string) ($data['source'] ?? '')), 0, 120),
 			'notes' => substr(trim((string) ($data['notes'] ?? '')), 0, 2000),
@@ -669,14 +709,14 @@ class Crm extends Model
 		{
 		$stmt = $this->db->prepare("
 			INSERT INTO " . $this->managerTable('tenant_people') . "
-				(tenant_id, person_id, crm_status, owner_user_id, source, notes, active, created_by_user_id, updated_by_user_id, created, modified)
+				(tenant_id, person_id, crm_status_id, owner_user_id, source, notes, active, created_by_user_id, updated_by_user_id, created, modified)
 			VALUES
-				(:tenant_id, :person_id, :crm_status, :owner_user_id, :source, :notes, :active, :created_by_user_id, :updated_by_user_id, :created, :modified)
+				(:tenant_id, :person_id, :crm_status_id, :owner_user_id, :source, :notes, :active, :created_by_user_id, :updated_by_user_id, :created, :modified)
 		");
 		$stmt->execute([
 			'tenant_id' => $tenantId,
 			'person_id' => $personId,
-			'crm_status' => $crm['crm_status'],
+			'crm_status_id' => $crm['crm_status_id'],
 			'owner_user_id' => $crm['owner_user_id'],
 			'source' => $crm['source'],
 			'notes' => $crm['notes'],
@@ -697,7 +737,7 @@ class Crm extends Model
 		{
 		$stmt = $this->db->prepare("
 			UPDATE " . $this->managerTable('tenant_people') . "
-			SET crm_status = :crm_status,
+			SET crm_status_id = :crm_status_id,
 			    owner_user_id = :owner_user_id,
 			    source = :source,
 			    notes = :notes,
@@ -708,7 +748,7 @@ class Crm extends Model
 			  AND tenant_id = :tenant_id
 		");
 		$stmt->execute([
-			'crm_status' => $crm['crm_status'],
+			'crm_status_id' => $crm['crm_status_id'],
 			'owner_user_id' => $crm['owner_user_id'],
 			'source' => $crm['source'],
 			'notes' => $crm['notes'],
