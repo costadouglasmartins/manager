@@ -127,6 +127,24 @@
           </ul>
         </li>
         <!-- /Menu financeiro -->
+        <?php if (authCan('crm.index') || authCan('crm.create')): ?>
+          <!-- Menu CRM -->
+          <li class="nav-item dropdown">
+            <a class="nav-link dropdown-toggle" href="#" id="crmMenu" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+              <i class="bi bi-briefcase me-1"></i> CRM
+            </a>
+            <ul class="dropdown-menu" aria-labelledby="crmMenu">
+              <?php if (authCan('crm.create')): ?>
+                <li><a class="dropdown-item" href="<?= url('crm/create'); ?>"><i class="bi bi-person-plus me-2"></i>Cadastrar</a></li>
+                <li><hr class="dropdown-divider" /></li>
+              <?php endif; ?>
+              <?php if (authCan('crm.index')): ?>
+                <li><a class="dropdown-item" href="<?= url('crm'); ?>"><i class="bi bi-list-ul me-2"></i>Listar</a></li>
+              <?php endif; ?>
+            </ul>
+          </li>
+          <!-- /Menu CRM -->
+        <?php endif; ?>
         <?php if (authCan('task.index') || authCan('task.create') || authCan('task_category.index') || authCan('task_category.create')): ?>
           <!-- Menu tarefas -->
           <li class="nav-item dropdown">

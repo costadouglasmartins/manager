@@ -10,6 +10,7 @@ use App\Models\BankFile;
 use App\Models\BankSlip;
 use App\Models\City;
 use App\Models\Country;
+use App\Models\Crm;
 use App\Models\Email;
 use App\Models\FinancialOperation;
 use App\Models\FinancialOperationCategory;
@@ -273,6 +274,27 @@ class RecordListExportService
 				['label' => 'Sigla', 'field' => 'acronym'],
 				['label' => 'Criado em', 'callback' => fn (array $row): string => $this->dateTime($row['created'] ?? '')],
 				['label' => 'Modificado em', 'callback' => fn (array $row): string => $this->dateTime($row['modified'] ?? '')],
+			]),
+			'crm' => $this->standardDefinition(Crm::class, 'Lista do CRM', 'crm', ['id', 'name', 'document', 'type', 'crm_status', 'owner_user_id', 'active'], [
+				['label' => '#', 'field' => 'id', 'align' => 'right'],
+				['label' => 'Pessoa ID', 'field' => 'person_id', 'align' => 'right'],
+				['label' => 'Nome', 'field' => 'name'],
+				['label' => 'Fantasia', 'field' => 'fantasy'],
+				['label' => 'Documento', 'callback' => fn (array $row): string => \maskCpfCnpj((string) ($row['document'] ?? ''))],
+				['label' => 'Tipo', 'callback' => fn (array $row): string => Crm::personTypeLabel((string) ($row['type'] ?? ''))],
+				['label' => 'Situação CRM', 'callback' => fn (array $row): string => Crm::statusLabel((string) ($row['crm_status'] ?? ''))],
+				['label' => 'Responsável', 'callback' => fn (array $row): string => trim((string) ($row['owner_name'] ?? '')) ?: (string) ($row['owner_username'] ?? '')],
+				['label' => 'Origem', 'field' => 'source'],
+				['label' => 'E-mail', 'field' => 'primary_email'],
+				['label' => 'Telefone', 'callback' => fn (array $row): string => \maskPhoneBr((string) ($row['primary_phone'] ?? ''))],
+				['label' => 'Vínculo', 'callback' => fn (array $row): string => $this->activeLabel($row['active'] ?? null)],
+				['label' => 'Observações', 'field' => 'notes'],
+				['label' => 'Criado em', 'callback' => fn (array $row): string => Crm::formatDateTime($row['created'] ?? '')],
+				['label' => 'Modificado em', 'callback' => fn (array $row): string => Crm::formatDateTime($row['modified'] ?? '')],
+			], [
+				'needsTenant' => true,
+				'tenantIdArgument' => true,
+				'searchArguments' => fn (array $filters, array $query, int $total): array => [$filters, max(1, $total), 0, $this->currentTenantId(), $this->crmSort($query), $this->crmDirection($query)],
 			]),
 			'email' => $this->standardDefinition(Email::class, 'Lista de e-mails', 'emails', ['id', 'email', 'person_id', 'person_name'], [
 				['label' => '#', 'field' => 'id', 'align' => 'right'],
@@ -715,6 +737,8 @@ class RecordListExportService
 			'type' => 'Tipo',
 			'document' => 'Documento',
 			'birthdate' => 'Data de nascimento',
+			'crm_status' => 'Situação CRM',
+			'owner_user_id' => 'Responsável',
 			'zip_code' => 'CEP',
 			'street' => 'Logradouro',
 			'person_id' => 'Pessoa',
@@ -887,6 +911,17 @@ class RecordListExportService
 		{
 		$position = strpos($ability, '.');
 		return $position === false ? 'outros' : substr($ability, 0, $position);
+		}
+
+	private function crmSort(array $query): string
+		{
+		$sort = trim((string) ($query['sort'] ?? 'modified'));
+		return $sort !== '' ? $sort : 'modified';
+		}
+
+	private function crmDirection(array $query): string
+		{
+		return strtolower(trim((string) ($query['direction'] ?? 'desc'))) === 'asc' ? 'asc' : 'desc';
 		}
 
 	private function taskSort(array $query): string
