@@ -395,6 +395,8 @@ class Crm extends Model
 		$usersTable = $this->managerTable('users');
 		$emailsTable = $this->managerTable('emails');
 		$phoneNumbersTable = $this->managerTable('phone_numbers');
+		$crmActivitiesTable = $this->tenantTable('crm_activities');
+		$activityStatusesTable = $this->tenantTable('crm_activity_statuses');
 
 		return "
 			SELECT TenantPerson.id,
@@ -421,6 +423,28 @@ class Crm extends Model
 			       CrmStatus.active AS crm_status_active,
 			       OwnerUser.username AS owner_username,
 			       OwnerPerson.name AS owner_name,
+			       (
+				SELECT Activity.scheduled_at
+				FROM {$crmActivitiesTable} AS Activity
+				LEFT JOIN {$activityStatusesTable} AS ActivityStatus ON ActivityStatus.id = Activity.activity_status_id
+				WHERE Activity.tenant_person_id = TenantPerson.id
+				  AND Activity.active = 1
+				  AND Activity.completed_at IS NULL
+				  AND COALESCE(ActivityStatus.is_final, 0) = 0
+				ORDER BY Activity.scheduled_at IS NULL ASC, Activity.scheduled_at ASC, Activity.id ASC
+				LIMIT 1
+			       ) AS next_activity_at,
+			       (
+				SELECT Activity.title
+				FROM {$crmActivitiesTable} AS Activity
+				LEFT JOIN {$activityStatusesTable} AS ActivityStatus ON ActivityStatus.id = Activity.activity_status_id
+				WHERE Activity.tenant_person_id = TenantPerson.id
+				  AND Activity.active = 1
+				  AND Activity.completed_at IS NULL
+				  AND COALESCE(ActivityStatus.is_final, 0) = 0
+				ORDER BY Activity.scheduled_at IS NULL ASC, Activity.scheduled_at ASC, Activity.id ASC
+				LIMIT 1
+			       ) AS next_activity_title,
 			       (
 			       	SELECT Email.email
 			       	FROM {$emailsTable} AS Email
@@ -485,6 +509,89 @@ class Crm extends Model
 			$params['owner_user_id'] = (int) $filters['owner_user_id'];
 			}
 
+		if (isset($filters['source']) && $filters['source'] !== '')
+			{
+			$sql .= " AND TenantPerson.source LIKE :source";
+			$params['source'] = '%' . trim((string) $filters['source']) . '%';
+			}
+
+		if (isset($filters['next_activity_from']) && $filters['next_activity_from'] !== '')
+			{
+			$sql .= " AND EXISTS (
+				SELECT 1
+				FROM " . $this->tenantTable('crm_activities') . " AS FilterActivity
+				LEFT JOIN " . $this->tenantTable('crm_activity_statuses') . " AS FilterActivityStatus
+					ON FilterActivityStatus.id = FilterActivity.activity_status_id
+				WHERE FilterActivity.tenant_person_id = TenantPerson.id
+				  AND FilterActivity.active = 1
+				  AND FilterActivity.completed_at IS NULL
+				  AND COALESCE(FilterActivityStatus.is_final, 0) = 0
+				  AND FilterActivity.scheduled_at >= :next_activity_from
+			)";
+			$params['next_activity_from'] = $this->normalizeDateBoundary((string) $filters['next_activity_from'], false);
+			}
+
+		if (isset($filters['next_activity_to']) && $filters['next_activity_to'] !== '')
+			{
+			$sql .= " AND EXISTS (
+				SELECT 1
+				FROM " . $this->tenantTable('crm_activities') . " AS FilterActivity
+				LEFT JOIN " . $this->tenantTable('crm_activity_statuses') . " AS FilterActivityStatus
+					ON FilterActivityStatus.id = FilterActivity.activity_status_id
+				WHERE FilterActivity.tenant_person_id = TenantPerson.id
+				  AND FilterActivity.active = 1
+				  AND FilterActivity.completed_at IS NULL
+				  AND COALESCE(FilterActivityStatus.is_final, 0) = 0
+				  AND FilterActivity.scheduled_at <= :next_activity_to
+			)";
+			$params['next_activity_to'] = $this->normalizeDateBoundary((string) $filters['next_activity_to'], true);
+			}
+
+		if (isset($filters['activity_scope']) && isset(CrmActivity::activityScopes()[(string) $filters['activity_scope']]))
+			{
+			$activityTable = $this->tenantTable('crm_activities');
+			$statusTable = $this->tenantTable('crm_activity_statuses');
+			$scope = (string) $filters['activity_scope'];
+			if ($scope === 'without_activity')
+				{
+				$sql .= " AND NOT EXISTS (
+					SELECT 1
+					FROM {$activityTable} AS ScopeActivity
+					WHERE ScopeActivity.tenant_person_id = TenantPerson.id
+					  AND ScopeActivity.active = 1
+				)";
+				}
+			else
+				{
+				$scopeCondition = "ScopeActivity.active = 1";
+				if ($scope === 'pending')
+					{
+					$scopeCondition .= " AND ScopeActivity.completed_at IS NULL AND COALESCE(ScopeActivityStatus.is_final, 0) = 0";
+					}
+				elseif ($scope === 'overdue')
+					{
+					$scopeCondition .= " AND ScopeActivity.completed_at IS NULL AND COALESCE(ScopeActivityStatus.is_final, 0) = 0 AND ScopeActivity.scheduled_at < NOW()";
+					}
+				elseif ($scope === 'today')
+					{
+					$scopeCondition .= " AND ScopeActivity.completed_at IS NULL AND COALESCE(ScopeActivityStatus.is_final, 0) = 0 AND DATE(ScopeActivity.scheduled_at) = CURDATE()";
+					}
+				elseif ($scope === 'completed')
+					{
+					$scopeCondition .= " AND (ScopeActivity.completed_at IS NOT NULL OR COALESCE(ScopeActivityStatus.is_final, 0) = 1)";
+					}
+
+				$sql .= " AND EXISTS (
+					SELECT 1
+					FROM {$activityTable} AS ScopeActivity
+					LEFT JOIN {$statusTable} AS ScopeActivityStatus
+						ON ScopeActivityStatus.id = ScopeActivity.activity_status_id
+					WHERE ScopeActivity.tenant_person_id = TenantPerson.id
+					  AND {$scopeCondition}
+				)";
+				}
+			}
+
 		if (isset($filters['active']) && $filters['active'] !== '')
 			{
 			$active = (int) $filters['active'];
@@ -507,6 +614,7 @@ class Crm extends Model
 			'document' => 'Person.document',
 			'crm_status' => 'CrmStatus.name',
 			'owner' => 'OwnerPerson.name',
+			'next_activity' => 'next_activity_at',
 			'created' => 'TenantPerson.created',
 			'modified' => 'TenantPerson.modified',
 		];
@@ -514,6 +622,20 @@ class Crm extends Model
 		$dir = strtolower($direction) === 'asc' ? 'ASC' : 'DESC';
 
 		return " ORDER BY {$column} {$dir}, TenantPerson.id DESC";
+		}
+
+	private function normalizeDateBoundary(string $value, bool $endOfDay): string
+		{
+		$date = \DateTimeImmutable::createFromFormat('!Y-m-d', trim($value));
+		$errors = \DateTimeImmutable::getLastErrors();
+		$hasErrors = is_array($errors)
+			&& (((int) ($errors['warning_count'] ?? 0) > 0) || ((int) ($errors['error_count'] ?? 0) > 0));
+		if ($date === false || $hasErrors)
+			{
+			throw new \InvalidArgumentException('Informe um período de próxima atividade válido.');
+			}
+
+		return $date->format('Y-m-d') . ($endOfDay ? ' 23:59:59' : ' 00:00:00');
 		}
 
 	/**

@@ -275,7 +275,7 @@ class RecordListExportService
 				['label' => 'Criado em', 'callback' => fn (array $row): string => $this->dateTime($row['created'] ?? '')],
 				['label' => 'Modificado em', 'callback' => fn (array $row): string => $this->dateTime($row['modified'] ?? '')],
 			]),
-			'crm' => $this->standardDefinition(Crm::class, 'Lista do CRM', 'crm', ['id', 'name', 'document', 'type', 'crm_status_id', 'owner_user_id', 'active'], [
+			'crm' => $this->standardDefinition(Crm::class, 'Lista do CRM', 'crm', ['id', 'name', 'document', 'type', 'crm_status_id', 'owner_user_id', 'source', 'next_activity_from', 'next_activity_to', 'activity_scope', 'active'], [
 				['label' => '#', 'field' => 'id', 'align' => 'right'],
 				['label' => 'Pessoa ID', 'field' => 'person_id', 'align' => 'right'],
 				['label' => 'Nome', 'field' => 'name'],
@@ -287,6 +287,7 @@ class RecordListExportService
 				['label' => 'Origem', 'field' => 'source'],
 				['label' => 'E-mail', 'field' => 'primary_email'],
 				['label' => 'Telefone', 'callback' => fn (array $row): string => \maskPhoneBr((string) ($row['primary_phone'] ?? ''))],
+				['label' => 'Próxima atividade', 'callback' => fn (array $row): string => trim(Crm::formatDateTime($row['next_activity_at'] ?? '') . ' ' . (string) ($row['next_activity_title'] ?? ''))],
 				['label' => 'Vínculo', 'callback' => fn (array $row): string => $this->activeLabel($row['active'] ?? null)],
 				['label' => 'Observações', 'field' => 'notes'],
 				['label' => 'Criado em', 'callback' => fn (array $row): string => Crm::formatDateTime($row['created'] ?? '')],
@@ -739,6 +740,10 @@ class RecordListExportService
 			'birthdate' => 'Data de nascimento',
 			'crm_status_id' => 'Situação CRM',
 			'owner_user_id' => 'Responsável',
+			'source' => 'Origem',
+			'next_activity_from' => 'Próxima atividade de',
+			'next_activity_to' => 'Próxima atividade até',
+			'activity_scope' => 'Acompanhamento CRM',
 			'zip_code' => 'CEP',
 			'street' => 'Logradouro',
 			'person_id' => 'Pessoa',

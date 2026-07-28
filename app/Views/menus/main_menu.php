@@ -127,19 +127,27 @@
           </ul>
         </li>
         <!-- /Menu financeiro -->
-        <?php if (authCan('crm.index') || authCan('crm.create') || authCan('crm_status.index') || authCan('crm_status.create') || authCan('crm_activity_type.index') || authCan('crm_activity_type.create') || authCan('crm_activity_status.index') || authCan('crm_activity_status.create')): ?>
+        <?php if (authCan('crm.dashboard') || authCan('crm.index') || authCan('crm.create') || authCan('crm_activity.index') || authCan('crm_activity.create') || authCan('crm_status.index') || authCan('crm_status.create') || authCan('crm_activity_type.index') || authCan('crm_activity_type.create') || authCan('crm_activity_status.index') || authCan('crm_activity_status.create')): ?>
           <!-- Menu CRM -->
           <li class="nav-item dropdown">
             <a class="nav-link dropdown-toggle" href="#" id="crmMenu" role="button" data-bs-toggle="dropdown" aria-expanded="false">
               <i class="bi bi-briefcase me-1"></i> CRM
             </a>
             <ul class="dropdown-menu" aria-labelledby="crmMenu">
+              <?php if (authCan('crm.dashboard')): ?>
+                <li><a class="dropdown-item" href="<?= url('crm/dashboard'); ?>"><i class="bi bi-speedometer2 me-2"></i>Painel</a></li>
+              <?php endif; ?>
               <?php if (authCan('crm.create')): ?>
                 <li><a class="dropdown-item" href="<?= url('crm/create'); ?>"><i class="bi bi-person-plus me-2"></i>Cadastrar</a></li>
                 <li><hr class="dropdown-divider" /></li>
               <?php endif; ?>
               <?php if (authCan('crm.index')): ?>
                 <li><a class="dropdown-item" href="<?= url('crm'); ?>"><i class="bi bi-list-ul me-2"></i>Listar</a></li>
+              <?php endif; ?>
+              <?php if (authCan('crm_activity.index') || authCan('crm_activity.create')): ?>
+                <li><a class="dropdown-item" href="<?= authCan('crm_activity.index') ? url('crm_activity') : url('crm_activity/create'); ?>"><i class="bi bi-clock-history me-2"></i>Atividades</a></li>
+              <?php endif; ?>
+              <?php if (authCan('crm.index') || authCan('crm_activity.index') || authCan('crm_activity.create')): ?>
                 <?php if (authCan('crm_status.index') || authCan('crm_status.create') || authCan('crm_activity_type.index') || authCan('crm_activity_type.create') || authCan('crm_activity_status.index') || authCan('crm_activity_status.create')): ?>
                   <li><hr class="dropdown-divider" /></li>
                 <?php endif; ?>

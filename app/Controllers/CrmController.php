@@ -5,6 +5,7 @@ namespace App\Controllers;
 use App\Core\TenantAwareController;
 use App\Core\TenantContext;
 use App\Models\Crm;
+use App\Models\CrmActivity;
 
 class CrmController extends TenantAwareController
 	{
@@ -46,6 +47,7 @@ class CrmController extends TenantAwareController
 			'statuses' => $crm->statusOptions($tenantId),
 			'personTypes' => Crm::personTypes(),
 			'owners' => $crm->ownerOptions($tenantId),
+			'activityScopes' => CrmActivity::activityScopes(),
 			'sort' => $order['sort'],
 			'direction' => $order['direction'],
 			'page' => $page,
@@ -62,6 +64,20 @@ class CrmController extends TenantAwareController
 	public function exportExcel(): void
 		{
 		parent::exportExcel();
+		}
+
+	/**
+	 * Displays a simple CRM dashboard for the selected tenant.
+	 */
+	public function dashboard(): void
+		{
+		$this->requirePermission('crm.dashboard');
+
+		$activity = new CrmActivity();
+		$this->view('crm/dashboard', [
+			'title' => 'Painel CRM',
+			'dashboard' => $activity->dashboard($this->currentTenantId()),
+		]);
 		}
 
 	/**
@@ -115,6 +131,7 @@ class CrmController extends TenantAwareController
 		$this->requirePermission('crm.edit');
 
 		$crm = new Crm();
+		$activity = new CrmActivity();
 		$data = $crm->findAllByCrmId($id, $this->currentTenantId());
 		if (empty($data['crm']))
 			{
@@ -197,6 +214,7 @@ class CrmController extends TenantAwareController
 			'emails' => $data['emails'],
 			'phones' => $data['phones'],
 			'addresses' => $data['addresses'],
+			'activities' => $activity->timelineByCrmId((int) $id, $this->currentTenantId()),
 		]);
 		}
 
@@ -253,6 +271,10 @@ class CrmController extends TenantAwareController
 			'type' => isset($_GET['type']) ? trim((string) $_GET['type']) : '',
 			'crm_status_id' => isset($_GET['crm_status_id']) ? trim((string) $_GET['crm_status_id']) : '',
 			'owner_user_id' => isset($_GET['owner_user_id']) ? trim((string) $_GET['owner_user_id']) : '',
+			'source' => isset($_GET['source']) ? trim((string) $_GET['source']) : '',
+			'next_activity_from' => isset($_GET['next_activity_from']) ? trim((string) $_GET['next_activity_from']) : '',
+			'next_activity_to' => isset($_GET['next_activity_to']) ? trim((string) $_GET['next_activity_to']) : '',
+			'activity_scope' => isset($_GET['activity_scope']) ? trim((string) $_GET['activity_scope']) : '',
 			'active' => isset($_GET['active']) ? trim((string) $_GET['active']) : '1',
 		];
 		}
