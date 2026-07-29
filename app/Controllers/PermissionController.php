@@ -83,13 +83,13 @@ class PermissionController extends Controller
 		$permissionModel = new Permission();
 		if (!$permissionModel->userBelongsToTenant($userId, $tenantId))
 			{
-			$this->redirect('permission');
+			$this->redirectWithFlash('permission', 'danger', 'Usuário inválido para o tenant selecionado.');
 			}
 
 		$permissionModel->setPermissionsForUser($userId, $permissionIds, $tenantId);
 		Authorization::clearCache();
 
-		$this->redirect('permission?user_id=' . $userId);
+		$this->redirectWithFlash('permission?user_id=' . $userId, 'success', 'Permissões do usuário salvas com sucesso.');
 		}
 
 	/**
@@ -105,13 +105,13 @@ class PermissionController extends Controller
 
 		Authorization::clearCache();
 
-		$qs = 'permission?synced=' . $added;
-		if ($backUserId > 0)
-			{
-			$qs .= '&user_id=' . $backUserId;
-			}
-
-		$this->redirect($qs);
+		$this->redirectWithFlash(
+			$backUserId > 0 ? 'permission?user_id=' . $backUserId : 'permission',
+			'success',
+			$added > 0
+				? ('Sincronização concluída: ' . (int) $added . ' permissões adicionadas ao catálogo.')
+				: 'Sincronização concluída: nenhuma permissão nova foi encontrada.'
+		);
 		}
 
 	/**
@@ -130,13 +130,11 @@ class PermissionController extends Controller
 
 		Authorization::clearCache();
 
-		$qs = 'permission?created=' . ($ok ? '1' : '0');
-		if ($backUserId > 0)
-			{
-			$qs .= '&user_id=' . $backUserId;
-			}
-
-		$this->redirect($qs);
+		$this->redirectWithFlash(
+			$backUserId > 0 ? 'permission?user_id=' . $backUserId : 'permission',
+			$ok ? 'success' : 'danger',
+			$ok ? 'Permissão adicionada ao catálogo.' : 'Não foi possível adicionar a permissão.'
+		);
 		}
 
 	/**
@@ -188,10 +186,10 @@ class PermissionController extends Controller
 		{
 		$this->currentTenantId();
 
-		if (strtoupper((string) ($_SERVER['REQUEST_METHOD'] ?? 'GET')) !== 'POST')
-			{
-			$this->redirect('permission/orphaned');
-			}
+			if (strtoupper((string) ($_SERVER['REQUEST_METHOD'] ?? 'GET')) !== 'POST')
+				{
+				$this->redirectWithFlash('permission/orphaned', 'danger', 'Método não permitido para a exclusão da permissão órfã.');
+				}
 
 		$permissionModel = new Permission();
 
@@ -201,14 +199,14 @@ class PermissionController extends Controller
 
 			if ($result['success'])
 				{
-				$this->redirect('permission/orphaned?deleted=1&users_affected=' . (int) $result['users_affected']);
+				$this->redirectWithFlash('permission/orphaned', 'success', 'Permissão órfã removida com sucesso.');
 				}
 
-			$this->redirect('permission/orphaned?deleted=0&error=not_orphaned');
+			$this->redirectWithFlash('permission/orphaned', 'danger', 'Não foi possível remover a permissão órfã.');
 			}
 		catch (\Throwable $e)
 			{
-			$this->redirect('permission/orphaned?deleted=0&error=exception');
+			$this->redirectWithFlash('permission/orphaned', 'danger', 'Não foi possível remover a permissão órfã.');
 			}
 		}
 

@@ -75,7 +75,11 @@ abstract class CrmCatalogController extends TenantAwareController
 		try
 			{
 			$result = $catalog->create($_POST, $this->currentManagerUserId());
-			$this->redirect((string) $meta['resource'] . '/informations/' . (int) ($result['id'] ?? 0));
+			$this->redirectWithFlash(
+				(string) $meta['resource'] . '/informations/' . (int) ($result['id'] ?? 0),
+				'success',
+				'Cadastro CRM salvo com sucesso.'
+			);
 			}
 		catch (\InvalidArgumentException $e)
 			{
@@ -108,7 +112,7 @@ abstract class CrmCatalogController extends TenantAwareController
 		$meta = $catalogModel->meta();
 		if (!$catalog)
 			{
-			$this->redirect((string) $meta['resource']);
+			$this->redirectWithFlash((string) $meta['resource'], 'warning', 'Cadastro CRM não encontrado.');
 			}
 
 		$this->view('crm_catalogs/edit', [
@@ -134,7 +138,11 @@ abstract class CrmCatalogController extends TenantAwareController
 		try
 			{
 			$catalogModel->update($id, $_POST, $this->currentManagerUserId());
-			$this->redirect((string) $meta['resource'] . '/informations/' . (int) $id);
+			$this->redirectWithFlash(
+				(string) $meta['resource'] . '/informations/' . (int) $id,
+				'success',
+				'Cadastro CRM atualizado com sucesso.'
+			);
 			}
 		catch (\InvalidArgumentException $e)
 			{
@@ -161,7 +169,11 @@ abstract class CrmCatalogController extends TenantAwareController
 				$this->json(['error' => 'Não foi possível atualizar o cadastro CRM agora.'], 500);
 				}
 
-			$this->redirect((string) $meta['resource']);
+			$this->redirectWithFlash(
+				(string) $meta['resource'],
+				'danger',
+				'Não foi possível atualizar o cadastro CRM agora.'
+			);
 			}
 		}
 
@@ -179,7 +191,7 @@ abstract class CrmCatalogController extends TenantAwareController
 		$meta = $catalogModel->meta();
 		if (!$catalog)
 			{
-			$this->redirect((string) $meta['resource']);
+			$this->redirectWithFlash((string) $meta['resource'], 'warning', 'Cadastro CRM não encontrado.');
 			}
 
 		$this->view('crm_catalogs/informations', [
@@ -205,6 +217,11 @@ abstract class CrmCatalogController extends TenantAwareController
 		try
 			{
 			$catalogModel->delete($id, $this->currentManagerUserId());
+			$this->redirectWithFlash(
+				(string) $meta['resource'],
+				'success',
+				'Cadastro CRM desativado com sucesso.'
+			);
 			}
 		catch (\InvalidArgumentException $e)
 			{
@@ -212,6 +229,8 @@ abstract class CrmCatalogController extends TenantAwareController
 				{
 				$this->json(['error' => $e->getMessage()], 422);
 				}
+
+			$this->redirectWithFlash((string) $meta['resource'], 'danger', $e->getMessage());
 			}
 		catch (\Throwable $e)
 			{
@@ -220,9 +239,13 @@ abstract class CrmCatalogController extends TenantAwareController
 				{
 				$this->json(['error' => 'Não foi possível desativar o cadastro CRM agora.'], 500);
 				}
-			}
 
-		$this->redirect((string) $meta['resource']);
+			$this->redirectWithFlash(
+				(string) $meta['resource'],
+				'danger',
+				'Não foi possível desativar o cadastro CRM agora.'
+			);
+			}
 		}
 
 	/**

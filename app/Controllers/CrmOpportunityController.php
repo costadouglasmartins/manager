@@ -69,12 +69,16 @@ class CrmOpportunityController extends TenantAwareController
 		$this->requirePost();
 
 		$opportunity = new CrmOpportunity();
-		try
-			{
-			$result = $opportunity->create($_POST, $this->currentTenantId(), $this->currentUserId());
-			$backToCrm = (string) ($_POST['back_to_crm'] ?? '') === '1';
-			$this->redirect($backToCrm ? 'crm/informations/' . (int) ($result['tenant_person_id'] ?? 0) : 'crm_opportunity/informations/' . (int) ($result['crm_opportunity_id'] ?? 0));
-			}
+			try
+				{
+				$result = $opportunity->create($_POST, $this->currentTenantId(), $this->currentUserId());
+				$backToCrm = (string) ($_POST['back_to_crm'] ?? '') === '1';
+				$this->redirectWithFlash(
+					$backToCrm ? 'crm/informations/' . (int) ($result['tenant_person_id'] ?? 0) : 'crm_opportunity/informations/' . (int) ($result['crm_opportunity_id'] ?? 0),
+					'success',
+					'Oportunidade CRM salva com sucesso.'
+				);
+				}
 		catch (\InvalidArgumentException $e)
 			{
 			$this->renderForm('crm_opportunities/create', 'Nova oportunidade CRM', [
@@ -100,7 +104,7 @@ class CrmOpportunityController extends TenantAwareController
 		$data = $opportunity->findAllByCrmOpportunityId($id, $this->currentTenantId());
 		if (empty($data['crm_opportunity']))
 			{
-			$this->redirect('crm_opportunity');
+			$this->redirectWithFlash('crm_opportunity', 'warning', 'Oportunidade CRM não encontrada.');
 			}
 
 		$this->renderForm('crm_opportunities/edit', 'Editar oportunidade CRM', [
@@ -114,11 +118,11 @@ class CrmOpportunityController extends TenantAwareController
 		$this->requirePost();
 
 		$opportunity = new CrmOpportunity();
-		try
-			{
-			$opportunity->update($id, $_POST, $this->currentTenantId(), $this->currentUserId());
-			$this->redirect('crm_opportunity/informations/' . (int) $id);
-			}
+			try
+				{
+				$opportunity->update($id, $_POST, $this->currentTenantId(), $this->currentUserId());
+				$this->redirectWithFlash('crm_opportunity/informations/' . (int) $id, 'success', 'Oportunidade CRM atualizada com sucesso.');
+				}
 		catch (\InvalidArgumentException $e)
 			{
 			$data = $opportunity->findAllByCrmOpportunityId($id, $this->currentTenantId());
@@ -128,11 +132,11 @@ class CrmOpportunityController extends TenantAwareController
 				'formError' => $e->getMessage(),
 			], 422);
 			}
-		catch (\Throwable $e)
-			{
-			error_log('CRM OPPORTUNITY UPDATE ERROR: ' . $e->getMessage());
-			$this->redirect('crm_opportunity');
-			}
+			catch (\Throwable $e)
+				{
+				error_log('CRM OPPORTUNITY UPDATE ERROR: ' . $e->getMessage());
+				$this->redirectWithFlash('crm_opportunity', 'danger', 'Não foi possível atualizar a oportunidade CRM agora.');
+				}
 		}
 
 	public function informations($id): void
@@ -143,7 +147,7 @@ class CrmOpportunityController extends TenantAwareController
 		$data = $opportunity->findAllByCrmOpportunityId($id, $this->currentTenantId());
 		if (empty($data['crm_opportunity']))
 			{
-			$this->redirect('crm_opportunity');
+			$this->redirectWithFlash('crm_opportunity', 'warning', 'Oportunidade CRM não encontrada.');
 			}
 
 		$this->view('crm_opportunities/informations', [
@@ -169,10 +173,21 @@ class CrmOpportunityController extends TenantAwareController
 				{
 				$this->json(['error' => $e->getMessage()], 422);
 				}
+
+			$redirectTo = trim((string) ($_POST['redirect_to'] ?? ''));
+			$this->redirectWithFlash(
+				$redirectTo !== '' ? $redirectTo : 'crm_opportunity/informations/' . (int) $id,
+				'danger',
+				'Não foi possível atualizar a etapa da oportunidade CRM agora.'
+			);
 			}
 
 		$redirectTo = trim((string) ($_POST['redirect_to'] ?? ''));
-		$this->redirect($redirectTo !== '' ? $redirectTo : 'crm_opportunity/informations/' . (int) $id);
+		$this->redirectWithFlash(
+			$redirectTo !== '' ? $redirectTo : 'crm_opportunity/informations/' . (int) $id,
+			'success',
+			'Oportunidade CRM atualizada com sucesso.'
+		);
 		}
 
 	public function delete($id): void
@@ -191,9 +206,11 @@ class CrmOpportunityController extends TenantAwareController
 				{
 				$this->json(['error' => $e->getMessage()], 422);
 				}
+
+			$this->redirectWithFlash('crm_opportunity', 'danger', 'Não foi possível excluir a oportunidade CRM agora.');
 			}
 
-		$this->redirect('crm_opportunity');
+		$this->redirectWithFlash('crm_opportunity', 'success', 'Oportunidade CRM excluída com sucesso.');
 		}
 
 	public function kanban(): void

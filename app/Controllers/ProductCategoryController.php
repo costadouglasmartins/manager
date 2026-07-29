@@ -84,12 +84,12 @@ class ProductCategoryController extends TenantAwareController
 		{
 		$this->requirePermission('product_category.store');
 
-		$productCategory = new ProductCategory();
-		try
-			{
-			$productCategory->create($_POST);
-			$this->redirect('product_category');
-			}
+			$productCategory = new ProductCategory();
+			try
+				{
+				$productCategory->create($_POST);
+				$this->redirectWithFlash('product_category', 'success', 'Categoria de produto salva com sucesso.');
+				}
 		catch (\Throwable $e)
 			{
 			http_response_code(422);
@@ -109,12 +109,12 @@ class ProductCategoryController extends TenantAwareController
 		{
 		$this->requirePermission('product_category.edit');
 
-		$productCategory = new ProductCategory();
-		$category = $productCategory->find($id);
-		if (!$category)
-			{
-			$this->redirect('product_category');
-			}
+			$productCategory = new ProductCategory();
+			$category = $productCategory->find($id);
+			if (!$category)
+				{
+				$this->redirectWithFlash('product_category', 'danger', 'Categoria de produto não encontrada.');
+				}
 
 		$this->view('product_categories/edit', [
 			'title'    => 'Editar categoria de produto',
@@ -134,11 +134,11 @@ class ProductCategoryController extends TenantAwareController
 		$this->requirePermission('product_category.update');
 
 		$productCategory = new ProductCategory();
-		try
-			{
-			$productCategory->update($id, $_POST);
-			$this->redirect('product_category');
-			}
+			try
+				{
+				$productCategory->update($id, $_POST);
+				$this->redirectWithFlash('product_category', 'success', 'Categoria de produto atualizada com sucesso.');
+				}
 		catch (\Throwable $e)
 			{
 			$category = array_merge($productCategory->find($id) ?: [], $_POST);
@@ -160,12 +160,12 @@ class ProductCategoryController extends TenantAwareController
 		{
 		$this->requirePermission('product_category.informations');
 
-		$productCategory = new ProductCategory();
-		$data = $productCategory->findAllByProductCategoryId($id);
-		if (empty($data['product_category']))
-			{
-			$this->redirect('product_category');
-			}
+			$productCategory = new ProductCategory();
+			$data = $productCategory->findAllByProductCategoryId($id);
+			if (empty($data['product_category']))
+				{
+				$this->redirectWithFlash('product_category', 'danger', 'Categoria de produto não encontrada.');
+				}
 
 		$this->view('product_categories/informations', [
 			'title'    => 'Informações da categoria de produto',
@@ -185,11 +185,11 @@ class ProductCategoryController extends TenantAwareController
 
 		$productCategory = new ProductCategory();
 
-		try
-			{
-			$productCategory->delete($id);
-			$this->redirect('product_category');
-			}
+			try
+				{
+				$productCategory->delete($id);
+				$this->redirectWithFlash('product_category', 'success', 'Categoria de produto excluída com sucesso.');
+				}
 		catch (\Throwable $e)
 			{
 			if ($this->wantsJson())

@@ -227,11 +227,11 @@ class ScheduleController extends TenantAwareController
 		$schedule = new ScheduleEvent();
 		$category = new ScheduleCategory();
 
-		try
-			{
-			$schedule->create($_POST, $this->currentUserId(), $this->currentTenantId());
-			$this->redirect('schedule');
-			}
+			try
+				{
+				$schedule->create($_POST, $this->currentUserId(), $this->currentTenantId());
+				$this->redirectWithFlash('schedule', 'success', 'Evento da agenda salvo com sucesso.');
+				}
 		catch (\Throwable $e)
 			{
 			if ($this->wantsJson())
@@ -265,7 +265,7 @@ class ScheduleController extends TenantAwareController
 		$data = $schedule->findAllByScheduleEventId($id);
 		if (empty($data['schedule_event']))
 			{
-			$this->redirect('schedule');
+			$this->redirectWithFlash('schedule', 'warning', 'Evento da agenda não encontrado.');
 			}
 
 		$category = new ScheduleCategory();
@@ -292,11 +292,11 @@ class ScheduleController extends TenantAwareController
 		$schedule = new ScheduleEvent();
 		$category = new ScheduleCategory();
 
-		try
-			{
-			$schedule->update($id, $_POST, $this->currentTenantId());
-			$this->redirect('schedule');
-			}
+			try
+				{
+				$schedule->update($id, $_POST, $this->currentTenantId());
+				$this->redirectWithFlash('schedule', 'success', 'Evento da agenda atualizado com sucesso.');
+				}
 		catch (\Throwable $e)
 			{
 			if ($this->wantsJson())
@@ -332,11 +332,11 @@ class ScheduleController extends TenantAwareController
 		$schedule = new ScheduleEvent();
 		$category = new ScheduleCategory();
 
-		try
-			{
-			$schedule->delete($id);
-			$this->redirect('schedule');
-			}
+			try
+				{
+				$schedule->delete($id);
+				$this->redirectWithFlash('schedule', 'success', 'Evento da agenda excluído com sucesso.');
+				}
 		catch (\Throwable $e)
 			{
 			if ($this->wantsJson())
@@ -393,7 +393,7 @@ class ScheduleController extends TenantAwareController
 		$data = $schedule->findAllByScheduleEventId($id);
 		if (empty($data['schedule_event']))
 			{
-			$this->redirect('schedule');
+			$this->redirectWithFlash('schedule', 'warning', 'Evento da agenda não encontrado.');
 			}
 
 		$this->view('schedule_events/informations', [

@@ -39,9 +39,7 @@ class UserController extends Controller
 			], 404);
 			}
 
-		http_response_code(404);
-		echo 'Usuario nao encontrado ou sem acesso para o tenant selecionado.';
-		exit;
+		$this->redirectWithFlash('user', 'warning', 'Usuário não encontrado ou sem acesso para o tenant selecionado.');
 		}
 
 	/**
@@ -155,8 +153,21 @@ class UserController extends Controller
 			$this->abortUserNotFound();
 			}
 
-		$user->update($id, $_POST, $tenantId);
-		$this->redirect('user');
+		try
+			{
+			$user->update($id, $_POST, $tenantId);
+			$this->redirectWithFlash('user', 'success', 'Usuário atualizado com sucesso.');
+			}
+		catch (\Throwable $e)
+			{
+			error_log('USER UPDATE ERROR: ' . $e->getMessage());
+			if ($this->wantsJson())
+				{
+				$this->json(['error' => 'Não foi possível atualizar o usuário agora.'], 422);
+				}
+
+			$this->redirectWithFlash('user/edit/' . (int) $id, 'danger', 'Não foi possível atualizar o usuário agora.');
+			}
 		}
 
 	/**

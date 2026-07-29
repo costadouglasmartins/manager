@@ -79,6 +79,11 @@ class StateController extends Controller
 		$this->requirePermission('state.informations');
 		$state = new State();
 		$data = $state->findAllByStateId($id);
+		if (empty($data['state']))
+			{
+			$this->redirectWithFlash('state', 'warning', 'Estado não encontrado.');
+			}
+
 		$this->view('states/informations', ['title' => 'Informações sobre o estado', 'state' => $data['state']]);
 		}
 

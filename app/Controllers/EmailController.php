@@ -81,8 +81,21 @@ class EmailController extends TenantAwareController
 		{
 		$this->requirePermission('email.store');
 		$email = new Email();
-		$email->create($_POST);
-		$this->redirect('email');
+		try
+			{
+			$email->create($_POST);
+			$this->redirectWithFlash('email', 'success', 'E-mail salvo com sucesso.');
+			}
+		catch (\Throwable $e)
+			{
+			error_log('EMAIL STORE ERROR: ' . $e->getMessage());
+			if ($this->wantsJson())
+				{
+				$this->json(['error' => 'Não foi possível salvar o e-mail agora.'], 422);
+				}
+
+			$this->redirectWithFlash('email/create', 'danger', 'Não foi possível salvar o e-mail agora.');
+			}
 		}
 
 	/**
@@ -94,6 +107,11 @@ class EmailController extends TenantAwareController
 		$this->requirePermission('email.edit');
 		$email = new Email();
 		$data = $email->find($id);
+		if (!$data)
+			{
+			$this->redirectWithFlash('email', 'warning', 'E-mail não encontrado.');
+			}
+
 		$this->view('emails/edit', ['title' => 'Editar e-mail', 'email' => $data]);
 		}
 
@@ -105,8 +123,21 @@ class EmailController extends TenantAwareController
 		{
 		$this->requirePermission('email.update');
 		$email = new Email();
-		$email->update($id, $_POST);
-		$this->redirect('email');
+		try
+			{
+			$email->update($id, $_POST);
+			$this->redirectWithFlash('email', 'success', 'E-mail atualizado com sucesso.');
+			}
+		catch (\Throwable $e)
+			{
+			error_log('EMAIL UPDATE ERROR: ' . $e->getMessage());
+			if ($this->wantsJson())
+				{
+				$this->json(['error' => 'Não foi possível atualizar o e-mail agora.'], 422);
+				}
+
+			$this->redirectWithFlash('email/edit/' . (int) $id, 'danger', 'Não foi possível atualizar o e-mail agora.');
+			}
 		}
 
 	/**
@@ -118,6 +149,11 @@ class EmailController extends TenantAwareController
 		$this->requirePermission('email.informations');
 		$email = new Email();
 		$data = $email->findAllByEmailId($id);
+		if (empty($data['email']))
+			{
+			$this->redirectWithFlash('email', 'warning', 'E-mail não encontrado.');
+			}
+
 		$this->view('emails/informations', ['title' => 'Informações sobre o e-mail', 'email' => $data['email']]);
 		}
 

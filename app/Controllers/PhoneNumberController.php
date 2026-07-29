@@ -80,8 +80,21 @@ class PhoneNumberController extends TenantAwareController
 		{
 		$this->requirePermission('phone_number.store');
 		$phoneNumber = new PhoneNumber();
-		$phoneNumber->create($_POST);
-		$this->redirect('phone_number');
+		try
+			{
+			$phoneNumber->create($_POST);
+			$this->redirectWithFlash('phone_number', 'success', 'Telefone salvo com sucesso.');
+			}
+		catch (\Throwable $e)
+			{
+			error_log('PHONE NUMBER STORE ERROR: ' . $e->getMessage());
+			if ($this->wantsJson())
+				{
+				$this->json(['error' => 'Não foi possível salvar o telefone agora.'], 422);
+				}
+
+			$this->redirectWithFlash('phone_number/create', 'danger', 'Não foi possível salvar o telefone agora.');
+			}
 		}
 
 	/**
@@ -93,6 +106,11 @@ class PhoneNumberController extends TenantAwareController
 		$this->requirePermission('phone_number.edit');
 		$phoneNumber = new PhoneNumber();
 		$data = $phoneNumber->find($id);
+		if (!$data)
+			{
+			$this->redirectWithFlash('phone_number', 'warning', 'Telefone não encontrado.');
+			}
+
 		$this->view('phone_numbers/edit', ['title' => 'Editar telefone', 'phone_number' => $data]);
 		}
 
@@ -104,8 +122,21 @@ class PhoneNumberController extends TenantAwareController
 		{
 		$this->requirePermission('phone_number.update');
 		$phoneNumber = new PhoneNumber();
-		$phoneNumber->update($id, $_POST);
-		$this->redirect('phone_number');
+		try
+			{
+			$phoneNumber->update($id, $_POST);
+			$this->redirectWithFlash('phone_number', 'success', 'Telefone atualizado com sucesso.');
+			}
+		catch (\Throwable $e)
+			{
+			error_log('PHONE NUMBER UPDATE ERROR: ' . $e->getMessage());
+			if ($this->wantsJson())
+				{
+				$this->json(['error' => 'Não foi possível atualizar o telefone agora.'], 422);
+				}
+
+			$this->redirectWithFlash('phone_number/edit/' . (int) $id, 'danger', 'Não foi possível atualizar o telefone agora.');
+			}
 		}
 
 	/**
@@ -117,6 +148,11 @@ class PhoneNumberController extends TenantAwareController
 		$this->requirePermission('phone_number.informations');
 		$phoneNumber = new PhoneNumber();
 		$data = $phoneNumber->findAllByPhoneNumberId($id);
+		if (empty($data['phone_number']))
+			{
+			$this->redirectWithFlash('phone_number', 'warning', 'Telefone não encontrado.');
+			}
+
 		$this->view('phone_numbers/informations', ['title' => 'Informações sobre o telefone', 'phone_number' => $data['phone_number']]);
 		}
 

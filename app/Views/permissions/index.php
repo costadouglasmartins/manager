@@ -24,21 +24,9 @@ foreach ($permissions as $p)
 	}
 ksort($groups);
 
-$syncCount = null;
-if (isset($_GET['synced']))
-	{
-	$syncCount = (int) $_GET['synced'];
-	}
-
-$created = null;
-if (isset($_GET['created']))
-	{
-	$created = (int) $_GET['created'];
-	}
-
-$queryFilters = http_build_query([
-	'user_id' => (int) ($selectedUserId ?? 0),
-]);
+	$queryFilters = http_build_query([
+		'user_id' => (int) ($selectedUserId ?? 0),
+	]);
 
 $selectedPermissionIds = array_values(array_unique(array_filter(array_map('intval', (array) ($userPermissionIds ?? [])))));
 $totalPermissions = count($permissions);
@@ -70,18 +58,6 @@ $selectedPermissionsTotal = count($selectedPermissionIds);
       </span>
     </div>
   </div>
-
-  <?php if ($syncCount !== null): ?>
-    <div class="alert <?= ($syncCount > 0 ? 'alert-success' : 'alert-warning'); ?> py-2 mb-0">
-      <?= ($syncCount > 0 ? ('Sincronização concluída: ' . (int) $syncCount . ' permissões adicionadas ao catálogo.') : 'Sincronização concluída: nenhuma permissão nova foi encontrada.'); ?>
-    </div>
-  <?php endif; ?>
-
-  <?php if ($created !== null): ?>
-    <div class="alert <?= ($created === 1 ? 'alert-success' : 'alert-danger'); ?> py-2 mb-0">
-      <?= ($created === 1 ? 'Permissão adicionada ao catálogo.' : 'Não foi possível adicionar (já existe ou ability inválida).'); ?>
-    </div>
-  <?php endif; ?>
 
   <section class="permissions-toolbar app-section">
     <div class="permissions-toolbar-main">

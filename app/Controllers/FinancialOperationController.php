@@ -152,10 +152,10 @@ class FinancialOperationController extends TenantAwareController
 		{
 		$this->requirePermission('financial_operation.store');
 
-		$operation = new FinancialOperation();
-		$operation->create($_POST);
-		$this->redirect('financial_operation');
-		}
+			$operation = new FinancialOperation();
+			$operation->create($_POST);
+			$this->redirectWithFlash('financial_operation', 'success', 'Operação financeira salva com sucesso.');
+			}
 
 	/**
 	 * Renders the financial operation edit form.
@@ -170,7 +170,7 @@ class FinancialOperationController extends TenantAwareController
 		$data = $operation->find($id);
 		if (!$data)
 			{
-			$this->redirect('financial_operation');
+			$this->redirectWithFlash('financial_operation', 'warning', 'Operação financeira não encontrada.');
 			}
 
 		$category = new FinancialOperationCategory();
@@ -190,10 +190,10 @@ class FinancialOperationController extends TenantAwareController
 		{
 		$this->requirePermission('financial_operation.update');
 
-		$operation = new FinancialOperation();
-		$operation->update($id, $_POST);
-		$this->redirect('financial_operation');
-		}
+			$operation = new FinancialOperation();
+			$operation->update($id, $_POST);
+			$this->redirectWithFlash('financial_operation', 'success', 'Operação financeira atualizada com sucesso.');
+			}
 
 	/**
 	 * Displays financial operation details and related payments.
@@ -208,7 +208,7 @@ class FinancialOperationController extends TenantAwareController
 		$data = $operation->findAllByFinancialOperationId($id);
 		if (empty($data['financial_operation']))
 			{
-			$this->redirect('financial_operation');
+			$this->redirectWithFlash('financial_operation', 'warning', 'Operação financeira não encontrada.');
 			}
 
 		$this->view('financial_operations/informations', [
@@ -231,10 +231,10 @@ class FinancialOperationController extends TenantAwareController
 		$category = new FinancialOperationCategory();
 
 		try
-			{
-			$operation->delete($id);
-			$this->redirect('financial_operation');
-			}
+				{
+				$operation->delete($id);
+				$this->redirectWithFlash('financial_operation', 'success', 'Operação financeira excluída com sucesso.');
+				}
 		catch (\Throwable $e)
 			{
 			if ($this->wantsJson())

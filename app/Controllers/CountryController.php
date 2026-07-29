@@ -84,8 +84,21 @@ class CountryController extends Controller
 		{
 		$this->requirePermission('country.store');
 		$country = new Country();
-		$country->create($_POST);
-		$this->redirect('country');
+		try
+			{
+			$country->create($_POST);
+			$this->redirectWithFlash('country', 'success', 'País salvo com sucesso.');
+			}
+		catch (\Throwable $e)
+			{
+			error_log('COUNTRY STORE ERROR: ' . $e->getMessage());
+			if ($this->wantsJson())
+				{
+				$this->json(['error' => 'Não foi possível salvar o país agora.'], 422);
+				}
+
+			$this->redirectWithFlash('country/create', 'danger', 'Não foi possível salvar o país agora.');
+			}
 		}
 
 	/**
@@ -98,6 +111,11 @@ class CountryController extends Controller
 		$this->requirePermission('country.informations');
 		$country = new Country();
 		$data = $country->findAllByCountryId($id);
+		if (empty($data['countries']))
+			{
+			$this->redirectWithFlash('country', 'warning', 'País não encontrado.');
+			}
+
 		$this->view('countries/informations', ['title' => 'Informações sobre a país',
 			'countries' => $data['countries']]);
 		}

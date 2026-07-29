@@ -39,6 +39,7 @@ $userPresence = is_array($userPresence) ? $userPresence : \App\Services\UserPres
   <main class="app-main">
     <div class="container-fluid app-container mt-3">
       <div class="app-content">
+        <?= renderFlashMessages(); ?>
         <?= $content ?>
       </div>
     </div>

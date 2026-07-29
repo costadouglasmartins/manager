@@ -166,7 +166,7 @@ class ProductController extends TenantAwareController
 			$chunkedUploadService->deleteTemporaryFiles($temporaryImageFiles);
 			}
 
-		$this->redirect('product');
+		$this->redirectWithFlash('product', 'success', 'Produto salvo com sucesso.');
 		}
 
 	/**
@@ -204,7 +204,7 @@ class ProductController extends TenantAwareController
 		$data = $product->findAllByProductId($id);
 		if (empty($data['product']))
 			{
-			$this->redirect('product');
+			$this->redirectWithFlash('product', 'warning', 'Produto não encontrado.');
 			}
 
 		$category = new ProductCategory();
@@ -237,7 +237,7 @@ class ProductController extends TenantAwareController
 		try
 			{
 			$product->update($id, $_POST, $_FILES['images'] ?? []);
-			$this->redirect('product');
+			$this->redirectWithFlash('product', 'success', 'Produto atualizado com sucesso.');
 			}
 		catch (\Throwable $e)
 			{
@@ -278,7 +278,7 @@ class ProductController extends TenantAwareController
 		$data = $product->findAllByProductId($id);
 		if (empty($data['product']))
 			{
-			$this->redirect('product');
+			$this->redirectWithFlash('product', 'warning', 'Produto não encontrado.');
 			}
 
 		$this->view('products/informations', [
@@ -360,7 +360,7 @@ class ProductController extends TenantAwareController
 		try
 			{
 			$product->delete($id);
-			$this->redirect('product');
+			$this->redirectWithFlash('product', 'success', 'Produto excluído com sucesso.');
 			}
 		catch (\Throwable $e)
 			{

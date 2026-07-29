@@ -69,12 +69,16 @@ class CrmActivityController extends TenantAwareController
 		$this->requirePost();
 
 		$activity = new CrmActivity();
-		try
-			{
-			$result = $activity->create($_POST, $this->currentTenantId(), $this->currentUserId());
-			$backToCrm = (string) ($_POST['back_to_crm'] ?? '') === '1';
-			$this->redirect($backToCrm ? 'crm/informations/' . (int) ($result['tenant_person_id'] ?? 0) : 'crm_activity/informations/' . (int) ($result['crm_activity_id'] ?? 0));
-			}
+			try
+				{
+				$result = $activity->create($_POST, $this->currentTenantId(), $this->currentUserId());
+				$backToCrm = (string) ($_POST['back_to_crm'] ?? '') === '1';
+				$this->redirectWithFlash(
+					$backToCrm ? 'crm/informations/' . (int) ($result['tenant_person_id'] ?? 0) : 'crm_activity/informations/' . (int) ($result['crm_activity_id'] ?? 0),
+					'success',
+					'Atividade CRM salva com sucesso.'
+				);
+				}
 		catch (\InvalidArgumentException $e)
 			{
 			$this->renderForm('crm_activities/create', 'Nova atividade CRM', [
@@ -100,7 +104,7 @@ class CrmActivityController extends TenantAwareController
 		$data = $activity->findAllByCrmActivityId($id, $this->currentTenantId());
 		if (empty($data['crm_activity']))
 			{
-			$this->redirect('crm_activity');
+			$this->redirectWithFlash('crm_activity', 'warning', 'Atividade CRM não encontrada.');
 			}
 
 		$this->renderForm('crm_activities/edit', 'Editar atividade CRM', [
@@ -117,7 +121,11 @@ class CrmActivityController extends TenantAwareController
 		try
 			{
 			$activity->update($id, $_POST, $this->currentTenantId(), $this->currentUserId());
-			$this->redirect('crm_activity/informations/' . (int) $id);
+			$this->redirectWithFlash(
+				'crm_activity/informations/' . (int) $id,
+				'success',
+				'Atividade CRM atualizada com sucesso.'
+			);
 			}
 		catch (\InvalidArgumentException $e)
 			{
@@ -128,11 +136,11 @@ class CrmActivityController extends TenantAwareController
 				'formError' => $e->getMessage(),
 			], 422);
 			}
-		catch (\Throwable $e)
-			{
-			error_log('CRM ACTIVITY UPDATE ERROR: ' . $e->getMessage());
-			$this->redirect('crm_activity');
-			}
+			catch (\Throwable $e)
+				{
+				error_log('CRM ACTIVITY UPDATE ERROR: ' . $e->getMessage());
+				$this->redirectWithFlash('crm_activity', 'danger', 'Não foi possível atualizar a atividade CRM agora.');
+				}
 		}
 
 	public function informations($id): void
@@ -143,7 +151,7 @@ class CrmActivityController extends TenantAwareController
 		$data = $activity->findAllByCrmActivityId($id, $this->currentTenantId());
 		if (empty($data['crm_activity']))
 			{
-			$this->redirect('crm_activity');
+			$this->redirectWithFlash('crm_activity', 'warning', 'Atividade CRM não encontrada.');
 			}
 
 		$this->view('crm_activities/informations', [
@@ -172,19 +180,21 @@ class CrmActivityController extends TenantAwareController
 		$this->requirePost();
 
 		$activity = new CrmActivity();
-		try
-			{
-			$activity->delete($id, $this->currentTenantId(), $this->currentUserId());
-			}
+			try
+				{
+				$activity->delete($id, $this->currentTenantId(), $this->currentUserId());
+				}
 		catch (\Throwable $e)
 			{
 			if ($this->wantsJson())
 				{
 				$this->json(['error' => $e->getMessage()], 422);
 				}
+
+			$this->redirectWithFlash('crm_activity', 'danger', 'Não foi possível excluir a atividade CRM agora.');
 			}
 
-		$this->redirect('crm_activity');
+		$this->redirectWithFlash('crm_activity', 'success', 'Atividade CRM excluída com sucesso.');
 		}
 
 	private function runStateAction($id, string $action): void
@@ -207,11 +217,25 @@ class CrmActivityController extends TenantAwareController
 				{
 				$this->json(['error' => $e->getMessage()], 422);
 				}
+
+			$backToCrm = (string) ($_POST['back_to_crm'] ?? '') === '1';
+			$crmId = (int) ($_POST['tenant_person_id'] ?? 0);
+			$this->redirectWithFlash(
+				$backToCrm && $crmId > 0 ? 'crm/informations/' . $crmId : 'crm_activity',
+				'danger',
+				$action === 'complete'
+					? 'Não foi possível concluir a atividade CRM agora.'
+					: 'Não foi possível cancelar a atividade CRM agora.'
+			);
 			}
 
 		$backToCrm = (string) ($_POST['back_to_crm'] ?? '') === '1';
 		$crmId = (int) ($_POST['tenant_person_id'] ?? 0);
-		$this->redirect($backToCrm && $crmId > 0 ? 'crm/informations/' . $crmId : 'crm_activity');
+		$this->redirectWithFlash(
+			$backToCrm && $crmId > 0 ? 'crm/informations/' . $crmId : 'crm_activity',
+			'success',
+			$action === 'complete' ? 'Atividade CRM concluída com sucesso.' : 'Atividade CRM cancelada com sucesso.'
+		);
 		}
 
 	private function renderForm(string $view, string $title, array $data = [], int $status = 200): void

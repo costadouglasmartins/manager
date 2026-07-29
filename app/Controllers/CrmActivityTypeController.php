@@ -57,11 +57,11 @@ class CrmActivityTypeController extends TenantAwareController
 		$this->requirePost();
 
 		$activityType = new CrmActivityType();
-		try
-			{
-			$result = $activityType->create($_POST, $this->currentUserId());
-			$this->redirect('crm_activity_type/informations/' . (int) ($result['crm_activity_type_id'] ?? 0));
-			}
+			try
+				{
+				$result = $activityType->create($_POST, $this->currentUserId());
+				$this->redirectWithFlash('crm_activity_type/informations/' . (int) ($result['crm_activity_type_id'] ?? 0), 'success', 'Tipo de atividade CRM salvo com sucesso.');
+				}
 		catch (\InvalidArgumentException $e)
 			{
 			$this->renderCreateError($e->getMessage(), 422);
@@ -81,7 +81,7 @@ class CrmActivityTypeController extends TenantAwareController
 		$type = $activityType->find($id);
 		if (!$type)
 			{
-			$this->redirect('crm_activity_type');
+			$this->redirectWithFlash('crm_activity_type', 'warning', 'Tipo de atividade CRM não encontrado.');
 			}
 
 		$this->view('crm_activity_types/edit', [
@@ -96,11 +96,11 @@ class CrmActivityTypeController extends TenantAwareController
 		$this->requirePost();
 
 		$activityType = new CrmActivityType();
-		try
-			{
-			$activityType->update($id, $_POST, $this->currentUserId());
-			$this->redirect('crm_activity_type/informations/' . (int) $id);
-			}
+			try
+				{
+				$activityType->update($id, $_POST, $this->currentUserId());
+				$this->redirectWithFlash('crm_activity_type/informations/' . (int) $id, 'success', 'Tipo de atividade CRM atualizado com sucesso.');
+				}
 		catch (\InvalidArgumentException $e)
 			{
 			$type = $activityType->find($id);
@@ -117,16 +117,16 @@ class CrmActivityTypeController extends TenantAwareController
 				'formError' => $e->getMessage(),
 			]);
 			}
-		catch (\Throwable $e)
-			{
-			error_log('CRM ACTIVITY TYPE UPDATE ERROR: ' . $e->getMessage());
-			if ($this->wantsJson())
+			catch (\Throwable $e)
 				{
-				$this->json(['error' => 'Não foi possível atualizar o tipo de atividade CRM agora.'], 500);
-				}
+				error_log('CRM ACTIVITY TYPE UPDATE ERROR: ' . $e->getMessage());
+				if ($this->wantsJson())
+					{
+					$this->json(['error' => 'Não foi possível atualizar o tipo de atividade CRM agora.'], 500);
+					}
 
-			$this->redirect('crm_activity_type');
-			}
+				$this->redirectWithFlash('crm_activity_type', 'danger', 'Não foi possível atualizar o tipo de atividade CRM agora.');
+				}
 		}
 
 	public function informations($id): void
@@ -137,7 +137,7 @@ class CrmActivityTypeController extends TenantAwareController
 		$data = $activityType->findAllByCrmActivityTypeId($id);
 		if (empty($data['crm_activity_type']))
 			{
-			$this->redirect('crm_activity_type');
+			$this->redirectWithFlash('crm_activity_type', 'warning', 'Tipo de atividade CRM não encontrado.');
 			}
 
 		$this->view('crm_activity_types/informations', [
@@ -152,19 +152,21 @@ class CrmActivityTypeController extends TenantAwareController
 		$this->requirePost();
 
 		$activityType = new CrmActivityType();
-		try
-			{
-			$activityType->delete($id, $this->currentUserId());
-			}
+			try
+				{
+				$activityType->delete($id, $this->currentUserId());
+				}
 		catch (\Throwable $e)
 			{
 			if ($this->wantsJson())
 				{
 				$this->json(['error' => $e->getMessage()], 422);
 				}
+
+			$this->redirectWithFlash('crm_activity_type', 'danger', 'Não foi possível excluir o tipo de atividade CRM agora.');
 			}
 
-		$this->redirect('crm_activity_type');
+		$this->redirectWithFlash('crm_activity_type', 'success', 'Tipo de atividade CRM excluído com sucesso.');
 		}
 
 	private function renderCreateError(string $message, int $status): void

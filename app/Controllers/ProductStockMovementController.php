@@ -89,11 +89,11 @@ class ProductStockMovementController extends TenantAwareController
 		$movement = new ProductStockMovement();
 		$product = new Product();
 
-		try
-			{
-			$movement->create($_POST);
-			$this->redirect('product_stock_movement');
-			}
+			try
+				{
+				$movement->create($_POST);
+				$this->redirectWithFlash('product_stock_movement', 'success', 'Movimentação de estoque salva com sucesso.');
+				}
 		catch (\Throwable $e)
 			{
 			if ($this->wantsJson())
@@ -126,7 +126,7 @@ class ProductStockMovementController extends TenantAwareController
 		$data = $movement->find($id);
 		if (!$data)
 			{
-			$this->redirect('product_stock_movement');
+			$this->redirectWithFlash('product_stock_movement', 'warning', 'Movimentação de estoque não encontrada.');
 			}
 
 		$this->view('product_stocks_movements/edit', [
@@ -148,11 +148,11 @@ class ProductStockMovementController extends TenantAwareController
 		$movement = new ProductStockMovement();
 		$product = new Product();
 
-		try
-			{
-			$movement->update($id, $_POST);
-			$this->redirect('product_stock_movement');
-			}
+			try
+				{
+				$movement->update($id, $_POST);
+				$this->redirectWithFlash('product_stock_movement', 'success', 'Movimentação de estoque atualizada com sucesso.');
+				}
 		catch (\Throwable $e)
 			{
 			if ($this->wantsJson())
@@ -163,7 +163,7 @@ class ProductStockMovementController extends TenantAwareController
 			$movementData = $movement->find($id);
 			if (!$movementData)
 				{
-				$this->redirect('product_stock_movement');
+				$this->redirectWithFlash('product_stock_movement', 'warning', 'Movimentação de estoque não encontrada.');
 				}
 
 			$formData = array_merge($movementData, $_POST);
@@ -190,7 +190,7 @@ class ProductStockMovementController extends TenantAwareController
 		$data = $movement->findAllByProductStockMovementId($id);
 		if (empty($data['product_stock_movement']))
 			{
-			$this->redirect('product_stock_movement');
+			$this->redirectWithFlash('product_stock_movement', 'warning', 'Movimentação de estoque não encontrada.');
 			}
 
 		$this->view('product_stocks_movements/informations', [
@@ -211,11 +211,11 @@ class ProductStockMovementController extends TenantAwareController
 		$movement = new ProductStockMovement();
 		$product = new Product();
 
-		try
-			{
-			$movement->delete($id);
-			$this->redirect('product_stock_movement');
-			}
+			try
+				{
+				$movement->delete($id);
+				$this->redirectWithFlash('product_stock_movement', 'success', 'Movimentação de estoque excluída com sucesso.');
+				}
 		catch (\Throwable $e)
 			{
 			if ($this->wantsJson())

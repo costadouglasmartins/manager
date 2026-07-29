@@ -114,10 +114,10 @@ class BankAccountController extends TenantAwareController
 		{
 		$this->requirePermission('bank_account.store');
 
-		$bankAccount = new BankAccount();
-		$bankAccount->create($this->bankAccountPayload($_POST));
-		$this->redirect('bank_account');
-		}
+			$bankAccount = new BankAccount();
+			$bankAccount->create($this->bankAccountPayload($_POST));
+			$this->redirectWithFlash('bank_account', 'success', 'Conta bancária salva com sucesso.');
+			}
 
 	/**
 	 * Renders the bank account edit form.
@@ -132,7 +132,7 @@ class BankAccountController extends TenantAwareController
 		$data = $bankAccount->find($id);
 		if (!$data)
 			{
-			$this->redirect('bank_account');
+			$this->redirectWithFlash('bank_account', 'warning', 'Conta bancária não encontrada.');
 			}
 
 		$bank = new Bank();
@@ -152,10 +152,10 @@ class BankAccountController extends TenantAwareController
 		{
 		$this->requirePermission('bank_account.update');
 
-		$bankAccount = new BankAccount();
-		$bankAccount->update($id, $this->bankAccountPayload($_POST));
-		$this->redirect('bank_account');
-		}
+			$bankAccount = new BankAccount();
+			$bankAccount->update($id, $this->bankAccountPayload($_POST));
+			$this->redirectWithFlash('bank_account', 'success', 'Conta bancária atualizada com sucesso.');
+			}
 
 	/**
 	 * Displays bank account details.
@@ -170,7 +170,7 @@ class BankAccountController extends TenantAwareController
 		$data = $bankAccount->findAllByBankAccountId($id);
 		if (empty($data['bank_account']))
 			{
-			$this->redirect('bank_account');
+			$this->redirectWithFlash('bank_account', 'warning', 'Conta bancária não encontrada.');
 			}
 
 		$this->view('bank_accounts/informations', [
@@ -191,10 +191,10 @@ class BankAccountController extends TenantAwareController
 		$bankAccount = new BankAccount();
 
 		try
-			{
-			$bankAccount->delete($id);
-			$this->redirect('bank_account');
-			}
+				{
+				$bankAccount->delete($id);
+				$this->redirectWithFlash('bank_account', 'success', 'Conta bancária excluída com sucesso.');
+				}
 		catch (\Throwable $e)
 			{
 			if ($this->wantsJson())

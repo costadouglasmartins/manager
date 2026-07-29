@@ -91,10 +91,10 @@ class FinancialOperationSubcategoryController extends TenantAwareController
 		{
 		$this->requirePermission('financial_operation_subcategory.store');
 
-		$subcategory = new FinancialOperationSubcategory();
-		$subcategory->create($_POST);
-		$this->redirect('financial_operation_subcategory');
-		}
+			$subcategory = new FinancialOperationSubcategory();
+			$subcategory->create($_POST);
+			$this->redirectWithFlash('financial_operation_subcategory', 'success', 'Subcategoria financeira salva com sucesso.');
+			}
 
 	/**
 	 * Renders the financial operation subcategory edit form.
@@ -109,7 +109,7 @@ class FinancialOperationSubcategoryController extends TenantAwareController
 		$data = $subcategory->find($id);
 		if (!$data)
 			{
-			$this->redirect('financial_operation_subcategory');
+			$this->redirectWithFlash('financial_operation_subcategory', 'warning', 'Subcategoria financeira não encontrada.');
 			}
 
 		$category = new FinancialOperationCategory();
@@ -129,10 +129,10 @@ class FinancialOperationSubcategoryController extends TenantAwareController
 		{
 		$this->requirePermission('financial_operation_subcategory.update');
 
-		$subcategory = new FinancialOperationSubcategory();
-		$subcategory->update($id, $_POST);
-		$this->redirect('financial_operation_subcategory');
-		}
+			$subcategory = new FinancialOperationSubcategory();
+			$subcategory->update($id, $_POST);
+			$this->redirectWithFlash('financial_operation_subcategory', 'success', 'Subcategoria financeira atualizada com sucesso.');
+			}
 
 	/**
 	 * Displays financial operation subcategory details.
@@ -147,7 +147,7 @@ class FinancialOperationSubcategoryController extends TenantAwareController
 		$data = $subcategory->findAllByFinancialOperationSubcategoryId($id);
 		if (empty($data['financial_operation_subcategory']))
 			{
-			$this->redirect('financial_operation_subcategory');
+			$this->redirectWithFlash('financial_operation_subcategory', 'warning', 'Subcategoria financeira não encontrada.');
 			}
 
 		$this->view('financial_operations_subcategories/informations', [
@@ -169,10 +169,10 @@ class FinancialOperationSubcategoryController extends TenantAwareController
 		$category = new FinancialOperationCategory();
 
 		try
-			{
-			$subcategory->delete($id);
-			$this->redirect('financial_operation_subcategory');
-			}
+				{
+				$subcategory->delete($id);
+				$this->redirectWithFlash('financial_operation_subcategory', 'success', 'Subcategoria financeira excluída com sucesso.');
+				}
 		catch (\Throwable $e)
 			{
 			if ($this->wantsJson())

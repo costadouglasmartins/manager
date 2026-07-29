@@ -82,10 +82,10 @@ class FinancialOperationCategoryController extends TenantAwareController
 		{
 		$this->requirePermission('financial_operation_category.store');
 
-		$category = new FinancialOperationCategory();
-		$category->create($_POST);
-		$this->redirect('financial_operation_category');
-		}
+			$category = new FinancialOperationCategory();
+			$category->create($_POST);
+			$this->redirectWithFlash('financial_operation_category', 'success', 'Categoria financeira salva com sucesso.');
+			}
 
 	/**
 	 * Renders the financial operation category edit form.
@@ -100,7 +100,7 @@ class FinancialOperationCategoryController extends TenantAwareController
 		$data = $category->find($id);
 		if (!$data)
 			{
-			$this->redirect('financial_operation_category');
+			$this->redirectWithFlash('financial_operation_category', 'warning', 'Categoria financeira não encontrada.');
 			}
 
 		$this->view('financial_operations_categories/edit', [
@@ -118,10 +118,10 @@ class FinancialOperationCategoryController extends TenantAwareController
 		{
 		$this->requirePermission('financial_operation_category.update');
 
-		$category = new FinancialOperationCategory();
-		$category->update($id, $_POST);
-		$this->redirect('financial_operation_category');
-		}
+			$category = new FinancialOperationCategory();
+			$category->update($id, $_POST);
+			$this->redirectWithFlash('financial_operation_category', 'success', 'Categoria financeira atualizada com sucesso.');
+			}
 
 	/**
 	 * Displays financial operation category details.
@@ -136,7 +136,7 @@ class FinancialOperationCategoryController extends TenantAwareController
 		$data = $category->findAllByFinancialOperationCategoryId($id);
 		if (empty($data['financial_operation_category']))
 			{
-			$this->redirect('financial_operation_category');
+			$this->redirectWithFlash('financial_operation_category', 'warning', 'Categoria financeira não encontrada.');
 			}
 
 		$this->view('financial_operations_categories/informations', [
@@ -157,10 +157,10 @@ class FinancialOperationCategoryController extends TenantAwareController
 		$category = new FinancialOperationCategory();
 
 		try
-			{
-			$category->delete($id);
-			$this->redirect('financial_operation_category');
-			}
+				{
+				$category->delete($id);
+				$this->redirectWithFlash('financial_operation_category', 'success', 'Categoria financeira excluída com sucesso.');
+				}
 		catch (\Throwable $e)
 			{
 			if ($this->wantsJson())

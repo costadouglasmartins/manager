@@ -99,8 +99,21 @@ class AddressController extends TenantAwareController
 		{
 		$this->requirePermission('address.store');
 		$address = new Address();
-		$address->create($_POST);
-		$this->redirect('address');
+		try
+			{
+			$address->create($_POST);
+			$this->redirectWithFlash('address', 'success', 'Endereço salvo com sucesso.');
+			}
+		catch (\Throwable $e)
+			{
+			error_log('ADDRESS STORE ERROR: ' . $e->getMessage());
+			if ($this->wantsJson())
+				{
+				$this->json(['error' => 'Não foi possível salvar o endereço agora.'], 422);
+				}
+
+			$this->redirectWithFlash('address/create', 'danger', 'Não foi possível salvar o endereço agora.');
+			}
 		}
 
 	/**
@@ -112,6 +125,11 @@ class AddressController extends TenantAwareController
 		$this->requirePermission('address.edit');
 		$address = new Address();
 		$data = $address->find($id);
+		if (!$data)
+			{
+			$this->redirectWithFlash('address', 'warning', 'Endereço não encontrado.');
+			}
+
 		$this->view('addresses/edit', ['title' => 'Editar endereço', 'address' => $data]);
 		}
 
@@ -123,8 +141,21 @@ class AddressController extends TenantAwareController
 		{
 		$this->requirePermission('address.update');
 		$address = new Address();
-		$address->update($id, $_POST);
-		$this->redirect('address');
+		try
+			{
+			$address->update($id, $_POST);
+			$this->redirectWithFlash('address', 'success', 'Endereço atualizado com sucesso.');
+			}
+		catch (\Throwable $e)
+			{
+			error_log('ADDRESS UPDATE ERROR: ' . $e->getMessage());
+			if ($this->wantsJson())
+				{
+				$this->json(['error' => 'Não foi possível atualizar o endereço agora.'], 422);
+				}
+
+			$this->redirectWithFlash('address/edit/' . (int) $id, 'danger', 'Não foi possível atualizar o endereço agora.');
+			}
 		}
 
 	/**
@@ -136,6 +167,11 @@ class AddressController extends TenantAwareController
 		$this->requirePermission('address.informations');
 		$address = new Address();
 		$data = $address->findAllByAddressId($id);
+		if (empty($data['address']))
+			{
+			$this->redirectWithFlash('address', 'warning', 'Endereço não encontrado.');
+			}
+
 		$this->view('addresses/informations', ['title' => 'Informações sobre o endereço', 'address' => $data['address']]);
 		}
 

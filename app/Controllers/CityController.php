@@ -153,6 +153,11 @@ class CityController extends Controller
 		$this->requirePermission('city.informations');
 		$city = new City();
 		$data = $city->findAllByCityId($id);
+		if (empty($data['city']))
+			{
+			$this->redirectWithFlash('city', 'warning', 'Cidade não encontrada.');
+			}
+
 		$this->view('cities/informations', ['title' => 'Informações sobre a cidade', 'city' => $data['city']]);
 		}
 

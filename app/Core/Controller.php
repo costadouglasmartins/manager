@@ -95,6 +95,12 @@ class Controller
 	 */
 	protected function view(string $view, array $data = [], bool $useLayout = true): void
 		{
+		if ($useLayout && isset($data['formError']) && is_scalar($data['formError']))
+			{
+			setFlashMessage('danger', (string) $data['formError']);
+			unset($data['formError']);
+			}
+
 		$this->auditListResponse($data, $view);
 		extract($data);
 
@@ -418,6 +424,19 @@ class Controller
 		{
 		header('Location: ' . \url($path));
 		exit;
+		}
+
+	/**
+	 * Redirects the client while storing a flash message in the manager session.
+	 *
+	 * @param string $path Relative application path.
+	 * @param string $type Flash variant, usually success or danger.
+	 * @param string $message Flash text shown on the next rendered page.
+	 **/
+	protected function redirectWithFlash(string $path, string $type, string $message): void
+		{
+		setFlashMessage($type, $message);
+		$this->redirect($path);
 		}
 
 	/**

@@ -67,11 +67,11 @@ class CrmStatusController extends TenantAwareController
 		$this->requirePost();
 
 		$crmStatus = new CrmStatus();
-		try
-			{
-			$result = $crmStatus->create($_POST, $this->currentUserId());
-			$this->redirect('crm_status/informations/' . (int) ($result['crm_status_id'] ?? 0));
-			}
+			try
+				{
+				$result = $crmStatus->create($_POST, $this->currentUserId());
+				$this->redirectWithFlash('crm_status/informations/' . (int) ($result['crm_status_id'] ?? 0), 'success', 'Status do CRM salvo com sucesso.');
+				}
 		catch (\InvalidArgumentException $e)
 			{
 			$this->renderCreateError($e->getMessage(), 422);
@@ -96,7 +96,7 @@ class CrmStatusController extends TenantAwareController
 		$status = $crmStatus->find($id);
 		if (!$status)
 			{
-			$this->redirect('crm_status');
+			$this->redirectWithFlash('crm_status', 'warning', 'Status do CRM não encontrado.');
 			}
 
 		$this->view('crm_statuses/edit', [
@@ -116,11 +116,11 @@ class CrmStatusController extends TenantAwareController
 		$this->requirePost();
 
 		$crmStatus = new CrmStatus();
-		try
-			{
-			$crmStatus->update($id, $_POST, $this->currentUserId());
-			$this->redirect('crm_status/informations/' . (int) $id);
-			}
+			try
+				{
+				$crmStatus->update($id, $_POST, $this->currentUserId());
+				$this->redirectWithFlash('crm_status/informations/' . (int) $id, 'success', 'Status do CRM atualizado com sucesso.');
+				}
 		catch (\InvalidArgumentException $e)
 			{
 			$status = $crmStatus->find($id);
@@ -137,16 +137,16 @@ class CrmStatusController extends TenantAwareController
 				'formError' => $e->getMessage(),
 			]);
 			}
-		catch (\Throwable $e)
-			{
-			error_log('CRM STATUS UPDATE ERROR: ' . $e->getMessage());
-			if ($this->wantsJson())
+			catch (\Throwable $e)
 				{
-				$this->json(['error' => 'Não foi possível atualizar o status CRM agora.'], 500);
-				}
+				error_log('CRM STATUS UPDATE ERROR: ' . $e->getMessage());
+				if ($this->wantsJson())
+					{
+					$this->json(['error' => 'Não foi possível atualizar o status CRM agora.'], 500);
+					}
 
-			$this->redirect('crm_status');
-			}
+				$this->redirectWithFlash('crm_status', 'danger', 'Não foi possível atualizar o status CRM agora.');
+				}
 		}
 
 	/**
@@ -162,7 +162,7 @@ class CrmStatusController extends TenantAwareController
 		$data = $crmStatus->findAllByCrmStatusId($id);
 		if (empty($data['crm_status']))
 			{
-			$this->redirect('crm_status');
+			$this->redirectWithFlash('crm_status', 'warning', 'Status do CRM não encontrado.');
 			}
 
 		$this->view('crm_statuses/informations', [
@@ -182,19 +182,21 @@ class CrmStatusController extends TenantAwareController
 		$this->requirePost();
 
 		$crmStatus = new CrmStatus();
-		try
-			{
-			$crmStatus->delete($id, $this->currentUserId());
-			}
+			try
+				{
+				$crmStatus->delete($id, $this->currentUserId());
+				}
 		catch (\Throwable $e)
 			{
 			if ($this->wantsJson())
 				{
 				$this->json(['error' => $e->getMessage()], 422);
 				}
+
+			$this->redirectWithFlash('crm_status', 'danger', 'Não foi possível excluir o status do CRM agora.');
 			}
 
-		$this->redirect('crm_status');
+		$this->redirectWithFlash('crm_status', 'success', 'Status do CRM excluído com sucesso.');
 		}
 
 	private function renderCreateError(string $message, int $status): void

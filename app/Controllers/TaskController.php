@@ -160,7 +160,7 @@ class TaskController extends TenantAwareController
 		try
 			{
 			$task->create($_POST, $this->currentUserId(), $this->currentTenantId());
-			$this->redirect('task');
+			$this->redirectWithFlash('task', 'success', 'Tarefa salva com sucesso.');
 			}
 		catch (\Throwable $e)
 			{
@@ -193,7 +193,7 @@ class TaskController extends TenantAwareController
 		$data = $task->findAllByTaskId($id);
 		if (empty($data['task']))
 			{
-			$this->redirect('task');
+			$this->redirectWithFlash('task', 'warning', 'Tarefa não encontrada.');
 			}
 
 		$category = new TaskCategory();
@@ -221,7 +221,7 @@ class TaskController extends TenantAwareController
 		try
 			{
 			$task->update($id, $_POST, $this->currentTenantId());
-			$this->redirect('task');
+			$this->redirectWithFlash('task', 'success', 'Tarefa atualizada com sucesso.');
 			}
 		catch (\Throwable $e)
 			{
@@ -259,7 +259,7 @@ class TaskController extends TenantAwareController
 		try
 			{
 			$task->delete($id);
-			$this->redirect('task');
+			$this->redirectWithFlash('task', 'success', 'Tarefa excluída com sucesso.');
 			}
 		catch (\Throwable $e)
 			{
@@ -316,7 +316,7 @@ class TaskController extends TenantAwareController
 		$data = $task->findAllByTaskId($id);
 		if (empty($data['task']))
 			{
-			$this->redirect('task');
+			$this->redirectWithFlash('task', 'warning', 'Tarefa não encontrada.');
 			}
 
 		$this->view('tasks/informations', [
@@ -341,7 +341,7 @@ class TaskController extends TenantAwareController
 		try
 			{
 			$task->addComment((int) $id, $this->currentUserId(), (string) ($_POST['comment'] ?? ''));
-			$this->redirect('task/informations/' . (int) $id);
+			$this->redirectWithFlash('task/informations/' . (int) $id, 'success', 'Comentário salvo com sucesso.');
 			}
 		catch (\Throwable $e)
 			{
@@ -350,7 +350,11 @@ class TaskController extends TenantAwareController
 				$this->json(['error' => $e->getMessage()], 422);
 				}
 
-			$this->redirect('task/informations/' . (int) $id);
+			$this->redirectWithFlash(
+				'task/informations/' . (int) $id,
+				'danger',
+				'Não foi possível salvar o comentário agora.'
+			);
 			}
 		}
 

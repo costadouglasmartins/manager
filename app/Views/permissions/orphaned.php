@@ -1,24 +1,6 @@
 <?php
 // Expected variables: $orphaned, $stats, $title
 
-$deleted = null;
-if (isset($_GET['deleted']))
-	{
-	$deleted = (int) $_GET['deleted'];
-	}
-
-$usersAffected = null;
-if (isset($_GET['users_affected']))
-	{
-	$usersAffected = (int) $_GET['users_affected'];
-	}
-
-$error = null;
-if (isset($_GET['error']))
-	{
-	$error = (string) $_GET['error'];
-	}
-
 $hiddenOrphanedAbilities = [
 	'permission.manage' => true,
 ];
@@ -86,24 +68,6 @@ foreach ($visibleOrphaned as $perm)
       Ao remover uma permissão órfã, os vínculos existentes em usuários também serão excluídos.
     </p>
   </section>
-
-  <?php if ($deleted === 1): ?>
-    <div class="alert alert-success py-2 mb-0">
-      <strong>Permissão órfã removida com sucesso.</strong>
-      <?php if ($usersAffected !== null): ?>
-        <br><small><?= (int) $usersAffected; ?> usuário(s) afetado(s).</small>
-      <?php endif; ?>
-    </div>
-  <?php elseif ($deleted === 0): ?>
-    <div class="alert alert-danger py-2 mb-0">
-      <strong>Não foi possível remover a permissão órfã.</strong>
-      <?php if ($error === 'not_orphaned'): ?>
-        <br><small>Ela não é mais órfã ou não pertence ao catálogo esperado.</small>
-      <?php elseif ($error === 'exception'): ?>
-        <br><small>Ocorreu um erro ao processar a exclusão.</small>
-      <?php endif; ?>
-    </div>
-  <?php endif; ?>
 
   <?php if ($totalOrphaned === 0): ?>
     <section class="permissions-orphaned-empty app-section">

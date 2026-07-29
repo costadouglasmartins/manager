@@ -215,11 +215,11 @@ class PersonController extends TenantAwareController
 		$this->requirePermission('person.store');
 		$person = new Person();
 
-		try
-			{
-			$person->create($_POST);
-			$this->redirect('person');
-			}
+			try
+				{
+				$person->create($_POST);
+				$this->redirectWithFlash('person', 'success', 'Pessoa salva com sucesso.');
+				}
 		catch (\InvalidArgumentException $e)
 			{
 			if ($this->wantsJson())
@@ -261,10 +261,10 @@ class PersonController extends TenantAwareController
 		$person = new Person();
 		$data = $person->findAllByPersonId($id, $this->currentTenantId());
 
-		if (empty($data['person']))
-			{
-			$this->redirect('person');
-			}
+			if (empty($data['person']))
+				{
+				$this->redirectWithFlash('person', 'danger', 'Pessoa não encontrada.');
+				}
 
 		$this->view('people/edit', [
 			'title' => 'Editar pessoa',
@@ -285,14 +285,14 @@ class PersonController extends TenantAwareController
 		$this->requirePermission('person.update');
 		$person = new Person();
 		$data = $person->findAllByPersonId($id, $this->currentTenantId());
-		if (empty($data['person']))
-			{
-			$this->redirect('person');
-			}
+			if (empty($data['person']))
+				{
+				$this->redirectWithFlash('person', 'danger', 'Pessoa não encontrada.');
+				}
 
-		$person->update($id, $_POST, $this->currentTenantId());
-		$this->redirect('person');
-		}
+			$person->update($id, $_POST, $this->currentTenantId());
+			$this->redirectWithFlash('person', 'success', 'Pessoa atualizada com sucesso.');
+			}
 
 	/**
 	 * Displays the details for the requested person and related tenant data.
@@ -304,10 +304,10 @@ class PersonController extends TenantAwareController
 		$this->requirePermission('person.informations');
 		$person = new Person();
 		$data = $person->findAllByPersonId($id, $this->currentTenantId());
-		if (empty($data['person']))
-			{
-			$this->redirect('person');
-			}
+			if (empty($data['person']))
+				{
+				$this->redirectWithFlash('person', 'danger', 'Pessoa não encontrada.');
+				}
 		$this->view('people/informations', [
 			'title'  => 'Informações sobre a pessoa',
 			'person' => $data['person'],

@@ -72,7 +72,7 @@ class BankController extends Controller
 		$data = $bank->findAllByBankId($id);
 		if (empty($data['bank']))
 			{
-			$this->redirect('bank');
+			$this->redirectWithFlash('bank', 'warning', 'Banco não encontrado.');
 			}
 
 		$this->view('banks/informations', ['title' => 'Informações sobre o banco', 'bank' => $data['bank']]);

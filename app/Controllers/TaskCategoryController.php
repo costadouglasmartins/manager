@@ -99,12 +99,12 @@ class TaskCategoryController extends TenantAwareController
 		{
 		$this->requirePermission('task_category.store');
 
-		$taskCategory = new TaskCategory();
-		try
-			{
-			$taskCategory->create($_POST);
-			$this->redirect('task_category');
-			}
+			$taskCategory = new TaskCategory();
+			try
+				{
+				$taskCategory->create($_POST);
+				$this->redirectWithFlash('task_category', 'success', 'Categoria de tarefa salva com sucesso.');
+				}
 		catch (\Throwable $e)
 			{
 			http_response_code(422);
@@ -128,7 +128,7 @@ class TaskCategoryController extends TenantAwareController
 		$category = $taskCategory->find($id);
 		if (!$category)
 			{
-			$this->redirect('task_category');
+			$this->redirectWithFlash('task_category', 'warning', 'Categoria de tarefa não encontrada.');
 			}
 
 		$this->view('task_categories/edit', [
@@ -146,11 +146,11 @@ class TaskCategoryController extends TenantAwareController
 		$this->requirePermission('task_category.update');
 
 		$taskCategory = new TaskCategory();
-		try
-			{
-			$taskCategory->update($id, $_POST);
-			$this->redirect('task_category');
-			}
+			try
+				{
+				$taskCategory->update($id, $_POST);
+				$this->redirectWithFlash('task_category', 'success', 'Categoria de tarefa atualizada com sucesso.');
+				}
 		catch (\Throwable $e)
 			{
 			$category = $taskCategory->find($id);
@@ -176,7 +176,7 @@ class TaskCategoryController extends TenantAwareController
 		$data = $taskCategory->findAllByTaskCategoryId($id);
 		if (empty($data['task_category']))
 			{
-			$this->redirect('task_category');
+			$this->redirectWithFlash('task_category', 'warning', 'Categoria de tarefa não encontrada.');
 			}
 
 		$this->view('task_categories/informations', [
@@ -195,11 +195,11 @@ class TaskCategoryController extends TenantAwareController
 
 		$taskCategory = new TaskCategory();
 
-		try
-			{
-			$taskCategory->delete($id);
-			$this->redirect('task_category');
-			}
+			try
+				{
+				$taskCategory->delete($id);
+				$this->redirectWithFlash('task_category', 'success', 'Categoria de tarefa excluída com sucesso.');
+				}
 		catch (\Throwable $e)
 			{
 			if ($this->wantsJson())

@@ -80,6 +80,11 @@ class NeighborhoodController extends Controller
 		$this->requirePermission('neighborhood.informations');
 		$neighborhood = new Neighborhood();
 		$data = $neighborhood->findAllByNeighborhoodId($id);
+		if (empty($data['neighborhood']))
+			{
+			$this->redirectWithFlash('neighborhood', 'warning', 'Bairro não encontrado.');
+			}
+
 		$this->view('neighborhoods/informations', ['title' => 'Informações sobre o bairro', 'neighborhood' => $data['neighborhood']]);
 		}
 

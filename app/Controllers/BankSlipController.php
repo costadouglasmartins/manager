@@ -70,11 +70,11 @@ class BankSlipController extends TenantAwareController
 		$this->requirePermission('bank_slip.store');
 
 		$model = new BankSlip();
-		try
-			{
-			$model->create($_POST);
-			$this->redirect('bank_slip');
-			}
+			try
+				{
+				$model->create($_POST);
+				$this->redirectWithFlash('bank_slip', 'success', 'Boleto salvo com sucesso.');
+				}
 		catch (\Throwable $e)
 			{
 			http_response_code(422);
@@ -100,7 +100,7 @@ class BankSlipController extends TenantAwareController
 		$bankSlip = $model->find((int) $id);
 		if ($bankSlip === [] || (string) ($bankSlip['status'] ?? '') !== 'DRAFT')
 			{
-			$this->redirect('bank_slip');
+			$this->redirectWithFlash('bank_slip', 'warning', 'Boleto não encontrado ou indisponível para edição.');
 			}
 
 		$this->view('bank_slips/edit', [
@@ -121,11 +121,11 @@ class BankSlipController extends TenantAwareController
 
 		$model = new BankSlip();
 
-		try
-			{
-			$model->update($id, $_POST);
-			$this->redirect('bank_slip');
-			}
+			try
+				{
+				$model->update($id, $_POST);
+				$this->redirectWithFlash('bank_slip', 'success', 'Boleto atualizado com sucesso.');
+				}
 		catch (\Throwable $e)
 			{
 			if ($this->wantsJson())
@@ -136,7 +136,7 @@ class BankSlipController extends TenantAwareController
 			$bankSlip = $model->find((int) $id);
 			if ($bankSlip === [] || (string) ($bankSlip['status'] ?? '') !== 'DRAFT')
 				{
-				$this->redirect('bank_slip');
+				$this->redirectWithFlash('bank_slip', 'warning', 'Boleto não encontrado ou indisponível para edição.');
 				}
 
 			http_response_code(422);
@@ -187,7 +187,7 @@ class BankSlipController extends TenantAwareController
 		$bankSlip = $model->find((int) $id);
 		if ($bankSlip === [])
 			{
-			$this->redirect('bank_slip');
+			$this->redirectWithFlash('bank_slip', 'warning', 'Boleto não encontrado.');
 			}
 
 		$this->view('bank_slips/informations', [
@@ -204,7 +204,7 @@ class BankSlipController extends TenantAwareController
 		$bankSlip = $model->find((int) $id);
 		if ($bankSlip === [])
 			{
-			$this->redirect('bank_slip');
+			$this->redirectWithFlash('bank_slip', 'warning', 'Boleto não encontrado.');
 			}
 
 		$service = new BankSlipService();
@@ -264,11 +264,11 @@ class BankSlipController extends TenantAwareController
 
 		$model = new BankSlip();
 
-		try
-			{
-			$model->delete($id);
-			$this->redirect('bank_slip');
-			}
+			try
+				{
+				$model->delete($id);
+				$this->redirectWithFlash('bank_slip', 'success', 'Boleto excluído com sucesso.');
+				}
 		catch (\Throwable $e)
 			{
 			if ($this->wantsJson())
@@ -344,10 +344,10 @@ class BankSlipController extends TenantAwareController
 				return (int) ($slip['bank_account_id'] ?? 0) === $remittanceBankAccountId;
 				}));
 			}
-		if ($slips === [])
-			{
-			$this->redirect('bank_slip');
-			}
+			if ($slips === [])
+				{
+				$this->redirectWithFlash('bank_slip', 'danger', 'Não foi possível gerar a remessa porque não há boletos válidos.');
+				}
 
 		$factory = new RemittanceGeneratorFactory();
 		$layout = $factory->normalizeLayout($layout);

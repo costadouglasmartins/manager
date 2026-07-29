@@ -61,12 +61,12 @@ class BankFileController extends TenantAwareController
 		{
 		$this->requirePermission('bank_file.informations');
 
-		$model = new BankFile();
-		$bankFile = $model->find((int) $id);
-		if ($bankFile === [])
-			{
-			$this->redirect('bank_file');
-			}
+			$model = new BankFile();
+			$bankFile = $model->find((int) $id);
+			if ($bankFile === [])
+				{
+				$this->redirectWithFlash('bank_file', 'danger', 'Arquivo de remessa não encontrado.');
+				}
 
 		$fileContent = '';
 		$filePath = trim((string) ($bankFile['file_path'] ?? ''));
@@ -95,12 +95,12 @@ class BankFileController extends TenantAwareController
 		{
 		$this->requirePermission('bank_file.delete');
 
-		$model = new BankFile();
-		$bankFile = $model->find((int) $id);
-		if ($bankFile === [])
-			{
-			$this->redirect('bank_file');
-			}
+			$model = new BankFile();
+			$bankFile = $model->find((int) $id);
+			if ($bankFile === [])
+				{
+				$this->redirectWithFlash('bank_file', 'danger', 'Arquivo de remessa não encontrado.');
+				}
 
 		$filePath = trim((string) ($bankFile['file_path'] ?? ''));
 		$absolutePath = $filePath !== '' ? $this->publicPath($filePath) : '';
@@ -115,10 +115,10 @@ class BankFileController extends TenantAwareController
 					}
 				}
 
-			$model->deleteRemittanceWithBankSlips((int) $id);
+				$model->deleteRemittanceWithBankSlips((int) $id);
 
-			$this->redirect('bank_file');
-			}
+				$this->redirectWithFlash('bank_file', 'success', 'Arquivo de remessa excluído com sucesso.');
+				}
 		catch (\Throwable $e)
 			{
 			if ($this->wantsJson())

@@ -99,12 +99,12 @@ class ScheduleCategoryController extends TenantAwareController
 		{
 		$this->requirePermission('schedule_category.store');
 
-		$scheduleCategory = new ScheduleCategory();
-		try
-			{
-			$scheduleCategory->create($_POST);
-			$this->redirect('schedule_category');
-			}
+			$scheduleCategory = new ScheduleCategory();
+			try
+				{
+				$scheduleCategory->create($_POST);
+				$this->redirectWithFlash('schedule_category', 'success', 'Categoria de agenda salva com sucesso.');
+				}
 		catch (\Throwable $e)
 			{
 			http_response_code(422);
@@ -129,7 +129,7 @@ class ScheduleCategoryController extends TenantAwareController
 		$category = $scheduleCategory->find($id);
 		if (!$category)
 			{
-			$this->redirect('schedule_category');
+			$this->redirectWithFlash('schedule_category', 'warning', 'Categoria da agenda não encontrada.');
 			}
 
 		$this->view('schedule_categories/edit', [
@@ -148,11 +148,11 @@ class ScheduleCategoryController extends TenantAwareController
 		$this->requirePermission('schedule_category.update');
 
 		$scheduleCategory = new ScheduleCategory();
-		try
-			{
-			$scheduleCategory->update($id, $_POST);
-			$this->redirect('schedule_category');
-			}
+			try
+				{
+				$scheduleCategory->update($id, $_POST);
+				$this->redirectWithFlash('schedule_category', 'success', 'Categoria de agenda atualizada com sucesso.');
+				}
 		catch (\Throwable $e)
 			{
 			$category = $scheduleCategory->find($id);
@@ -179,7 +179,7 @@ class ScheduleCategoryController extends TenantAwareController
 		$data = $scheduleCategory->findAllByScheduleCategoryId($id);
 		if (empty($data['schedule_category']))
 			{
-			$this->redirect('schedule_category');
+			$this->redirectWithFlash('schedule_category', 'warning', 'Categoria da agenda não encontrada.');
 			}
 
 		$this->view('schedule_categories/informations', [
@@ -199,11 +199,11 @@ class ScheduleCategoryController extends TenantAwareController
 
 		$scheduleCategory = new ScheduleCategory();
 
-		try
-			{
-			$scheduleCategory->delete($id);
-			$this->redirect('schedule_category');
-			}
+			try
+				{
+				$scheduleCategory->delete($id);
+				$this->redirectWithFlash('schedule_category', 'success', 'Categoria de agenda excluída com sucesso.');
+				}
 		catch (\Throwable $e)
 			{
 			if ($this->wantsJson())

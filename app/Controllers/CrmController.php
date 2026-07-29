@@ -113,7 +113,7 @@ class CrmController extends TenantAwareController
 		try
 			{
 			$result = $crm->create($_POST, $this->currentTenantId(), $this->currentUserId());
-			$this->redirect('crm/informations/' . (int) ($result['crm_id'] ?? 0));
+			$this->redirectWithFlash('crm/informations/' . (int) ($result['crm_id'] ?? 0), 'success', 'Registro CRM salvo com sucesso.');
 			}
 		catch (\InvalidArgumentException $e)
 			{
@@ -139,7 +139,7 @@ class CrmController extends TenantAwareController
 		$data = $crm->findAllByCrmId($id, $this->currentTenantId());
 		if (empty($data['crm']))
 			{
-			$this->redirect('crm');
+			$this->redirectWithFlash('crm', 'warning', 'Registro CRM não encontrado.');
 			}
 
 		$this->view('crm/edit', [
@@ -166,7 +166,7 @@ class CrmController extends TenantAwareController
 		try
 			{
 			$crm->update($id, $_POST, $this->currentTenantId(), $this->currentUserId());
-			$this->redirect('crm/informations/' . (int) $id);
+			$this->redirectWithFlash('crm/informations/' . (int) $id, 'success', 'Registro CRM atualizado com sucesso.');
 			}
 		catch (\InvalidArgumentException $e)
 			{
@@ -196,7 +196,7 @@ class CrmController extends TenantAwareController
 				$this->json(['error' => 'Não foi possível atualizar o registro CRM agora.'], 500);
 				}
 
-			$this->redirect('crm');
+			$this->redirectWithFlash('crm', 'danger', 'Não foi possível atualizar o registro CRM agora.');
 			}
 		}
 
@@ -215,7 +215,7 @@ class CrmController extends TenantAwareController
 		$data = $crm->findAllByCrmId($id, $this->currentTenantId());
 		if (empty($data['crm']))
 			{
-			$this->redirect('crm');
+			$this->redirectWithFlash('crm', 'warning', 'Registro CRM não encontrado.');
 			}
 
 		$this->view('crm/informations', [
@@ -250,9 +250,10 @@ class CrmController extends TenantAwareController
 				{
 				$this->json(['error' => $e->getMessage()], 422);
 				}
+			$this->redirectWithFlash('crm', 'danger', 'Não foi possível excluir o registro CRM agora.');
 			}
 
-		$this->redirect('crm');
+		$this->redirectWithFlash('crm', 'success', 'Registro CRM excluído com sucesso.');
 		}
 
 	private function renderCreateError(Crm $crm, string $message, int $status): void
