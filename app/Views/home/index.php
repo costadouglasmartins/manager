@@ -1,23 +1,12 @@
 <?php
 $dashboard = is_array($dashboard ?? null) ? $dashboard : [];
 $metrics = is_array($dashboard['metrics'] ?? null) ? $dashboard['metrics'] : [];
-$health = is_array($dashboard['health'] ?? null) ? $dashboard['health'] : [];
-$quickActions = is_array($dashboard['quickActions'] ?? null) ? $dashboard['quickActions'] : [];
-$recentPeople = is_array($dashboard['recentPeople'] ?? null) ? $dashboard['recentPeople'] : [];
-$recentUsers = is_array($dashboard['recentUsers'] ?? null) ? $dashboard['recentUsers'] : [];
-$pendingTasks = is_array($dashboard['pendingTasks'] ?? null) ? $dashboard['pendingTasks'] : [];
-$upcomingScheduleEvents = is_array($dashboard['upcomingScheduleEvents'] ?? null) ? $dashboard['upcomingScheduleEvents'] : [];
-$schemaVersions = is_array($schemaVersions ?? null) ? $schemaVersions : [];
-$latestSchema = is_array($dashboard['latestSchema'] ?? null) ? $dashboard['latestSchema'] : null;
+$todayTasks = is_array($dashboard['todayTasks'] ?? null) ? $dashboard['todayTasks'] : [];
+$todayScheduleEvents = is_array($dashboard['todayScheduleEvents'] ?? null) ? $dashboard['todayScheduleEvents'] : [];
 $currentUser = is_array($currentUser ?? null) ? $currentUser : [];
-$tenantDatabaseName = (string) ($tenantDatabaseName ?? '');
 
 $formatNumber = static function ($value): string {
 	return number_format((float) $value, 0, ',', '.');
-};
-
-$formatValue = static function ($value): string {
-	return is_float($value) ? number_format($value, 1, ',', '.') : number_format((float) $value, 0, ',', '.');
 };
 
 $formatDateTime = static function ($value): string {
@@ -38,26 +27,6 @@ $formatDateTime = static function ($value): string {
 		}
 };
 
-$personTypeLabel = static function ($type): string {
-	return $type === 'company' ? 'Pessoa jurídica' : 'Pessoa física';
-};
-
-$userTypeLabel = static function ($type): string {
-	$type = (string) $type;
-
-	if ($type === 'admin')
-		{
-		return 'Administrador';
-		}
-
-	if ($type === 'root')
-		{
-		return 'Root';
-		}
-
-	return 'Usuário';
-};
-
 $canOpen = static function (array $item): bool {
 	if (empty($item['href']))
 		{
@@ -72,14 +41,10 @@ $canOpen = static function (array $item): bool {
 	return function_exists('authCan') && authCan((string) $item['ability']);
 };
 
-$tenantName = trim((string) ($tenant['fantasy'] ?? '')) !== '' ? (string) $tenant['fantasy'] : (string) ($tenant['name'] ?? 'Tenant');
-$tenantStatus = (string) ($tenant['status'] ?? '');
-$tenantStatusLabel = $tenantStatus === 'active' ? 'Ativo' : ($tenantStatus !== '' ? ucfirst($tenantStatus) : '-');
-$tenantDocument = trim((string) ($tenant['document'] ?? ''));
 $userName = trim((string) ($currentUser['name'] ?? ''));
 $metricsCount = count($metrics);
-$metricsDesktopColumns = $metricsCount <= 4 ? max(1, $metricsCount) : (int) ceil($metricsCount / 2);
-$metricsDesktopColumns = min(6, max(1, $metricsDesktopColumns));
+$metricsDesktopColumns = min(6, max(1, $metricsCount));
+$today = date('Y-m-d');
 ?>
 
 <link rel="stylesheet" href="<?= url('assets/css/home/index.css?v=3'); ?>">
@@ -88,35 +53,15 @@ $metricsDesktopColumns = min(6, max(1, $metricsDesktopColumns));
 	<?php if (!empty($tenant)): ?>
 		<section class="dashboard-hero">
 			<div class="dashboard-hero-copy">
-				<span class="dashboard-kicker"><i class="bi bi-speedometer2"></i> Dashboard do tenant</span>
-				<h1><?= htmlspecialchars($tenantName, ENT_QUOTES, 'UTF-8'); ?></h1>
+				<span class="dashboard-kicker"><i class="bi bi-speedometer2"></i> Dashboard do dia</span>
+				<h1>Painel operacional</h1>
 				<p>
-					<?= $userName !== '' ? htmlspecialchars($userName, ENT_QUOTES, 'UTF-8') . ', ' : ''; ?>visão operacional de
-					<strong><?= htmlspecialchars($tenant['name'] ?? 'tenant', ENT_QUOTES, 'UTF-8'); ?></strong>.
+					<?= $userName !== '' ? htmlspecialchars($userName, ENT_QUOTES, 'UTF-8') . ', ' : ''; ?>acompanhe os indicadores diários dos módulos principais.
 				</p>
-			</div>
-
-			<div class="dashboard-tenant-grid" aria-label="Resumo do tenant ativo">
-				<div class="dashboard-tenant-item">
-					<span>Banco</span>
-					<strong><?= htmlspecialchars($tenantDatabaseName, ENT_QUOTES, 'UTF-8'); ?></strong>
-				</div>
-				<div class="dashboard-tenant-item">
-					<span>Status</span>
-					<strong><?= htmlspecialchars($tenantStatusLabel, ENT_QUOTES, 'UTF-8'); ?></strong>
-				</div>
-				<div class="dashboard-tenant-item">
-					<span>Tenant ID</span>
-					<strong>#<?= htmlspecialchars((string) ($tenant['id'] ?? '-'), ENT_QUOTES, 'UTF-8'); ?></strong>
-				</div>
-				<div class="dashboard-tenant-item">
-					<span>Último schema</span>
-					<strong><?= htmlspecialchars((string) ($latestSchema['version'] ?? $latestSchema['id'] ?? '-'), ENT_QUOTES, 'UTF-8'); ?></strong>
-				</div>
 			</div>
 		</section>
 
-		<section class="dashboard-metrics" style="--dashboard-metrics-desktop-columns: <?= $metricsDesktopColumns; ?>;" aria-label="Indicadores do tenant">
+		<section class="dashboard-metrics" style="--dashboard-metrics-desktop-columns: <?= $metricsDesktopColumns; ?>;" aria-label="Indicadores diários dos módulos">
 			<?php foreach ($metrics as $metric): ?>
 				<?php
 				$tone = preg_replace('/[^a-z0-9_-]/i', '', (string) ($metric['tone'] ?? 'blue'));
@@ -146,10 +91,10 @@ $metricsDesktopColumns = min(6, max(1, $metricsDesktopColumns));
 			<div class="dashboard-panel-heading">
 				<div>
 					<span class="dashboard-section-label">Tarefas</span>
-					<h2>Pendentes</h2>
+					<h2>Criadas hoje</h2>
 				</div>
 				<?php if (function_exists('authCan') && authCan('task.index')): ?>
-					<a class="dashboard-panel-link" href="<?= url('task'); ?>">Ver tarefas</a>
+					<a class="dashboard-panel-link" href="<?= url('task?created_from=' . $today . '&created_to=' . $today); ?>">Ver tarefas</a>
 				<?php endif; ?>
 			</div>
 
@@ -166,8 +111,8 @@ $metricsDesktopColumns = min(6, max(1, $metricsDesktopColumns));
 						</tr>
 					</thead>
 					<tbody>
-						<?php if (!empty($pendingTasks)): ?>
-							<?php foreach ($pendingTasks as $taskRow): ?>
+						<?php if (!empty($todayTasks)): ?>
+							<?php foreach ($todayTasks as $taskRow): ?>
 								<tr data-dashboard-task-row="<?= (int) ($taskRow['id'] ?? 0); ?>">
 									<td><?= htmlspecialchars((string) ($taskRow['id'] ?? ''), ENT_QUOTES, 'UTF-8'); ?></td>
 									<td>
@@ -198,7 +143,7 @@ $metricsDesktopColumns = min(6, max(1, $metricsDesktopColumns));
 							<?php endforeach; ?>
 						<?php else: ?>
 							<tr>
-								<td colspan="6" class="text-center text-muted py-4">Nenhuma tarefa pendente encontrada.</td>
+								<td colspan="6" class="text-center text-muted py-4">Nenhuma tarefa criada hoje.</td>
 							</tr>
 						<?php endif; ?>
 					</tbody>
@@ -210,16 +155,16 @@ $metricsDesktopColumns = min(6, max(1, $metricsDesktopColumns));
 			<div class="dashboard-panel-heading">
 				<div>
 					<span class="dashboard-section-label">Agenda</span>
-					<h2>Próximos eventos</h2>
+					<h2>Eventos de hoje</h2>
 				</div>
-				<?php if (function_exists('authCan') && authCan('schedule.calendar')): ?>
-					<a class="dashboard-panel-link" href="<?= url('schedule/calendar'); ?>">Ver calendário</a>
+				<?php if (function_exists('authCan') && authCan('schedule.index')): ?>
+					<a class="dashboard-panel-link" href="<?= url('schedule?starts_from=' . $today . '&starts_to=' . $today); ?>">Ver agenda</a>
 				<?php endif; ?>
 			</div>
 
 			<div class="dashboard-schedule-list">
-				<?php if (!empty($upcomingScheduleEvents)): ?>
-					<?php foreach ($upcomingScheduleEvents as $scheduleEvent): ?>
+				<?php if (!empty($todayScheduleEvents)): ?>
+					<?php foreach ($todayScheduleEvents as $scheduleEvent): ?>
 						<?php
 						$categoryBg = (string) ($scheduleEvent['schedule_category_background_color'] ?? '#0d6efd');
 						$categoryColor = (string) ($scheduleEvent['schedule_category_description_color'] ?? '#ffffff');
@@ -255,182 +200,10 @@ $metricsDesktopColumns = min(6, max(1, $metricsDesktopColumns));
 						</a>
 					<?php endforeach; ?>
 				<?php else: ?>
-					<p class="dashboard-empty">Nenhum evento futuro encontrado.</p>
+					<p class="dashboard-empty">Nenhum evento para hoje.</p>
 				<?php endif; ?>
 			</div>
 		</section>
-
-		<section class="dashboard-grid">
-			<div class="dashboard-panel dashboard-panel-wide">
-				<div class="dashboard-panel-heading">
-					<div>
-						<span class="dashboard-section-label">Atividade</span>
-						<h2>Pessoas recentes</h2>
-					</div>
-					<?php if (function_exists('authCan') && authCan('person.index')): ?>
-						<a class="dashboard-panel-link" href="<?= url('person'); ?>">Ver lista</a>
-					<?php endif; ?>
-				</div>
-
-				<div class="table-responsive dashboard-table-wrap">
-					<table class="table table-hover dashboard-table">
-						<thead>
-							<tr>
-								<th>#</th>
-								<th>Nome</th>
-								<th>Tipo</th>
-								<th>Status</th>
-								<th>Cadastro</th>
-							</tr>
-						</thead>
-						<tbody>
-							<?php if (!empty($recentPeople)): ?>
-								<?php foreach ($recentPeople as $person): ?>
-									<tr>
-										<td><?= htmlspecialchars((string) ($person['id'] ?? ''), ENT_QUOTES, 'UTF-8'); ?></td>
-										<td><?= htmlspecialchars((string) ($person['name'] ?? ''), ENT_QUOTES, 'UTF-8'); ?></td>
-										<td><?= htmlspecialchars($personTypeLabel($person['type'] ?? ''), ENT_QUOTES, 'UTF-8'); ?></td>
-										<td>
-											<span class="dashboard-status <?= ((int) ($person['active'] ?? 0) === 1) ? 'is-active' : 'is-inactive'; ?>">
-												<?= ((int) ($person['active'] ?? 0) === 1) ? 'Ativa' : 'Inativa'; ?>
-											</span>
-										</td>
-										<td><?= htmlspecialchars($formatDateTime($person['created'] ?? ''), ENT_QUOTES, 'UTF-8'); ?></td>
-									</tr>
-								<?php endforeach; ?>
-							<?php else: ?>
-								<tr>
-									<td colspan="5" class="text-center text-muted py-4">Nenhuma pessoa encontrada.</td>
-								</tr>
-							<?php endif; ?>
-						</tbody>
-					</table>
-				</div>
-			</div>
-
-			<div class="dashboard-panel">
-				<div class="dashboard-panel-heading">
-					<div>
-						<span class="dashboard-section-label">Saúde</span>
-						<h2>Resumo do tenant</h2>
-					</div>
-				</div>
-
-				<div class="dashboard-health-list">
-					<?php foreach ($health as $item): ?>
-						<?php
-						$progress = max(0, min(100, (int) ($item['progress'] ?? $item['value'] ?? 0)));
-						$tone = preg_replace('/[^a-z0-9_-]/i', '', (string) ($item['tone'] ?? 'blue'));
-						?>
-						<div class="dashboard-health-item is-<?= htmlspecialchars($tone, ENT_QUOTES, 'UTF-8'); ?>">
-							<div class="dashboard-health-top">
-								<span><?= htmlspecialchars((string) ($item['label'] ?? ''), ENT_QUOTES, 'UTF-8'); ?></span>
-								<strong><?= $formatValue($item['value'] ?? 0); ?><?= htmlspecialchars((string) ($item['suffix'] ?? ''), ENT_QUOTES, 'UTF-8'); ?></strong>
-							</div>
-							<div class="dashboard-progress" aria-hidden="true">
-								<span style="width: <?= $progress; ?>%;"></span>
-							</div>
-							<small><?= htmlspecialchars((string) ($item['caption'] ?? ''), ENT_QUOTES, 'UTF-8'); ?></small>
-						</div>
-					<?php endforeach; ?>
-				</div>
-			</div>
-		</section>
-
-		<section class="dashboard-grid dashboard-grid-secondary">
-			<div class="dashboard-panel">
-				<div class="dashboard-panel-heading">
-					<div>
-						<span class="dashboard-section-label">Acesso</span>
-						<h2>Usuários recentes</h2>
-					</div>
-					<?php if (function_exists('authCan') && authCan('user.index')): ?>
-						<a class="dashboard-panel-link" href="<?= url('user'); ?>">Ver usuários</a>
-					<?php endif; ?>
-				</div>
-
-				<div class="dashboard-list">
-					<?php if (!empty($recentUsers)): ?>
-						<?php foreach ($recentUsers as $user): ?>
-							<div class="dashboard-list-row">
-								<span class="dashboard-avatar"><i class="bi bi-person"></i></span>
-								<div>
-									<strong><?= htmlspecialchars((string) ($user['username'] ?? ''), ENT_QUOTES, 'UTF-8'); ?></strong>
-									<small><?= htmlspecialchars($userTypeLabel($user['type'] ?? ''), ENT_QUOTES, 'UTF-8'); ?> · <?= ((int) ($user['active'] ?? 0) === 1) ? 'Ativo' : 'Inativo'; ?></small>
-								</div>
-							</div>
-						<?php endforeach; ?>
-					<?php else: ?>
-						<p class="dashboard-empty">Nenhum usuário encontrado.</p>
-					<?php endif; ?>
-				</div>
-			</div>
-
-			<div class="dashboard-panel dashboard-panel-wide">
-				<div class="dashboard-panel-heading">
-					<div>
-						<span class="dashboard-section-label">Schema Versions</span>
-						<h2>Últimas execuções</h2>
-					</div>
-					<span class="dashboard-chip"><?= $formatNumber($dashboard['schemaTotal'] ?? 0); ?> registro(s)</span>
-				</div>
-
-				<div class="table-responsive dashboard-table-wrap">
-					<table class="table table-hover dashboard-table">
-						<thead>
-							<tr>
-								<th>ID</th>
-								<th>Version</th>
-								<th>Description</th>
-								<th>Executed At</th>
-							</tr>
-						</thead>
-						<tbody>
-							<?php if (!empty($schemaVersions)): ?>
-								<?php foreach ($schemaVersions as $row): ?>
-									<tr>
-										<td><?= htmlspecialchars((string) ($row['id'] ?? ''), ENT_QUOTES, 'UTF-8'); ?></td>
-										<td><?= htmlspecialchars((string) ($row['version'] ?? ''), ENT_QUOTES, 'UTF-8'); ?></td>
-										<td><?= htmlspecialchars((string) ($row['description'] ?? $row['name'] ?? ''), ENT_QUOTES, 'UTF-8'); ?></td>
-										<td><?= htmlspecialchars($formatDateTime($row['executed_at'] ?? $row['created'] ?? ''), ENT_QUOTES, 'UTF-8'); ?></td>
-									</tr>
-								<?php endforeach; ?>
-							<?php else: ?>
-								<tr>
-									<td colspan="4" class="text-center text-muted py-4">Nenhuma versão de schema encontrada.</td>
-								</tr>
-							<?php endif; ?>
-						</tbody>
-					</table>
-				</div>
-			</div>
-		</section>
-
-		<?php
-		$visibleActions = array_values(array_filter($quickActions, $canOpen));
-		?>
-		<?php if (!empty($visibleActions) || $tenantDocument !== ''): ?>
-			<section class="dashboard-actions">
-				<div class="dashboard-actions-copy">
-					<span class="dashboard-section-label">Atalhos</span>
-					<h2>Operações do tenant</h2>
-					<?php if ($tenantDocument !== ''): ?>
-						<p>Documento: <?= htmlspecialchars($tenantDocument, ENT_QUOTES, 'UTF-8'); ?></p>
-					<?php endif; ?>
-				</div>
-
-				<?php if (!empty($visibleActions)): ?>
-					<div class="dashboard-action-list">
-						<?php foreach ($visibleActions as $action): ?>
-							<a class="btn btn-<?= htmlspecialchars((string) ($action['variant'] ?? 'secondary'), ENT_QUOTES, 'UTF-8'); ?>" href="<?= url((string) $action['href']); ?>">
-								<i class="bi <?= htmlspecialchars((string) ($action['icon'] ?? 'bi-arrow-right'), ENT_QUOTES, 'UTF-8'); ?>"></i>
-								<?= htmlspecialchars((string) ($action['label'] ?? ''), ENT_QUOTES, 'UTF-8'); ?>
-							</a>
-						<?php endforeach; ?>
-					</div>
-				<?php endif; ?>
-			</section>
-		<?php endif; ?>
 	<?php else: ?>
 		<section class="dashboard-empty-state">
 			<i class="bi bi-building-lock"></i>

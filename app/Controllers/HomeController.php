@@ -4,20 +4,16 @@ namespace App\Controllers;
 
 use App\Core\Controller;
 use App\Core\TenantContext;
-use App\Models\Address;
-use App\Models\Email;
-use App\Models\Person;
-use App\Models\PhoneNumber;
+use App\Models\Crm;
+use App\Models\FinancialOperation;
 use App\Models\ScheduleEvent;
-use App\Models\SchemaVersion;
 use App\Models\Task;
 use App\Models\Tenant;
-use App\Models\User;
 
 class HomeController extends Controller
   {
 	/**
-	 * Renders the tenant dashboard with operational metrics and recent activity.
+	 * Renders the home dashboard with the tenant selected in session.
 	 */
 	public function index()
 	  {
@@ -26,24 +22,18 @@ class HomeController extends Controller
 
 		$tenant = TenantContext::tenant();
 		$dashboard = $this->emptyDashboard();
-		$schemaVersions = [];
 
 		if (TenantContext::hasTenant() && $tenant !== null)
 		  {
 			$dashboard = $this->buildTenantDashboard((int) ($tenant['id'] ?? 0));
-			$schemaVersions = $dashboard['schemaVersions'];
 		  }
 
-		$data = [
+		$this->view('home/index', [
 			'title' => 'Dashboard',
 			'tenant' => $tenant,
-			'tenantDatabaseName' => TenantContext::databaseName(),
 			'currentUser' => $_SESSION['manager']['user'] ?? null,
 			'dashboard' => $dashboard,
-			'schemaVersions' => $schemaVersions,
-		];
-
-		$this->view('home/index', $data);
+		]);
 	  }
 
 	/**
@@ -77,69 +67,41 @@ class HomeController extends Controller
 	 */
 	private function buildTenantDashboard(int $tenantId): array
 	  {
-		$personModel = new Person();
-		$userModel = new User();
-		$emailModel = new Email();
-		$phoneNumberModel = new PhoneNumber();
-		$addressModel = new Address();
-		$schemaVersionModel = new SchemaVersion();
+		$today = date('Y-m-d');
+		$crmModel = new Crm();
+		$financialOperationModel = new FinancialOperation();
 		$taskModel = new Task();
 		$scheduleModel = new ScheduleEvent();
 
-		$peopleTotal = $this->safeInt(function () use ($personModel, $tenantId) {
-			return $personModel->count([], $tenantId);
+		$crmToday = $this->safeInt(function () use ($crmModel, $tenantId) {
+			return $crmModel->count(['activity_scope' => 'today'], $tenantId);
 		});
-		$activePeople = $this->safeInt(function () use ($personModel, $tenantId) {
-			return $personModel->count(['active' => '1'], $tenantId);
-		});
-		$inactivePeople = $this->safeInt(function () use ($personModel, $tenantId) {
-			return $personModel->count(['active' => '0'], $tenantId);
-		});
-		$companyPeople = $this->safeInt(function () use ($personModel, $tenantId) {
-			return $personModel->count(['type' => 'company'], $tenantId);
-		});
-		$individualPeople = $this->safeInt(function () use ($personModel, $tenantId) {
-			return $personModel->count(['type' => 'individual'], $tenantId);
-		});
-		$usersTotal = $this->safeInt(function () use ($userModel, $tenantId) {
-			return $userModel->count([], $tenantId);
-		});
-		$activeUsers = $this->safeInt(function () use ($userModel, $tenantId) {
-			return $userModel->count(['active' => '1'], $tenantId);
-		});
-		$emailTotal = $this->safeInt(function () use ($emailModel, $tenantId) {
-			return $emailModel->count([], $tenantId);
-		});
-		$phoneTotal = $this->safeInt(function () use ($phoneNumberModel, $tenantId) {
-			return $phoneNumberModel->count([], $tenantId);
-		});
-		$addressTotal = $this->safeInt(function () use ($addressModel, $tenantId) {
-			return $addressModel->count([], $tenantId);
-		});
-		$schemaTotal = $this->safeInt(function () use ($schemaVersionModel) {
-			return $schemaVersionModel->count();
-		});
-		$pendingTasksTotal = $this->safeInt(function () use ($taskModel) {
-			return $taskModel->count(['statuses' => Task::pendingStatuses()]);
-		});
-		$upcomingScheduleTotal = $this->safeInt(function () use ($scheduleModel) {
+		$scheduleToday = $this->safeInt(function () use ($scheduleModel, $today) {
 			return $scheduleModel->count([
-				'status' => ScheduleEvent::STATUS_SCHEDULED,
-				'starts_from' => date('Y-m-d'),
+				'status_not' => ScheduleEvent::STATUS_CANCELED,
+				'starts_from' => $today,
+				'starts_to' => $today,
 			]);
 		});
+		$tasksToday = $this->safeInt(function () use ($taskModel, $today) {
+			return $taskModel->count([
+				'created_from' => $today,
+				'created_to' => $today,
+			]);
+		});
+		$payableToday = $this->safeInt(function () use ($financialOperationModel, $today) {
+			return $financialOperationModel->countBySectionAndDate('expense', $today);
+		});
+		$receivableToday = $this->safeInt(function () use ($financialOperationModel, $today) {
+			return $financialOperationModel->countBySectionAndDate('income', $today);
+		});
 
-		$schemaVersions = $this->safeArray(function () use ($schemaVersionModel) {
-			return $schemaVersionModel->getLatest(10);
-		});
-		$recentPeople = $this->safeArray(function () use ($personModel, $tenantId) {
-			return $personModel->search([], 6, 0, $tenantId);
-		});
-		$recentUsers = $this->safeArray(function () use ($userModel, $tenantId) {
-			return $userModel->search([], 5, 0, $tenantId);
-		});
-		$pendingTasks = $this->safeArray(function () use ($taskModel) {
-			$tasks = $taskModel->dashboardTasks(8);
+		$todayTasks = $this->safeArray(function () use ($taskModel, $today) {
+			$tasks = $taskModel->search([
+				'created_from' => $today,
+				'created_to' => $today,
+			], 8, 0, 'created', 'desc');
+
 			foreach ($tasks as &$task)
 				{
 				$task['assignees'] = $taskModel->getAssignees((int) ($task['id'] ?? 0));
@@ -148,137 +110,64 @@ class HomeController extends Controller
 
 			return $tasks;
 		});
-		$upcomingScheduleEvents = $this->safeArray(function () use ($scheduleModel) {
-			return $scheduleModel->dashboardEvents(10);
+		$todayScheduleEvents = $this->safeArray(function () use ($scheduleModel, $today) {
+			return $scheduleModel->search([
+				'status_not' => ScheduleEvent::STATUS_CANCELED,
+				'starts_from' => $today,
+				'starts_to' => $today,
+			], 10, 0, 'starts_at', 'asc');
 		});
-
-		$latestSchema = $schemaVersions[0] ?? null;
-		$contactTotal = $emailTotal + $phoneTotal;
-		$activePeoplePercentage = $this->percentage($activePeople, $peopleTotal);
-		$activeUsersPercentage = $this->percentage($activeUsers, $usersTotal);
-		$contactAverage = $peopleTotal > 0 ? round($contactTotal / $peopleTotal, 1) : 0;
 
 		return [
 			'metrics' => [
 				[
-					'label' => 'Pessoas',
-					'value' => $peopleTotal,
-					'caption' => $activePeople . ' ativas / ' . $inactivePeople . ' inativas',
-					'icon' => 'bi-people-fill',
+					'label' => 'CRM',
+					'value' => $crmToday,
+					'caption' => 'Registros com atividade prevista para hoje',
+					'icon' => 'bi-person-workspace',
 					'tone' => 'blue',
-					'href' => 'person',
-					'ability' => 'person.index',
-				],
-				[
-					'label' => 'Empresas',
-					'value' => $companyPeople,
-					'caption' => $individualPeople . ' pessoas físicas',
-					'icon' => 'bi-building-fill',
-					'tone' => 'green',
-					'href' => 'person?type=company',
-					'ability' => 'person.index',
-				],
-				[
-					'label' => 'Usuários',
-					'value' => $usersTotal,
-					'caption' => $activeUsers . ' ativos no tenant',
-					'icon' => 'bi-person-badge-fill',
-					'tone' => 'indigo',
-					'href' => 'user',
-					'ability' => 'user.index',
-				],
-				[
-					'label' => 'Tarefas',
-					'value' => $pendingTasksTotal,
-					'caption' => 'Abertas, em andamento ou aguardando terceiro',
-					'icon' => 'bi-list-check',
-					'tone' => 'teal',
-					'href' => 'task',
-					'ability' => 'task.index',
+					'href' => 'crm?activity_scope=today',
+					'ability' => 'crm.index',
 				],
 				[
 					'label' => 'Agenda',
-					'value' => $upcomingScheduleTotal,
-					'caption' => 'Eventos futuros agendados',
+					'value' => $scheduleToday,
+					'caption' => 'Eventos programados para hoje',
 					'icon' => 'bi-calendar3',
-					'tone' => 'indigo',
-					'href' => 'schedule/calendar',
-					'ability' => 'schedule.calendar',
-				],
-				[
-					'label' => 'E-mails',
-					'value' => $emailTotal,
-					'caption' => 'Registros de contato',
-					'icon' => 'bi-envelope-paper-fill',
-					'tone' => 'teal',
-					'href' => 'email',
-					'ability' => 'email.index',
-				],
-				[
-					'label' => 'Telefones',
-					'value' => $phoneTotal,
-					'caption' => 'Linhas cadastradas',
-					'icon' => 'bi-telephone-fill',
-					'tone' => 'amber',
-					'href' => 'phone_number',
-					'ability' => 'phone_number.index',
-				],
-				[
-					'label' => 'Endereços',
-					'value' => $addressTotal,
-					'caption' => 'Pontos vinculados',
-					'icon' => 'bi-signpost-split-fill',
-					'tone' => 'rose',
-					'href' => 'address',
-					'ability' => 'address.index',
-				],
-			],
-			'health' => [
-				[
-					'label' => 'Pessoas ativas',
-					'value' => $activePeoplePercentage,
-					'progress' => $activePeoplePercentage,
-					'suffix' => '%',
-					'caption' => $activePeople . ' de ' . $peopleTotal . ' cadastros',
-					'tone' => 'blue',
-				],
-				[
-					'label' => 'Usuários ativos',
-					'value' => $activeUsersPercentage,
-					'progress' => $activeUsersPercentage,
-					'suffix' => '%',
-					'caption' => $activeUsers . ' de ' . $usersTotal . ' usuários',
 					'tone' => 'green',
+					'href' => 'schedule?starts_from=' . $today . '&starts_to=' . $today,
+					'ability' => 'schedule.index',
 				],
 				[
-					'label' => 'Média de contatos',
-					'value' => $contactAverage,
-					'progress' => min(100, (int) round($contactAverage * 25)),
-					'suffix' => '',
-					'caption' => $contactAverage . ' por pessoa',
+					'label' => 'Tarefas',
+					'value' => $tasksToday,
+					'caption' => 'Tarefas criadas hoje',
+					'icon' => 'bi-list-check',
+					'tone' => 'indigo',
+					'href' => 'task?created_from=' . $today . '&created_to=' . $today,
+					'ability' => 'task.index',
+				],
+				[
+					'label' => 'Contas a pagar',
+					'value' => $payableToday,
+					'caption' => 'Despesas cadastradas hoje',
+					'icon' => 'bi-wallet2',
+					'tone' => 'teal',
+					'href' => 'financial_operation',
+					'ability' => 'financial_operation.index',
+				],
+				[
+					'label' => 'Contas a receber',
+					'value' => $receivableToday,
+					'caption' => 'Receitas cadastradas hoje',
+					'icon' => 'bi-cash-coin',
 					'tone' => 'amber',
+					'href' => 'financial_operation',
+					'ability' => 'financial_operation.index',
 				],
 			],
-			'quickActions' => [
-				['label' => 'Nova pessoa', 'icon' => 'bi-person-fill-add', 'href' => 'person/create', 'ability' => 'person.create', 'variant' => 'primary'],
-				['label' => 'Nova tarefa', 'icon' => 'bi-plus-square', 'href' => 'task/create', 'ability' => 'task.create', 'variant' => 'primary'],
-				['label' => 'Novo evento', 'icon' => 'bi-calendar-plus', 'href' => 'schedule/create', 'ability' => 'schedule.create', 'variant' => 'primary'],
-				['label' => 'Pessoas', 'icon' => 'bi-person-lines-fill', 'href' => 'person', 'ability' => 'person.index', 'variant' => 'secondary'],
-				['label' => 'Tarefas', 'icon' => 'bi-list-check', 'href' => 'task', 'ability' => 'task.index', 'variant' => 'secondary'],
-				['label' => 'Agenda', 'icon' => 'bi-calendar3', 'href' => 'schedule/calendar', 'ability' => 'schedule.calendar', 'variant' => 'secondary'],
-				['label' => 'Usuários', 'icon' => 'bi-person-badge', 'href' => 'user', 'ability' => 'user.index', 'variant' => 'secondary'],
-				['label' => 'E-mails', 'icon' => 'bi-envelope-paper', 'href' => 'email', 'ability' => 'email.index', 'variant' => 'secondary'],
-				['label' => 'Telefones', 'icon' => 'bi-telephone', 'href' => 'phone_number', 'ability' => 'phone_number.index', 'variant' => 'secondary'],
-				['label' => 'Endereços', 'icon' => 'bi-signpost-split', 'href' => 'address', 'ability' => 'address.index', 'variant' => 'secondary'],
-			],
-			'recentPeople' => $recentPeople,
-			'recentUsers' => $recentUsers,
-			'pendingTasks' => $pendingTasks,
-			'upcomingScheduleEvents' => $upcomingScheduleEvents,
-			'schemaVersions' => $schemaVersions,
-			'schemaTotal' => $schemaTotal,
-			'latestSchema' => $latestSchema,
-			'contactTotal' => $contactTotal,
+			'todayTasks' => $todayTasks,
+			'todayScheduleEvents' => $todayScheduleEvents,
 		];
 	  }
 
@@ -289,16 +178,8 @@ class HomeController extends Controller
 	  {
 		return [
 			'metrics' => [],
-			'health' => [],
-			'quickActions' => [],
-			'recentPeople' => [],
-			'recentUsers' => [],
-			'pendingTasks' => [],
-			'upcomingScheduleEvents' => [],
-			'schemaVersions' => [],
-			'schemaTotal' => 0,
-			'latestSchema' => null,
-			'contactTotal' => 0,
+			'todayTasks' => [],
+			'todayScheduleEvents' => [],
 		];
 	  }
 
@@ -333,19 +214,6 @@ class HomeController extends Controller
 			error_log('Dashboard list error: ' . $e->getMessage());
 			return [];
 		  }
-	  }
-
-	/**
-	 * Calculates an integer percentage while avoiding division by zero.
-	 */
-	private function percentage(int $value, int $total): int
-	  {
-		if ($total <= 0)
-		  {
-			return 0;
-		  }
-
-		return (int) round(($value / $total) * 100);
 	  }
   }
 ?>

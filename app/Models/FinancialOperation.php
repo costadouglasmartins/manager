@@ -416,6 +416,42 @@ class FinancialOperation extends TenantModel
 		}
 
 	/**
+	 * Counts operations created on one date grouped by financial section.
+	 */
+	public function countBySectionAndDate(string $section, string $date): int
+		{
+		$stmt = $this->db->prepare("
+			SELECT FinancialOperationCategory.name,
+			       COUNT(FinancialOperation.id) AS total
+			FROM financial_operations AS FinancialOperation
+			INNER JOIN financial_operations_categories AS FinancialOperationCategory
+				ON FinancialOperationCategory.id = FinancialOperation.financial_operation_category_id
+			WHERE FinancialOperation.created >= :start
+			  AND FinancialOperation.created <= :end
+			GROUP BY FinancialOperationCategory.name
+		");
+		$stmt->execute([
+			'start' => trim($date) . ' 00:00:00',
+			'end' => trim($date) . ' 23:59:59',
+		]);
+
+		$requestedSection = $section === 'income' ? 'income' : 'expense';
+		$total = 0;
+
+		foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row)
+			{
+			if ($this->sectionForCategory((string) ($row['name'] ?? '')) !== $requestedSection)
+				{
+				continue;
+				}
+
+			$total += (int) ($row['total'] ?? 0);
+			}
+
+		return $total;
+		}
+
+	/**
 	 * Builds the annual spreadsheet grouped by financial category and subcategory.
 	 */
 	public function yearlySpreadsheet(int $year): array
