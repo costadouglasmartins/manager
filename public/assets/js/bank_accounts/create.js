@@ -34,8 +34,10 @@
     input.value = normalizeMoneyValue(input.value);
     }
 
+  const bankSlipToggle = document.querySelector(".js-bank-slip-toggle");
   const bankSelect = document.getElementById("bank_id");
   const bankSlipFields = document.querySelectorAll(".js-bank-slip-field");
+  const cnab240OnlyFieldWrappers = document.querySelectorAll(".js-bank-slip-cnab240-field");
   const bankSlipProtestSelect = document.getElementById("bank_slip_protest");
   const bankSlipProtestDaysInput = document.getElementById("bank_slip_protest_number_of_days");
   const fieldValidationRules = [
@@ -105,6 +107,32 @@
     return isValid;
     }
 
+  function firstEnabledBankOption()
+    {
+    if (!bankSelect)
+      {
+      return null;
+      }
+
+    return Array.from(bankSelect.options).find(function (option)
+      {
+      return !option.disabled;
+      }) || null;
+    }
+
+  function neutralBankOption()
+    {
+    if (!bankSelect)
+      {
+      return null;
+      }
+
+    return Array.from(bankSelect.options).find(function (option)
+      {
+      return String(option.dataset.bankNumber || "") === "000";
+      }) || null;
+    }
+
   function registerFieldValidations()
     {
     fieldValidationRules.forEach(function (rule)
@@ -126,11 +154,44 @@
       });
     }
 
+  function selectedBankConfig()
+    {
+    if (!bankSelect)
+      {
+      return { number: "", cnab: "" };
+      }
+
+    const selectedOption = bankSelect.options[bankSelect.selectedIndex] || null;
+
+    return {
+      number: selectedOption ? String(selectedOption.dataset.bankNumber || "").trim() : "",
+      cnab: selectedOption ? String(selectedOption.dataset.bankCnab || "").trim() : "",
+    };
+    }
+
+  function toggleBankSlipLayoutByBank(shouldEnableBankSlips)
+    {
+    const bankConfig = selectedBankConfig();
+    const shouldShowCnab240OnlyFields = shouldEnableBankSlips && bankConfig.number === "341" && bankConfig.cnab === "240";
+
+    cnab240OnlyFieldWrappers.forEach(function (fieldWrapper)
+      {
+      fieldWrapper.classList.toggle("d-none", !shouldShowCnab240OnlyFields);
+
+      fieldWrapper.querySelectorAll("input, select, textarea").forEach(function (field)
+        {
+        field.disabled = !shouldShowCnab240OnlyFields;
+        field.required = false;
+        field.setCustomValidity("");
+        });
+      });
+
+    toggleBankSlipProtestDays(shouldShowCnab240OnlyFields);
+    }
+
   function toggleBankSlipFields()
     {
-    const selectedOption = bankSelect ? bankSelect.options[bankSelect.selectedIndex] : null;
-    const bankCnab = selectedOption ? String(selectedOption.dataset.bankCnab || "") : "";
-    const shouldEnableBankSlips = bankCnab === "240" || bankCnab === "400";
+    const shouldEnableBankSlips = Boolean(bankSlipToggle && bankSlipToggle.checked);
 
     bankSlipFields.forEach(function (fieldWrapper)
       {
@@ -142,7 +203,24 @@
         });
       });
 
-    toggleBankSlipProtestDays(shouldEnableBankSlips);
+    if (bankSelect)
+      {
+      bankSelect.required = shouldEnableBankSlips;
+
+      const selectedOption = bankSelect.options[bankSelect.selectedIndex] || null;
+
+      if (!shouldEnableBankSlips && (!bankSelect.value || (selectedOption && selectedOption.disabled)))
+        {
+        const fallbackOption = neutralBankOption() || firstEnabledBankOption();
+
+        if (fallbackOption)
+          {
+          bankSelect.value = fallbackOption.value;
+          }
+        }
+      }
+
+    toggleBankSlipLayoutByBank(shouldEnableBankSlips);
     }
 
   function toggleBankSlipProtestDays(shouldEnableBankSlips)
@@ -156,20 +234,22 @@
     validateField(bankSlipProtestDaysInput);
     }
 
-  if (bankSelect && bankSlipFields.length > 0)
+  if (bankSlipToggle && bankSlipFields.length > 0)
+    {
+    bankSlipToggle.addEventListener("change", toggleBankSlipFields);
+    toggleBankSlipFields();
+    }
+
+  if (bankSelect)
     {
     bankSelect.addEventListener("change", toggleBankSlipFields);
-    toggleBankSlipFields();
     }
 
   if (bankSlipProtestSelect)
     {
     bankSlipProtestSelect.addEventListener("change", function ()
       {
-      const selectedOption = bankSelect ? bankSelect.options[bankSelect.selectedIndex] : null;
-      const bankCnab = selectedOption ? String(selectedOption.dataset.bankCnab || "") : "";
-
-      toggleBankSlipProtestDays(bankCnab === "240" || bankCnab === "400");
+      toggleBankSlipLayoutByBank(Boolean(bankSlipToggle && bankSlipToggle.checked));
       });
     }
 
