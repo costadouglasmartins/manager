@@ -298,6 +298,6 @@ $variationClientKey = static function (array $variation, int $index): string {
 </template>
 <script type="application/json" id="productCategorySchemas"><?= json_encode($categorySchemas, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT); ?></script>
 <script type="application/json" id="productAttributeValues"><?= json_encode($attributeValues, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT); ?></script>
-<script src="/assets/richtexteditor/rich_text_editor.js?v=2"></script>
+<script src="/manager_assets/richtexteditor/rich_text_editor.js?v=2"></script>
 <script src="<?= url('assets/js/products/form.js?v=2'); ?>"></script>
 <script src="<?= url($isEdit ? 'assets/js/products/edit.js?v=2' : 'assets/js/products/create.js?v=3'); ?>"></script>

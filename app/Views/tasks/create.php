@@ -88,5 +88,5 @@ $statusValue = (string) ($taskData['status'] ?? \App\Models\Task::STATUS_OPEN);
   </form>
 </div>
 
-<script src="/assets/autocomplete/autocomplete.js?v=2"></script>
+<script src="/manager_assets/autocomplete/autocomplete.js?v=2"></script>
 <script src="<?= url('assets/js/tasks/create.js?v=1'); ?>"></script>

@@ -168,4 +168,4 @@ $queryFilters = http_build_query([
 	<?= paginationLinks('person', $page, $totalPages, $queryFilters, 2, 'Anterior', 'Próxima') ?>
 <?php endif; ?>
 <!-- /Pagination -->
-<script src="/assets/autocomplete/autocomplete.js?v=2"></script>
+<script src="/manager_assets/autocomplete/autocomplete.js?v=2"></script>

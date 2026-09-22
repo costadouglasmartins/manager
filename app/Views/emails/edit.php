@@ -54,4 +54,4 @@
 </div>
 <!-- /E-mail -->
 
-<script src="/assets/autocomplete/autocomplete.js?v=2"></script>
+<script src="/manager_assets/autocomplete/autocomplete.js?v=2"></script>

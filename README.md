@@ -9,7 +9,7 @@ As configurações Docker usadas no ambiente local ficam no diretório acima da 
 
 ```text
 /var/www/html/
-  assets/
+  manager_assets/
   manager_main/
   manager/
 ```
@@ -26,15 +26,15 @@ Em produção, evite habilitar Xdebug. Ele aparece no Docker para desenvolviment
 
 ### Publicação dos arquivos
 
-1. Envie os diretórios `assets`, `manager_main` e `manager` para `/var/www/html`.
+1. Envie os diretórios `manager_assets`, `manager_main` e `manager` para `/var/www/html`.
 2. Instale uma única vez as dependências PHP compartilhadas:
 
 ```sh
-cd /var/www/html/assets
+cd /var/www/html/manager_assets
 composer install --no-dev --optimize-autoloader
 ```
 
-Os dois sistemas procuram esse diretório no mesmo nível por padrão. Se a implantação utilizar outro caminho, configure `SHARED_ASSETS_PATH` com o caminho absoluto da pasta `assets`.
+Os dois sistemas procuram esse diretório no mesmo nível por padrão. Se a implantação utilizar outro caminho, configure `SHARED_ASSETS_PATH` com o caminho absoluto da pasta `manager_assets`.
 
 3. Garanta permissão de escrita para o usuário do PHP-FPM nas pastas públicas que recebem arquivos por tenant:
 
@@ -58,7 +58,7 @@ As demais configurações continuam disponíveis por variáveis de ambiente:
 
 ```env
 SUPPORT_CHAT_WS_URL=wss://seu-dominio.com/ws
-SHARED_ASSETS_PATH=/var/www/html/assets
+SHARED_ASSETS_PATH=/var/www/html/manager_assets
 ```
 
 No Docker local, o host do banco é `mysql`, a porta é `3306` e o Redis fica disponível no host `redis`. Em um servidor tradicional, ajuste as constantes e a conexão do Redis conforme a infraestrutura instalada.
@@ -116,7 +116,7 @@ server {
         rewrite ^/manager/public/(.*)$ /manager/public/index.php?url=$1&$args last;
     }
 
-    location ^~ /assets/bootstrap/ {
+    location ^~ /manager_assets/bootstrap/ {
         location ~* \.(?:css|js|map|svg|png|ico|woff|woff2)$ {
             try_files $uri =404;
         }
@@ -124,7 +124,7 @@ server {
         return 404;
     }
 
-    location ^~ /assets/fullcalendar/ {
+    location ^~ /manager_assets/fullcalendar/ {
         location ~* \.js$ {
             try_files $uri =404;
         }
@@ -132,7 +132,7 @@ server {
         return 404;
     }
 
-    location ^~ /assets/ {
+    location ^~ /manager_assets/ {
         deny all;
     }
 
@@ -167,11 +167,11 @@ Se usar Apache, mantenha a mesma raiz em `/var/www/html` e habilite `AllowOverri
         Require all granted
     </Directory>
 
-    <Directory /var/www/html/assets>
+    <Directory /var/www/html/manager_assets>
         Require all denied
     </Directory>
 
-    <Directory /var/www/html/assets/bootstrap>
+    <Directory /var/www/html/manager_assets/bootstrap>
         Options -Indexes
         AllowOverride None
         Require all granted
@@ -181,7 +181,7 @@ Se usar Apache, mantenha a mesma raiz em `/var/www/html` e habilite `AllowOverri
         </FilesMatch>
     </Directory>
 
-    <Directory /var/www/html/assets/fullcalendar>
+    <Directory /var/www/html/manager_assets/fullcalendar>
         Options -Indexes
         AllowOverride None
         Require all granted
@@ -242,8 +242,8 @@ Exemplo recomendado para comentários de métodos:
 ## Código reutilizável
 
 - Sempre que um código puder ser reutilizado por mais de uma aplicação não o mantenha duplicado ou embutido em uma view.
-- Antes de criar uma nova biblioteca, verifique se já existe uma biblioteca em `assets/` que possa ser estendida.
-- Quando for necessária uma nova biblioteca JavaScript reutilizável, crie-a no diretório compartilhado seguindo o padrão `assets/<nome_da_lib>/<nome_da_lib>.js`.
+- Antes de criar uma nova biblioteca, verifique se já existe uma biblioteca em `manager_assets/` que possa ser estendida.
+- Quando for necessária uma nova biblioteca JavaScript reutilizável, crie-a no diretório compartilhado seguindo o padrão `manager_assets/<nome_da_lib>/<nome_da_lib>.js`.
 - Mantenha a biblioteca independente dos detalhes de uma tela específica e exponha somente as opções necessárias para que cada tela configure seu comportamento.
 - Nas views de `manager` e `manager_main`, apenas carregue e inicialize a biblioteca compartilhada; mantenha nelas somente o código que for realmente exclusivo daquela tela.
 

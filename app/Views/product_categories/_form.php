@@ -136,5 +136,5 @@ $typeLabels = ['TEXT' => 'Texto', 'INTEGER' => 'Número inteiro', 'DECIMAL' => '
     </div>
   </div>
 </template>
-<script src="/assets/richtexteditor/rich_text_editor.js?v=2"></script>
+<script src="/manager_assets/richtexteditor/rich_text_editor.js?v=2"></script>
 <script src="<?= url('assets/js/product_categories/form.js?v=1'); ?>"></script>

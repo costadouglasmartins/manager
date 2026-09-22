@@ -101,6 +101,6 @@ $editorHtml = trim(preg_replace('/<([a-z][a-z0-9]*)\b[^>]*>/i', '<$1>', strip_ta
   </form>
 </div>
 
-<script src="/assets/richtexteditor/rich_text_editor.js?v=2"></script>
+<script src="/manager_assets/richtexteditor/rich_text_editor.js?v=2"></script>
 <script type="application/json" id="productStockOptions"><?= json_encode($products, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT); ?></script>
 <script src="<?= url('assets/js/product_stocks_movements/create.js?v=2'); ?>"></script>

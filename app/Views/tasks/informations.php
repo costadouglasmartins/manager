@@ -173,6 +173,6 @@ $commentHtml = static function (?string $comment): string {
   </div>
 </div>
 
-<script src="/assets/richtexteditor/rich_text_editor.js?v=2"></script>
+<script src="/manager_assets/richtexteditor/rich_text_editor.js?v=2"></script>
 <script src="<?= url('assets/js/tasks/duration_timer.js?v=1'); ?>"></script>
 <script src="<?= url('assets/js/tasks/informations.js?v=2'); ?>"></script>

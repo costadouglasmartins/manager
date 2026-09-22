@@ -16,17 +16,17 @@ $userPresence = is_array($userPresence) ? $userPresence : \App\Services\UserPres
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <script src="/assets/helpers/helper.js?v=3"></script>
+  <script src="/manager_assets/helpers/helper.js?v=3"></script>
   <script>
     AppTheme.initialize({ storageKey: "theme-manager" });
   </script>
-  <link rel="stylesheet" href="/assets/bootstrap/css/bootstrap.min.css">
-  <link rel="stylesheet" href="/assets/bootstrap/images/bootstrap-icons.min.css">
+  <link rel="stylesheet" href="/manager_assets/bootstrap/css/bootstrap.min.css">
+  <link rel="stylesheet" href="/manager_assets/bootstrap/images/bootstrap-icons.min.css">
   <link rel="stylesheet" href="<?= url('assets/css/main.css?v=13'); ?>">
   <link rel="stylesheet" href="<?= url('assets/css/menu.css?v=4'); ?>">
-  <link rel="apple-touch-icon" sizes="180x180" href="/assets/bootstrap/images/apple-touch-icon.png">
-  <link rel="icon" type="image/png" sizes="32x32" href="/assets/bootstrap/images/favicon-32x32.png">
-  <link rel="icon" type="image/png" sizes="16x16" href="/assets/bootstrap/images/favicon-16x16.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="/manager_assets/bootstrap/images/apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/manager_assets/bootstrap/images/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/manager_assets/bootstrap/images/favicon-16x16.png">
   <link rel="manifest" href="<?= url('/site.webmanifest'); ?>">
   <title>Manager - <?= htmlspecialchars($pageTitle, ENT_QUOTES, 'UTF-8'); ?></title>
 </head>
@@ -45,7 +45,7 @@ $userPresence = is_array($userPresence) ? $userPresence : \App\Services\UserPres
     </div>
   </main>
   
-  <script src="/assets/bootstrap/js/bootstrap.bundle.min.js"></script>
+  <script src="/manager_assets/bootstrap/js/bootstrap.bundle.min.js"></script>
   <script src="<?= url('assets/js/menu.js?v=4'); ?>"></script>
   <script src="<?= url('assets/js/main.js?v=5'); ?>"></script>
   <?php if ($isAuthenticated): ?>
