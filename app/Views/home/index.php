@@ -54,7 +54,7 @@ $today = date('Y-m-d');
 		<section class="dashboard-hero">
 			<div class="dashboard-hero-copy">
 				<span class="dashboard-kicker"><i class="bi bi-speedometer2"></i> Dashboard do dia</span>
-				<h1>Painel operacional</h1>
+				<h1>Painel operacionalTESTE</h1>
 				<p>
 					<?= $userName !== '' ? htmlspecialchars($userName, ENT_QUOTES, 'UTF-8') . ', ' : ''; ?>acompanhe os indicadores diários dos módulos principais.
 				</p>
