@@ -1,5 +1,9 @@
 Manager System
 
+## Deployment
+
+For automatic publication to the existing VPS, see [deployment instructions](docs/deployment.md).
+
 - Apenas para usuários admin e user;
 - Este é o cliente tenant para todos os bancos de dados.
 
