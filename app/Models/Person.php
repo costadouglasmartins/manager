@@ -41,14 +41,15 @@ class Person extends Model
 
 			$stmtPerson = $this->db->prepare("
 				INSERT INTO people
-					(name, fantasy, type, document, active, birthdate, created, modified)
+					(name, fantasy, type, role, document, active, birthdate, created, modified)
 				VALUES
-					(:name, :fantasy, :type, :document, :active, :birthdate, :created, :modified)
+					(:name, :fantasy, :type, :role, :document, :active, :birthdate, :created, :modified)
 			");
 			$stmtPerson->execute([
 				'name' => $personData['name'],
 				'fantasy' => $personData['fantasy'],
 				'type' => $personData['type'],
+				'role' => $personData['role'],
 				'document' => cleanCpfCnpj((string)$personData['document']),
 				'active' => $personData['active'],
 				'birthdate' => $personData['birthdate'],
@@ -144,6 +145,7 @@ class Person extends Model
 					name = :name,
 					fantasy = :fantasy,
 					type = :type,
+					role = :role,
 					document = :document,
 					active = :active,
 					birthdate = :birthdate,
@@ -154,6 +156,7 @@ class Person extends Model
 				'name' => $normalizedPersonData['name'],
 				'fantasy' => $normalizedPersonData['fantasy'],
 				'type' => $normalizedPersonData['type'],
+				'role' => $normalizedPersonData['role'],
 				'document' => $normalizedPersonData['document'],
 				'active' => $normalizedPersonData['active'],
 				'birthdate' => $normalizedPersonData['birthdate'],
@@ -908,10 +911,18 @@ class Person extends Model
 	 */
 	private function normalizePersonPayload(array $personData): array
 		{
+		$role = trim((string) ($personData['role'] ?? ''));
+
+		if (!in_array($role, ['', 'employee', 'customer', 'user'], true))
+			{
+			$role = '';
+			}
+
 		return [
 			'name' => trim((string) ($personData['name'] ?? '')),
 			'fantasy' => trim((string) ($personData['fantasy'] ?? '')),
 			'type' => trim((string) ($personData['type'] ?? '')),
+			'role' => $role,
 			'document' => cleanCpfCnpj((string) ($personData['document'] ?? '')),
 			'active' => (int) ($personData['active'] ?? 1),
 			'birthdate' => (!empty($personData['birthdate']) ? dateBrToUs($personData['birthdate']) : null),

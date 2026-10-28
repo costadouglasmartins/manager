@@ -14,6 +14,7 @@
       const personNameInput = document.getElementById("personName");
       const personFantasyInput = document.getElementById("personFantasy");
       const personTypeSelect = document.getElementById("personType");
+      const personRoleSelect = document.getElementById("personRole");
       const personDocumentInput = document.getElementById("personDocument");
       const personBirthdateInput = document.getElementById("personBirthdate");
       const personActiveSelect = document.getElementById("personActive");
@@ -133,6 +134,7 @@
               name: getFieldValue(personNameInput),
               fantasy: getFieldValue(personFantasyInput),
               type: getFieldValue(personTypeSelect),
+              role: getFieldValue(personRoleSelect),
               document: getFieldValue(personDocumentInput),
               birthdate: getFieldValue(personBirthdateInput)
             },
@@ -246,6 +248,7 @@
           assignDraftField(personNameInput, person, "name");
           assignDraftField(personFantasyInput, person, "fantasy");
           assignDraftField(personTypeSelect, person, "type");
+          assignDraftField(personRoleSelect, person, "role");
           assignDraftField(personDocumentInput, person, "document");
           assignDraftField(personBirthdateInput, person, "birthdate");
           assignDraftField(createUserSelect, draft, "create_user");
@@ -1616,6 +1619,7 @@
           setFieldValue(personNameInput, "");
           setFieldValue(personFantasyInput, "");
           setFieldValue(personTypeSelect, "");
+          setFieldValue(personRoleSelect, "");
           setFieldValue(personDocumentInput, "");
           setFieldValue(personBirthdateInput, "");
           setFieldValue(userUsernameInput, "");

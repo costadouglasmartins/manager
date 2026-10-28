@@ -1,3 +1,18 @@
+<?php
+$personRoleLabels = [
+  '' => 'Não se aplica',
+  'employee' => 'Funcionário',
+  'customer' => 'Cliente',
+  'user' => 'Usuário comum',
+];
+$personRole = (string) ($person['role'] ?? '');
+
+if (!isset($personRoleLabels[$personRole]))
+  {
+  $personRole = '';
+  }
+?>
+
 <div class="d-flex justify-content-between align-items-center mb-3">
   <h5 class="mb-0">Dados gerais da pessoa</h5>
 </div>
@@ -19,6 +34,10 @@
         <tr>
           <th class="text-muted">Tipo</th>
           <td><?= ($person['type'] === 'individual' ? 'Pessoa física' : 'Pessoa jurídica'); ?></td>
+        </tr>
+        <tr>
+          <th class="text-muted">Papel</th>
+          <td><?= htmlspecialchars($personRoleLabels[$personRole], ENT_QUOTES, 'UTF-8'); ?></td>
         </tr>
         <tr>
           <th class="text-muted">Documento</th>

@@ -75,18 +75,24 @@ $jsonFlags = JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JS
       </div>
 
       <div class="row g-3">
-        <div class="col-12 col-xl-6">
+        <div class="col-12 col-lg-4">
           <label class="form-label" for="personName">Nome *</label>
           <input autocomplete="off" class="form-control" id="personName" name="person[name]" placeholder="Nome completo ou razão social" type="text" required value="<?= htmlspecialchars($person['name'] ?? '', ENT_QUOTES, 'UTF-8'); ?>" />
           <div class="invalid-feedback">Informe o nome.</div>
         </div>
 
-        <div class="col-12 col-xl-6">
+        <div class="col-12 col-md-6 col-lg-4">
           <label class="form-label" for="personFantasy">Nome fantasia</label>
           <input autocomplete="off" class="form-control" id="personFantasy" name="person[fantasy]" placeholder="Nome fantasia" type="text" value="<?= htmlspecialchars($person['fantasy'] ?? '', ENT_QUOTES, 'UTF-8'); ?>" />
         </div>
 
-        <div class="col-12 col-md-3">
+        <div class="col-12 col-md-6 col-lg-4">
+          <label class="form-label" for="personDocument">Documento *</label>
+          <input autocomplete="off" class="form-control mask-cpf-cnpj" id="personDocument" name="person[document]" maxlength="18" placeholder="CPF ou CNPJ" type="text" required value="<?= htmlspecialchars(maskCpfCnpj($person['document'] ?? ''), ENT_QUOTES, 'UTF-8'); ?>" />
+          <div class="invalid-feedback">Informe o documento.</div>
+        </div>
+
+        <div class="col-12 col-md-6 col-xl-3">
           <label class="form-label" for="personType">Tipo *</label>
           <select autocomplete="off" class="form-select" id="personType" name="person[type]" required>
             <option value="" disabled <?= empty($person['type']) ? 'selected' : ''; ?>>Selecione...</option>
@@ -96,19 +102,23 @@ $jsonFlags = JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JS
           <div class="invalid-feedback">Selecione o tipo.</div>
         </div>
 
-        <div class="col-12 col-md-3">
-          <label class="form-label" for="personDocument">Documento *</label>
-          <input autocomplete="off" class="form-control mask-cpf-cnpj" id="personDocument" name="person[document]" maxlength="18" placeholder="CPF ou CNPJ" type="text" required value="<?= htmlspecialchars(maskCpfCnpj($person['document'] ?? ''), ENT_QUOTES, 'UTF-8'); ?>" />
-          <div class="invalid-feedback">Informe o documento.</div>
+        <div class="col-12 col-md-6 col-xl-3">
+          <label class="form-label" for="personRole">Papel</label>
+          <select autocomplete="off" class="form-select" id="personRole" name="person[role]">
+            <option value="" <?= (($person['role'] ?? '') === '' ? 'selected' : ''); ?>>Não se aplica</option>
+            <option value="employee" <?= (($person['role'] ?? '') === 'employee' ? 'selected' : ''); ?>>Funcionário</option>
+            <option value="customer" <?= (($person['role'] ?? '') === 'customer' ? 'selected' : ''); ?>>Cliente</option>
+            <option value="user" <?= (($person['role'] ?? '') === 'user' ? 'selected' : ''); ?>>Usuário comum</option>
+          </select>
         </div>
 
-        <div class="col-12 col-md-3">
+        <div class="col-12 col-md-6 col-xl-3">
           <label class="form-label" for="personBirthdate">Data de nascimento</label>
           <input autocomplete="off" class="form-control mask-date" id="personBirthdate" name="person[birthdate]" placeholder="DD/MM/AAAA" type="text" value="<?= htmlspecialchars(maskDateBr($person['birthdate'] ?? null) ?? '', ENT_QUOTES, 'UTF-8'); ?>" />
           <div class="invalid-feedback">Informe uma data válida.</div>
         </div>
 
-        <div class="col-12 col-md-3">
+        <div class="col-12 col-md-6 col-xl-3">
           <label class="form-label" for="personActive">Ativo *</label>
           <select autocomplete="off" class="form-select" id="personActive" name="person[active]" required>
             <option value="" disabled <?= (!isset($person['active']) || $person['active'] === '') ? 'selected' : ''; ?>>Selecione...</option>
@@ -296,4 +306,4 @@ $jsonFlags = JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JS
   const initialPhones = <?= json_encode($initialPhones, $jsonFlags); ?>;
   const initialEmails = <?= json_encode($initialEmails, $jsonFlags); ?>;
 </script>
-<script src="<?= url('assets/js/people/edit.js?v=4'); ?>"></script>
+<script src="<?= url('assets/js/people/edit.js?v=6'); ?>"></script>

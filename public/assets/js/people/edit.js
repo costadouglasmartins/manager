@@ -21,6 +21,7 @@
   const personNameInput = document.getElementById("personName");
   const personFantasyInput = document.getElementById("personFantasy");
   const personTypeSelect = document.getElementById("personType");
+  const personRoleSelect = document.getElementById("personRole");
   const personDocumentInput = document.getElementById("personDocument");
   const personBirthdateInput = document.getElementById("personBirthdate");
   const personActiveSelect = document.getElementById("personActive");
@@ -1098,6 +1099,7 @@
     setFieldValue(personNameInput, "");
     setFieldValue(personFantasyInput, "");
     setFieldValue(personTypeSelect, "");
+    setFieldValue(personRoleSelect, "");
     setFieldValue(personDocumentInput, "");
     setFieldValue(personBirthdateInput, "");
     setFieldValue(personActiveSelect, "");
