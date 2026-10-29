@@ -41,6 +41,12 @@ $canOpen = static function (array $item): bool {
 	return function_exists('authCan') && authCan((string) $item['ability']);
 };
 
+// Metrics the user cannot open are not rendered at all, and the grid counts only the visible cards.
+$metrics = array_values(array_filter($metrics, $canOpen));
+// Today's panels follow the same module permissions the controller uses to load their lists.
+$canViewTasks = function_exists('authCan') && authCan('task.index');
+$canViewSchedule = function_exists('authCan') && authCan('schedule.index');
+
 $userName = trim((string) ($currentUser['name'] ?? ''));
 $metricsCount = count($metrics);
 $metricsDesktopColumns = min(6, max(1, $metricsCount));
@@ -61,41 +67,32 @@ $today = date('Y-m-d');
 			</div>
 		</section>
 
+		<?php if (!empty($metrics)): ?>
 		<section class="dashboard-metrics" style="--dashboard-metrics-desktop-columns: <?= $metricsDesktopColumns; ?>;" aria-label="Indicadores diários dos módulos">
 			<?php foreach ($metrics as $metric): ?>
 				<?php
 				$tone = preg_replace('/[^a-z0-9_-]/i', '', (string) ($metric['tone'] ?? 'blue'));
 				$metricClass = 'dashboard-metric is-' . $tone;
-				$metricCanOpen = $canOpen($metric);
 				?>
 
-				<?php if ($metricCanOpen): ?>
-					<a class="<?= htmlspecialchars($metricClass, ENT_QUOTES, 'UTF-8'); ?>" href="<?= url((string) $metric['href']); ?>">
-						<span class="dashboard-metric-icon"><i class="bi <?= htmlspecialchars((string) ($metric['icon'] ?? 'bi-circle'), ENT_QUOTES, 'UTF-8'); ?>"></i></span>
-						<span class="dashboard-metric-label"><?= htmlspecialchars((string) ($metric['label'] ?? ''), ENT_QUOTES, 'UTF-8'); ?></span>
-						<strong><?= $formatNumber($metric['value'] ?? 0); ?></strong>
-						<small><?= htmlspecialchars((string) ($metric['caption'] ?? ''), ENT_QUOTES, 'UTF-8'); ?></small>
-					</a>
-				<?php else: ?>
-					<div class="<?= htmlspecialchars($metricClass, ENT_QUOTES, 'UTF-8'); ?>">
-						<span class="dashboard-metric-icon"><i class="bi <?= htmlspecialchars((string) ($metric['icon'] ?? 'bi-circle'), ENT_QUOTES, 'UTF-8'); ?>"></i></span>
-						<span class="dashboard-metric-label"><?= htmlspecialchars((string) ($metric['label'] ?? ''), ENT_QUOTES, 'UTF-8'); ?></span>
-						<strong><?= $formatNumber($metric['value'] ?? 0); ?></strong>
-						<small><?= htmlspecialchars((string) ($metric['caption'] ?? ''), ENT_QUOTES, 'UTF-8'); ?></small>
-					</div>
-				<?php endif; ?>
+				<a class="<?= htmlspecialchars($metricClass, ENT_QUOTES, 'UTF-8'); ?>" href="<?= url((string) $metric['href']); ?>">
+					<span class="dashboard-metric-icon"><i class="bi <?= htmlspecialchars((string) ($metric['icon'] ?? 'bi-circle'), ENT_QUOTES, 'UTF-8'); ?>"></i></span>
+					<span class="dashboard-metric-label"><?= htmlspecialchars((string) ($metric['label'] ?? ''), ENT_QUOTES, 'UTF-8'); ?></span>
+					<strong><?= $formatNumber($metric['value'] ?? 0); ?></strong>
+					<small><?= htmlspecialchars((string) ($metric['caption'] ?? ''), ENT_QUOTES, 'UTF-8'); ?></small>
+				</a>
 			<?php endforeach; ?>
 		</section>
+		<?php endif; ?>
 
+		<?php if ($canViewTasks): ?>
 		<section class="dashboard-panel dashboard-task-panel">
 			<div class="dashboard-panel-heading">
 				<div>
 					<span class="dashboard-section-label">Tarefas</span>
 					<h2>Criadas hoje</h2>
 				</div>
-				<?php if (function_exists('authCan') && authCan('task.index')): ?>
-					<a class="dashboard-panel-link" href="<?= url('task?created_from=' . $today . '&created_to=' . $today); ?>">Ver tarefas</a>
-				<?php endif; ?>
+				<a class="dashboard-panel-link" href="<?= url('task?created_from=' . $today . '&created_to=' . $today); ?>">Ver tarefas</a>
 			</div>
 
 			<div class="table-responsive dashboard-table-wrap">
@@ -150,16 +147,16 @@ $today = date('Y-m-d');
 				</table>
 			</div>
 		</section>
+		<?php endif; ?>
 
+		<?php if ($canViewSchedule): ?>
 		<section class="dashboard-panel dashboard-schedule-panel">
 			<div class="dashboard-panel-heading">
 				<div>
 					<span class="dashboard-section-label">Agenda</span>
 					<h2>Eventos de hoje</h2>
 				</div>
-				<?php if (function_exists('authCan') && authCan('schedule.index')): ?>
-					<a class="dashboard-panel-link" href="<?= url('schedule?starts_from=' . $today . '&starts_to=' . $today); ?>">Ver agenda</a>
-				<?php endif; ?>
+				<a class="dashboard-panel-link" href="<?= url('schedule?starts_from=' . $today . '&starts_to=' . $today); ?>">Ver agenda</a>
 			</div>
 
 			<div class="dashboard-schedule-list">
@@ -204,6 +201,7 @@ $today = date('Y-m-d');
 				<?php endif; ?>
 			</div>
 		</section>
+		<?php endif; ?>
 	<?php else: ?>
 		<section class="dashboard-empty-state">
 			<i class="bi bi-building-lock"></i>
