@@ -507,7 +507,8 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 
   setHistoryCollapsed(readStoredValue(storageKeys.history) === "collapsed", false);
-  setPanelOpen(readStoredValue(storageKeys.panel) === "open", false, false);
+  const shouldResetPanel = root.dataset.resetPanel === "true";
+  setPanelOpen(!shouldResetPanel && readStoredValue(storageKeys.panel) === "open", shouldResetPanel, false);
 
   refreshBootstrap().catch(() => {
     setConnectionStatus("Falha ao carregar", false);
