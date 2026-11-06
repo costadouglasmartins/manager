@@ -43,6 +43,21 @@ $initialUser = [
   'active' => '1',
 ];
 
+// HR data: lists for the selects and the values to repopulate after a validation error.
+$hrDepartments = (isset($hrDepartments) && is_array($hrDepartments)) ? $hrDepartments : [];
+$hrPositions = (isset($hrPositions) && is_array($hrPositions)) ? $hrPositions : [];
+$employee = $employee ?? ($personForm['employee'] ?? ($formData['employee'] ?? null));
+$employeeRoles = is_array($personForm['role'] ?? null) ? $personForm['role'] : explode(',', (string) ($personForm['role'] ?? ''));
+$employeeCardVisible = in_array('employee', array_map('trim', array_map('strval', $employeeRoles)), true);
+$employeeCardClass = 'person-create';
+// Without the HR ability (hr_employee.create) the HR card is not rendered and the employee role is locked.
+$hrCanManage = !empty($hrCanManage);
+if (!$hrCanManage)
+  {
+  // The locked employee role is never pre-selected on the creation form.
+  $personForm['role'] = array_values(array_filter(is_array($personForm['role'] ?? null) ? $personForm['role'] : explode(',', (string) ($personForm['role'] ?? '')), static fn($role): bool => trim((string) $role) !== 'employee'));
+  }
+
 $jsonFlags = JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT;
 ?>
 <link rel="stylesheet" href="<?= url('assets/css/people/create.css?v=1'); ?>">
@@ -99,13 +114,7 @@ $jsonFlags = JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JS
         </div>
 
         <div class="col-12 col-md-4">
-          <label class="form-label" for="personRole">Papel</label>
-          <select autocomplete="off" class="form-select" id="personRole" name="person[role]">
-            <option value="" <?= (($personForm['role'] ?? '') === '' ? 'selected' : ''); ?>>Não se aplica</option>
-            <option value="employee" <?= (($personForm['role'] ?? '') === 'employee' ? 'selected' : ''); ?>>Funcionário</option>
-            <option value="customer" <?= (($personForm['role'] ?? '') === 'customer' ? 'selected' : ''); ?>>Cliente</option>
-            <option value="user" <?= (($personForm['role'] ?? '') === 'user' ? 'selected' : ''); ?>>Usuário comum</option>
-          </select>
+          <?php $roleValue = $personForm['role'] ?? ''; $roleHasEmployeeRecord = false; $roleEmployeeLocked = !$hrCanManage; require __DIR__ . '/_role_field.php'; ?>
         </div>
 
         <div class="col-12 col-md-4">
@@ -115,6 +124,9 @@ $jsonFlags = JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JS
         </div>
       </div>
     </section>
+
+    <?php // Employee card: toggled by the employee role checkbox (people/employee_card.js). ?>
+    <?php if ($hrCanManage) { require __DIR__ . '/_employee_card.php'; } ?>
 
     <section class="person-create-section" id="userFieldsSection">
       <div class="person-create-section-header">
@@ -321,4 +333,7 @@ $jsonFlags = JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JS
   const initialEmails = <?= json_encode($initialEmails, $jsonFlags); ?>;
   const initialUser = <?= json_encode($initialUser, $jsonFlags); ?>;
 </script>
-<script src="<?= url('assets/js/people/create.js?v=7'); ?>"></script>
+<script src="/manager_assets/masks/masks.js?v=7"></script>
+<script src="/manager_assets/autocomplete/autocomplete.js?v=2"></script>
+<?php if ($hrCanManage): ?><script src="<?= url('assets/js/people/employee_card.js?v=1'); ?>"></script><?php endif; ?>
+<script src="<?= url('assets/js/people/create.js?v=8'); ?>"></script>

@@ -107,6 +107,13 @@ return [
         ['label' => 'Listar', 'icon' => 'bi-list', 'url' => 'task_category', 'ability' => 'task_category.index'],
       ]],
     ]],
+    ['id' => 'hrMenu', 'label' => 'RH', 'icon' => 'bi-people', 'children' => [
+      ['label' => 'Funcionários', 'icon' => 'bi-person-vcard', 'url' => 'hr_employee', 'ability' => 'hr_employee.index'],
+      ['divider' => true],
+      ['label' => 'Departamentos', 'icon' => 'bi-diagram-3', 'url' => 'hr_department', 'ability' => 'hr_department.index'],
+      ['divider' => true],
+      ['label' => 'Cargos', 'icon' => 'bi-person-badge', 'url' => 'hr_position', 'ability' => 'hr_position.index'],
+    ]],
     ['id' => 'scheduleMenu', 'label' => 'Agenda', 'icon' => 'bi-calendar3', 'children' => [
       ['label' => 'Cadastrar', 'icon' => 'bi-calendar-plus', 'url' => 'schedule/create', 'ability' => 'schedule.create'],
       ['divider' => true],

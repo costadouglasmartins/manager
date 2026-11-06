@@ -51,6 +51,16 @@ $initialEmails = array_map(function ($email)
   ];
   }, $emails);
 
+// HR data: $employee is the current HR record (array) or null when the person has none.
+$hrDepartments = (isset($hrDepartments) && is_array($hrDepartments)) ? $hrDepartments : [];
+$hrPositions = (isset($hrPositions) && is_array($hrPositions)) ? $hrPositions : [];
+$employee = (isset($employee) && is_array($employee)) ? $employee : null;
+$employeeRoles = is_array($person['role'] ?? null) ? $person['role'] : explode(',', (string) ($person['role'] ?? ''));
+$employeeCardVisible = in_array('employee', array_map('trim', array_map('strval', $employeeRoles)), true);
+$employeeCardClass = 'person-edit';
+// Without the HR ability (hr_employee.edit) the HR card is not rendered and the employee role is locked.
+$hrCanManage = !empty($hrCanManage);
+
 $jsonFlags = JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT;
 ?>
 <link rel="stylesheet" href="<?= url('assets/css/people/edit.css?v=1'); ?>">
@@ -103,13 +113,7 @@ $jsonFlags = JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JS
         </div>
 
         <div class="col-12 col-md-6 col-xl-3">
-          <label class="form-label" for="personRole">Papel</label>
-          <select autocomplete="off" class="form-select" id="personRole" name="person[role]">
-            <option value="" <?= (($person['role'] ?? '') === '' ? 'selected' : ''); ?>>Não se aplica</option>
-            <option value="employee" <?= (($person['role'] ?? '') === 'employee' ? 'selected' : ''); ?>>Funcionário</option>
-            <option value="customer" <?= (($person['role'] ?? '') === 'customer' ? 'selected' : ''); ?>>Cliente</option>
-            <option value="user" <?= (($person['role'] ?? '') === 'user' ? 'selected' : ''); ?>>Usuário comum</option>
-          </select>
+          <?php $roleValue = $person['role'] ?? ''; $roleHasEmployeeRecord = !empty($employee); $roleEmployeeLocked = !$hrCanManage; require __DIR__ . '/_role_field.php'; ?>
         </div>
 
         <div class="col-12 col-md-6 col-xl-3">
@@ -129,6 +133,9 @@ $jsonFlags = JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JS
         </div>
       </div>
     </section>
+
+    <?php // Employee card: toggled by the employee role checkbox (people/employee_card.js). ?>
+    <?php if ($hrCanManage) { require __DIR__ . '/_employee_card.php'; } ?>
 
     <section class="person-edit-section">
       <div class="person-edit-section-header">
@@ -306,4 +313,7 @@ $jsonFlags = JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JS
   const initialPhones = <?= json_encode($initialPhones, $jsonFlags); ?>;
   const initialEmails = <?= json_encode($initialEmails, $jsonFlags); ?>;
 </script>
-<script src="<?= url('assets/js/people/edit.js?v=6'); ?>"></script>
+<script src="/manager_assets/masks/masks.js?v=7"></script>
+<script src="/manager_assets/autocomplete/autocomplete.js?v=2"></script>
+<?php if ($hrCanManage): ?><script src="<?= url('assets/js/people/employee_card.js?v=1'); ?>"></script><?php endif; ?>
+<script src="<?= url('assets/js/people/edit.js?v=7'); ?>"></script>

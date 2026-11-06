@@ -9,6 +9,27 @@ use PDO;
 class Person extends Model
 	{
 	/**
+	 * Roles accepted by people.role (MySQL SET), in the canonical order used when saving the CSV value.
+	 * @var array<int, string>
+	 **/
+	public const ROLES = ['employee', 'customer', 'user'];
+
+	/**
+	 * Portuguese labels of the roles, keyed by role.
+	 * @var array<string, string>
+	 **/
+	public const ROLE_LABELS = [
+		'employee' => 'Funcionário',
+		'customer' => 'Cliente',
+		'user' => 'Usuário comum',
+	];
+
+	/**
+	 * Exception code of the error raised when the person was saved but the HR record could not be (and the person could not be rolled back).
+	 **/
+	public const HR_PARTIAL_FAILURE_CODE = 4001;
+
+	/**
 	 * Returns all people ordered by newest first.
 	 */
 	public function getAll()
@@ -21,10 +42,11 @@ class Person extends Model
 	 * Creates a person and, optionally, a linked manager user.
 	 *
 	 * @param array $data Request payload from the person form.
+	 * @param bool $canManageEmployee True when the user holds hr_employee.create; without it employee[...] is ignored and the employee role is rejected.
 	 * @return array
 	 * @throws \Exception
 	 */
-	public function create($data)
+	public function create($data, bool $canManageEmployee = false)
 		{
 		$personData = $this->normalizePersonPayload(
 			(is_array($data['person'] ?? null) ? $data['person'] : [])
@@ -32,6 +54,27 @@ class Person extends Model
 		$emails = (is_array($data['emails'] ?? null) ? $data['emails'] : []);
 		$userData = $this->normalizeUserPayload($data, $personData['active']);
 		$now = date('Y-m-d H:i:s');
+
+		// Everything the HR record needs is validated before the first write, so a rejected form never leaves a half-saved person.
+		$hrEmployee = null;
+		$employeePayload = null;
+		if (in_array('employee', $personData['roles'], true))
+			{
+			// A person with only the employee role has no other tenant link, so the HR record is its only access path: it cannot be skipped.
+			if (!$canManageEmployee)
+				{
+				throw new \InvalidArgumentException('Você não tem permissão para cadastrar funcionários. Remova o perfil de funcionário.');
+				}
+
+			if (!$this->hrTablesAvailable())
+				{
+				throw new \InvalidArgumentException('O módulo de RH ainda não está disponível neste tenant. Remova o perfil de funcionário ou solicite a atualização da base.');
+				}
+
+			$hrEmployee = new HrEmployee();
+			// A missing employee[...] group creates the record with defaults; a sent group must be complete.
+			$employeePayload = $hrEmployee->normalizeEmployeeData($this->employeeInput($data), null, is_array($data['employee'] ?? null));
+			}
 
 		try
 			{
@@ -84,11 +127,6 @@ class Person extends Model
 			]);
 
 			$this->db->commit();
-
-			return [
-				'person_id' => $personId,
-				'user_id' => $userId,
-			];
 			}
 		catch (\Exception $e)
 			{
@@ -99,6 +137,24 @@ class Person extends Model
 
 			throw $e;
 			}
+
+		// people (central) and hr_employees (tenant) use different connections, so the HR write runs after the person commit.
+		if ($hrEmployee !== null && $employeePayload !== null)
+			{
+			try
+				{
+				$hrEmployee->saveForPerson($personId, $employeePayload, ['source' => 'person_form']);
+				}
+			catch (\Throwable $hrError)
+				{
+				$this->compensateCreatedPerson($personId, $userId, $hrError);
+				}
+			}
+
+		return [
+			'person_id' => $personId,
+			'user_id' => $userId,
+		];
 		}
 
 	/**
@@ -119,8 +175,10 @@ class Person extends Model
 	 *
 	 * @param mixed $id
 	 * @param array $data
+	 * @param int|null $tenantId Tenant used to scope the person lookup.
+	 * @param bool $canManageEmployee True when the user holds hr_employee.edit; without it employee[...] is ignored and the HR link cannot be created or inactivated.
 	 */
-	public function update($id, $data, ?int $tenantId = null)
+	public function update($id, $data, ?int $tenantId = null, bool $canManageEmployee = false)
 		{
 		$personId = (int) $id;
 		$personData = (isset($data['person']) && is_array($data['person'])) ? $data['person'] : $data;
@@ -132,6 +190,18 @@ class Person extends Model
 			{
 			throw new \InvalidArgumentException('Pessoa não encontrada neste tenant.');
 			}
+
+		// Validate the central rules first so the HR write below only needs compensation for unexpected failures.
+		$this->assertLoginEmailsAvailable($emails, $personId);
+
+		// HR changes are validated and applied before the central write: restoring one HR row is cheap, undoing the person sync is not.
+		$hrChange = $this->applyEmployeeChange(
+			$personId,
+			$normalizedPersonData['roles'],
+			$data,
+			$canManageEmployee,
+			in_array('employee', self::parseRoles($beforeData['person']['role'] ?? null), true)
+		);
 
 		try
 			{
@@ -186,12 +256,15 @@ class Person extends Model
 
 			$this->db->commit();
 			}
-		catch (\Exception $e)
+		catch (\Throwable $e)
 			{
 			if ($this->db->inTransaction())
 				{
 				$this->db->rollBack();
 				}
+
+			// The person write failed after the HR write: put the HR record back as it was.
+			$this->revertEmployeeChange($hrChange, $e);
 
 			throw $e;
 			}
@@ -524,6 +597,19 @@ class Person extends Model
 		$usersTable = $this->managerTable('users');
 		$tenantUsersTable = $this->managerTable('tenant_users');
 		$tenantPeopleTable = $this->managerTable('tenant_people');
+
+		// Employees registered through the person form may have no user or CRM link: the HR record of the selected tenant also grants access.
+		$hrScope = '';
+		$selectedTenant = TenantContext::tenant();
+		if ((int) ($selectedTenant['id'] ?? 0) === $tenantId && $this->hrTablesAvailable())
+			{
+			$hrScope = "OR EXISTS (
+					SELECT 1
+					FROM `" . TenantContext::databaseName() . "`.`hr_employees` AS ScopeEmployee
+					WHERE ScopeEmployee.person_id = {$personAlias}.id
+				)";
+			}
+
 		$sql .= "
 			AND (
 				EXISTS (
@@ -540,6 +626,7 @@ class Person extends Model
 					WHERE TenantPerson.person_id = {$personAlias}.id
 					  AND TenantPerson.tenant_id = :tenant_person_tenant_id
 				)
+				{$hrScope}
 			)
 		";
 		$params['tenant_user_tenant_id'] = $tenantId;
@@ -911,22 +998,319 @@ class Person extends Model
 	 */
 	private function normalizePersonPayload(array $personData): array
 		{
-		$role = trim((string) ($personData['role'] ?? ''));
-
-		if (!in_array($role, ['', 'employee', 'customer', 'user'], true))
-			{
-			$role = '';
-			}
+		// person[role] may be an array (person[role][]), a CSV string or the legacy single value.
+		$roles = self::parseRoles($personData['role'] ?? null);
 
 		return [
 			'name' => trim((string) ($personData['name'] ?? '')),
 			'fantasy' => trim((string) ($personData['fantasy'] ?? '')),
 			'type' => trim((string) ($personData['type'] ?? '')),
-			'role' => $role,
+			'role' => implode(',', $roles),
+			'roles' => $roles,
 			'document' => cleanCpfCnpj((string) ($personData['document'] ?? '')),
 			'active' => (int) ($personData['active'] ?? 1),
 			'birthdate' => (!empty($personData['birthdate']) ? dateBrToUs($personData['birthdate']) : null),
 		];
+		}
+
+	/**
+	 * Normalizes people.role into a list of allowed roles in canonical order (employee, customer, user).
+	 * Accepts an array, a CSV string or a single legacy value; unknown values are dropped and duplicates collapsed.
+	 * @param mixed $value Submitted role value.
+	 * @return array<int, string> Allowed roles; empty when none was selected.
+	 **/
+	public static function parseRoles($value): array
+		{
+		$items = [];
+		$candidates = is_array($value) ? $value : [$value];
+
+		foreach ($candidates as $candidate)
+			{
+			// Nested arrays or objects are never valid role values.
+			if (!is_scalar($candidate))
+				{
+				continue;
+				}
+
+			foreach (explode(',', (string) $candidate) as $part)
+				{
+				$items[] = strtolower(trim($part));
+				}
+			}
+
+		// Intersecting with the allowlist drops unknown values, removes duplicates and fixes the order.
+		return array_values(array_intersect(self::ROLES, $items));
+		}
+
+	/**
+	 * Returns the employee[...] group of the request, or an empty list when the form did not send it.
+	 * @param array $data Request payload from the person form.
+	 * @return array Raw HR fields.
+	 **/
+	private function employeeInput(array $data): array
+		{
+		return is_array($data['employee'] ?? null) ? $data['employee'] : [];
+		}
+
+	/**
+	 * Applies the HR side of a person update before the central write.
+	 * Role "employee" selected: validates and upserts the HR record. Role removed: inactivates the HR record (never deletes it).
+	 * @param int $personId Person identifier.
+	 * @param array<int, string> $roles Normalized roles from the form.
+	 * Without the HR ability the employee[...] group is never read, and a role change that would create or inactivate
+	 * the HR link is rejected (safer than silently altering HR data or dropping the role).
+	 * @param array $data Request payload from the person form.
+	 * @param bool $canManageEmployee Whether the user holds the HR edit ability.
+	 * @param bool $hadEmployeeRole Whether the stored person already had the employee role (legacy people may have it without an HR record).
+	 * @return array{kind: string, id: int, before: array|null}|null Data needed to undo the HR change, or null when nothing changed.
+	 **/
+	private function applyEmployeeChange(int $personId, array $roles, array $data, bool $canManageEmployee = false, bool $hadEmployeeRole = false): ?array
+		{
+		// Tenants without the HR tables (schema not migrated yet) keep working for people without the employee role.
+		$wantsEmployee = in_array('employee', $roles, true);
+		if (!$wantsEmployee && !$this->hrTablesAvailable())
+			{
+			return null;
+			}
+
+		if ($wantsEmployee && !$this->hrTablesAvailable())
+			{
+			throw new \InvalidArgumentException('O módulo de RH ainda não está disponível neste tenant. Remova o perfil de funcionário ou solicite a atualização da base.');
+			}
+
+		$hrEmployee = new HrEmployee();
+		$existing = $hrEmployee->findByPersonId($personId);
+
+		if (!$canManageEmployee)
+			{
+			// Adding the role would create an HR record and removing it would inactivate one: both need the HR ability.
+			if ($wantsEmployee && !$existing && !$hadEmployeeRole)
+				{
+				throw new \InvalidArgumentException('Você não tem permissão para cadastrar dados de funcionário. Mantenha o perfil de funcionário como estava.');
+				}
+
+			if (!$wantsEmployee && $existing && !((int) $existing['active'] === 0 && (string) $existing['status'] === 'terminated'))
+				{
+				throw new \InvalidArgumentException('Você não tem permissão para alterar o vínculo de funcionário. Mantenha o perfil de funcionário marcado.');
+				}
+
+			return null;
+			}
+
+		if ($wantsEmployee)
+			{
+			// No employee[...] group and an existing record: keep the HR data untouched.
+			$hasGroup = is_array($data['employee'] ?? null);
+			if (!$hasGroup && $existing)
+				{
+				return null;
+				}
+
+			// Without the group (legacy clients) the record is created with defaults, so required HR fields are not enforced.
+			$payload = $hrEmployee->normalizeEmployeeData($hasGroup ? $data['employee'] : [], $existing ?: null, $hasGroup);
+			$saved = $hrEmployee->saveForPerson($personId, $payload, ['source' => 'person_form']);
+
+			return [
+				'kind' => $saved['created'] ? 'created' : 'updated',
+				'id' => $saved['id'],
+				'before' => $saved['before'],
+			];
+			}
+
+		$inactivated = $hrEmployee->inactivateByPersonId($personId, ['source' => 'person_role_removed']);
+		if ($inactivated === null)
+			{
+			return null;
+			}
+
+		return [
+			'kind' => 'inactivated',
+			'id' => $inactivated['id'],
+			'before' => $inactivated['before'],
+		];
+		}
+
+	/**
+	 * Undoes the HR change made by applyEmployeeChange() after the central person write failed.
+	 * If the undo itself fails, the original error is replaced by an explicit partial-failure error.
+	 * @param array|null $change Value returned by applyEmployeeChange().
+	 * @param \Throwable $cause Error that made the person write fail.
+	 * @return void
+	 **/
+	private function revertEmployeeChange(?array $change, \Throwable $cause): void
+		{
+		if ($change === null)
+			{
+			return;
+			}
+
+		try
+			{
+			$hrEmployee = new HrEmployee();
+			if ($change['kind'] === 'created')
+				{
+				$hrEmployee->discardCreated((int) $change['id'], ['source' => 'person_form_compensation']);
+				return;
+				}
+
+			if (is_array($change['before']))
+				{
+				$hrEmployee->restoreSnapshot($change['before'], ['source' => 'person_form_compensation']);
+				}
+			}
+		catch (\Throwable $revertError)
+			{
+			error_log('Person update HR compensation failed: ' . $revertError->getMessage() . ' | original: ' . $cause->getMessage());
+
+			throw new \RuntimeException(
+				'Os dados de RH foram alterados, mas a pessoa não pôde ser atualizada. Revise os dados do funcionário no módulo de RH.',
+				self::HR_PARTIAL_FAILURE_CODE,
+				$cause
+			);
+			}
+		}
+
+	/**
+	 * Rolls back a person created moments ago after the HR record failed, then reports the failure.
+	 * Always throws: the original InvalidArgumentException for validation errors, or a RuntimeException otherwise.
+	 * @param int $personId Created person identifier.
+	 * @param int|null $userId Created user identifier, when any.
+	 * @param \Throwable $cause Error raised by the HR write.
+	 * @return void
+	 **/
+	private function compensateCreatedPerson(int $personId, ?int $userId, \Throwable $cause): void
+		{
+		error_log('Person create HR write failed: ' . $cause->getMessage());
+
+		try
+			{
+			$this->db->beginTransaction();
+
+			$snapshot = $this->findAllByPersonId($personId);
+			if ($userId !== null)
+				{
+				$stmt = $this->db->prepare('DELETE FROM tenant_users WHERE user_id = :user_id');
+				$stmt->execute(['user_id' => $userId]);
+				$stmt = $this->db->prepare('DELETE FROM users WHERE id = :id AND person_id = :person_id');
+				$stmt->execute(['id' => $userId, 'person_id' => $personId]);
+				}
+
+			foreach (['emails', 'phone_numbers', 'addresses'] as $table)
+				{
+				$stmt = $this->db->prepare("DELETE FROM {$table} WHERE person_id = :person_id");
+				$stmt->execute(['person_id' => $personId]);
+				}
+
+			$stmt = $this->db->prepare('DELETE FROM people WHERE id = :id');
+			$stmt->execute(['id' => $personId]);
+
+			$this->auditDelete('person', 'people', $personId, $snapshot, [
+				'affected_tables' => ['people', 'phone_numbers', 'addresses', 'emails', 'users', 'tenant_users'],
+				'source' => 'hr_employee_compensation',
+			]);
+			$this->db->commit();
+			}
+		catch (\Throwable $rollbackError)
+			{
+			if ($this->db->inTransaction())
+				{
+				$this->db->rollBack();
+				}
+
+			error_log('Person create compensation failed: ' . $rollbackError->getMessage());
+
+			// A person without user or CRM link is only reachable through its HR record, so it may be missing from the list.
+			$partialMessage = ($userId !== null)
+				? 'A pessoa foi salva, mas os dados de funcionário não puderam ser gravados. Localize a pessoa na lista, edite-a e complete os dados de RH.'
+				: 'A pessoa foi salva, mas os dados de funcionário não puderam ser gravados. Como ela não possui usuário, pode não aparecer na lista de pessoas: informe o nome ao suporte para concluir o cadastro.';
+
+			throw new \RuntimeException(
+				$partialMessage,
+				self::HR_PARTIAL_FAILURE_CODE,
+				$cause
+			);
+			}
+
+		if ($cause instanceof \InvalidArgumentException)
+			{
+			throw $cause;
+			}
+
+		throw new \RuntimeException('Não foi possível salvar os dados do funcionário. A pessoa não foi cadastrada.', 0, $cause);
+		}
+
+	/**
+	 * Returns the HR data the person screens need: the employee record, active catalogs and option lists.
+	 * Never throws: tenants whose schema has no HR tables yet get hr_available = false and empty lists.
+	 * @param int|null $personId Person identifier, or null on the creation form.
+	 * @param array|null $submittedEmployee employee[...] values of a rejected submission, used to keep selected catalog rows listed.
+	 * @return array{hr_available: bool, employee: array|null, hr_departments: array, hr_positions: array, hr_statuses: array, hr_employment_types: array} HR form data.
+	 **/
+	public function employeeFormData(?int $personId = null, ?array $submittedEmployee = null): array
+		{
+		$result = [
+			'hr_available' => false,
+			'employee' => null,
+			'hr_departments' => [],
+			'hr_positions' => [],
+			'hr_statuses' => HrEmployee::STATUSES,
+			'hr_employment_types' => HrEmployee::EMPLOYMENT_TYPES,
+		];
+
+		if (!$this->hrTablesAvailable())
+			{
+			return $result;
+			}
+
+		try
+			{
+			$employee = ($personId !== null && $personId > 0) ? (new HrEmployee())->findByPersonId($personId) : false;
+			$result['employee'] = $employee ?: null;
+
+			// Keep the currently selected (possibly inactive) department/position in the select.
+			$departmentId = (int) ($submittedEmployee['hr_department_id'] ?? ($employee['hr_department_id'] ?? 0));
+			$positionId = (int) ($submittedEmployee['hr_position_id'] ?? ($employee['hr_position_id'] ?? 0));
+			$result['hr_departments'] = (new HrDepartment())->getOptions(true, $departmentId ?: null);
+			$result['hr_positions'] = (new HrPosition())->getOptions(true, $positionId ?: null);
+			$result['hr_available'] = true;
+			}
+		catch (\Throwable $e)
+			{
+			error_log('Person HR form data failed: ' . $e->getMessage());
+			}
+
+		return $result;
+		}
+
+	/**
+	 * Tells whether the selected tenant database already has the HR tables (schema 0.0.9 applied).
+	 * The answer is cached per tenant database for the request.
+	 * @return bool True when hr_employees exists in the tenant database.
+	 **/
+	private function hrTablesAvailable(): bool
+		{
+		static $cache = [];
+
+		$databaseName = TenantContext::databaseName();
+		if ($databaseName === null || preg_match('/^manager_[0-9]{4}$/', $databaseName) !== 1)
+			{
+			return false;
+			}
+
+		if (!isset($cache[$databaseName]))
+			{
+			$stmt = $this->db->prepare("
+				SELECT 1
+				FROM information_schema.TABLES
+				WHERE TABLE_SCHEMA = :schema
+				  AND TABLE_NAME = 'hr_employees'
+				LIMIT 1
+			");
+			$stmt->execute(['schema' => $databaseName]);
+			$cache[$databaseName] = ($stmt->fetchColumn() !== false);
+			}
+
+		return $cache[$databaseName];
 		}
 
 	/**
