@@ -26,6 +26,7 @@ document.addEventListener("DOMContentLoaded", () => {
     historyModalMeta: document.getElementById("supportWidgetHistoryModalMeta"),
     historyModalMessages: document.getElementById("supportWidgetHistoryModalMessages"),
     typing: document.getElementById("supportWidgetTyping"),
+    notice: document.getElementById("supportWidgetNotice"),
     form: document.getElementById("supportWidgetComposer"),
     input: document.getElementById("supportWidgetInput"),
     sendButton: document.getElementById("supportWidgetSendButton"),
@@ -145,6 +146,20 @@ document.addEventListener("DOMContentLoaded", () => {
     elements.connection.textContent = label;
     elements.connection.classList.toggle("text-success", Boolean(isOnline));
     elements.connection.classList.toggle("text-muted", !isOnline);
+  }
+
+  function showNotice(message) {
+    if (!elements.notice) {
+      return;
+    }
+
+    const text = String(message || "").trim();
+    elements.notice.textContent = text;
+    elements.notice.hidden = text === "";
+  }
+
+  function clearNotice() {
+    showNotice("");
   }
 
   function setPanelOpen(isOpen, shouldPersist = true, shouldFocus = true) {
@@ -426,8 +441,28 @@ document.addEventListener("DOMContentLoaded", () => {
           return;
         }
 
+        if (payload.type === "error") {
+          if (payload.code === "support_unavailable") {
+            try {
+              await refreshBootstrap();
+            } catch (error) {
+              // The persisted message will be loaded on the next successful refresh.
+            }
+            showNotice(payload.message || "Não há atendentes disponíveis no momento. Sua mensagem foi registrada e ficará na fila.");
+            return;
+          }
+
+          showNotice("Não foi possível concluir a operação no chat.");
+          return;
+        }
+
         if (payload.type === "message_created" || payload.type === "chat_created" || payload.type === "chat_assigned" || payload.type === "chat_closed") {
           await refreshBootstrap();
+
+          if (payload.type === "chat_assigned" && Number(payload.chat_id) === chatId() && Number(payload.attendant_user_id) > 0) {
+            clearNotice();
+          }
+
           return;
         }
       });
