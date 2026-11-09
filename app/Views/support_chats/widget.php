@@ -1,7 +1,11 @@
-<link rel="stylesheet" href="<?= url('assets/css/support_chats/widget.css?v=5'); ?>">
+<?php
+$resetChatPanel = !empty($_SESSION['manager']['reset_chat_panel']);
+unset($_SESSION['manager']['reset_chat_panel']);
+?>
+<link rel="stylesheet" href="<?= url('assets/css/support_chats/widget.css?v=6'); ?>">
 <link rel="stylesheet" href="<?= url('assets/css/internal_chats/widget.css?v=1'); ?>">
 
-<div class="support-widget" id="supportWidget" data-bootstrap-url="<?= url('support_chat/bootstrap'); ?>" data-chat-url-base="<?= url('support_chat/show'); ?>" data-ws-auth-url="<?= url('support_chat/wsAuth'); ?>">
+<div class="support-widget" id="supportWidget" data-bootstrap-url="<?= url('support_chat/bootstrap'); ?>" data-chat-url-base="<?= url('support_chat/show'); ?>" data-ws-auth-url="<?= url('support_chat/wsAuth'); ?>" data-reset-panel="<?= $resetChatPanel ? 'true' : 'false'; ?>">
   <button class="support-widget-toggle" id="supportWidgetToggle" type="button" aria-expanded="false" aria-controls="supportWidgetPanel">
     <i class="bi bi-chat-dots-fill"></i>
     <span>Chat</span>
@@ -32,6 +36,7 @@
       <div class="support-widget-content">
         <div class="support-widget-main">
           <div class="support-widget-body">
+            <div class="alert alert-warning mb-2" id="supportWidgetNotice" role="alert" aria-live="polite" aria-atomic="true" hidden></div>
             <div id="supportWidgetMessages" class="support-widget-messages">
               <div class="support-widget-empty">
                 <p class="mb-0">Digite a primeira mensagem para iniciar o atendimento.</p>
@@ -122,5 +127,5 @@
   </div>
 </div>
 
-<script src="<?= url('assets/js/support_chats/widget.js?v=5'); ?>"></script>
+<script src="<?= url('assets/js/support_chats/widget.js?v=7'); ?>"></script>
 <script src="<?= url('assets/js/internal_chats/widget.js?v=2'); ?>"></script>

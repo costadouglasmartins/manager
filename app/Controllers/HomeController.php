@@ -2,6 +2,7 @@
 
 namespace App\Controllers;
 
+use App\Core\Authorization;
 use App\Core\Controller;
 use App\Core\TenantContext;
 use App\Models\Crm;
@@ -73,53 +74,64 @@ class HomeController extends Controller
 		$taskModel = new Task();
 		$scheduleModel = new ScheduleEvent();
 
-		$crmToday = $this->safeInt(function () use ($crmModel, $tenantId) {
+		// Metric values stay as callbacks so visibleMetrics() only queries the ones the user may open.
+		$crmToday = function () use ($crmModel, $tenantId) {
 			return $crmModel->count(['activity_scope' => 'today'], $tenantId);
-		});
-		$scheduleToday = $this->safeInt(function () use ($scheduleModel, $today) {
+		};
+		$scheduleToday = function () use ($scheduleModel, $today) {
 			return $scheduleModel->count([
 				'status_not' => ScheduleEvent::STATUS_CANCELED,
 				'starts_from' => $today,
 				'starts_to' => $today,
 			]);
-		});
-		$tasksToday = $this->safeInt(function () use ($taskModel, $today) {
+		};
+		$tasksToday = function () use ($taskModel, $today) {
 			return $taskModel->count([
 				'created_from' => $today,
 				'created_to' => $today,
 			]);
-		});
-		$payableToday = $this->safeInt(function () use ($financialOperationModel, $today) {
+		};
+		$payableToday = function () use ($financialOperationModel, $today) {
 			return $financialOperationModel->countBySectionAndDate('expense', $today);
-		});
-		$receivableToday = $this->safeInt(function () use ($financialOperationModel, $today) {
+		};
+		$receivableToday = function () use ($financialOperationModel, $today) {
 			return $financialOperationModel->countBySectionAndDate('income', $today);
-		});
+		};
 
-		$todayTasks = $this->safeArray(function () use ($taskModel, $today) {
-			$tasks = $taskModel->search([
-				'created_from' => $today,
-				'created_to' => $today,
-			], 8, 0, 'created', 'desc');
+		// Today's lists are loaded only for users allowed to open their modules.
+		$todayTasks = [];
+		if (Authorization::can('task.index'))
+		  {
+			$todayTasks = $this->safeArray(function () use ($taskModel, $today) {
+				$tasks = $taskModel->search([
+					'created_from' => $today,
+					'created_to' => $today,
+				], 8, 0, 'created', 'desc');
 
-			foreach ($tasks as &$task)
-				{
-				$task['assignees'] = $taskModel->getAssignees((int) ($task['id'] ?? 0));
-				}
-			unset($task);
+				foreach ($tasks as &$task)
+					{
+					$task['assignees'] = $taskModel->getAssignees((int) ($task['id'] ?? 0));
+					}
+				unset($task);
 
-			return $tasks;
-		});
-		$todayScheduleEvents = $this->safeArray(function () use ($scheduleModel, $today) {
-			return $scheduleModel->search([
-				'status_not' => ScheduleEvent::STATUS_CANCELED,
-				'starts_from' => $today,
-				'starts_to' => $today,
-			], 10, 0, 'starts_at', 'asc');
-		});
+				return $tasks;
+			});
+		  }
+
+		$todayScheduleEvents = [];
+		if (Authorization::can('schedule.index'))
+		  {
+			$todayScheduleEvents = $this->safeArray(function () use ($scheduleModel, $today) {
+				return $scheduleModel->search([
+					'status_not' => ScheduleEvent::STATUS_CANCELED,
+					'starts_from' => $today,
+					'starts_to' => $today,
+				], 10, 0, 'starts_at', 'asc');
+			});
+		  }
 
 		return [
-			'metrics' => [
+			'metrics' => $this->visibleMetrics([
 				[
 					'label' => 'CRM',
 					'value' => $crmToday,
@@ -165,10 +177,34 @@ class HomeController extends Controller
 					'href' => 'financial_operation',
 					'ability' => 'financial_operation.index',
 				],
-			],
+			]),
 			'todayTasks' => $todayTasks,
 			'todayScheduleEvents' => $todayScheduleEvents,
 		];
+	  }
+
+	/**
+	 * Keeps the metrics the current user may open and resolves only their values.
+	 * @param array $metrics Metric definitions whose `value` is a callback returning the count.
+	 * @return array Visible metrics with integer values.
+	 **/
+	private function visibleMetrics(array $metrics): array
+	  {
+		$visible = [];
+
+		foreach ($metrics as $metric)
+		  {
+			// Metrics without a granted ability are skipped before their query runs.
+			if (!Authorization::can((string) ($metric['ability'] ?? '')))
+			  {
+				continue;
+			  }
+
+			$metric['value'] = $this->safeInt($metric['value']);
+			$visible[] = $metric;
+		  }
+
+		return $visible;
 	  }
 
 	/**

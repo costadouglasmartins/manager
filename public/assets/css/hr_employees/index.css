@@ -1,0 +1,5 @@
+/* HR employee list: compact id column; badges keep contrast in both themes via Bootstrap utilities. */
+.hr-col-id {
+  width: 1%;
+  white-space: nowrap;
+}

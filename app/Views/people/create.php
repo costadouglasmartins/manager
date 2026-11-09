@@ -43,6 +43,21 @@ $initialUser = [
   'active' => '1',
 ];
 
+// HR data: lists for the selects and the values to repopulate after a validation error.
+$hrDepartments = (isset($hrDepartments) && is_array($hrDepartments)) ? $hrDepartments : [];
+$hrPositions = (isset($hrPositions) && is_array($hrPositions)) ? $hrPositions : [];
+$employee = $employee ?? ($personForm['employee'] ?? ($formData['employee'] ?? null));
+$employeeRoles = is_array($personForm['role'] ?? null) ? $personForm['role'] : explode(',', (string) ($personForm['role'] ?? ''));
+$employeeCardVisible = in_array('employee', array_map('trim', array_map('strval', $employeeRoles)), true);
+$employeeCardClass = 'person-create';
+// Without the HR ability (hr_employee.create) the HR card is not rendered and the employee role is locked.
+$hrCanManage = !empty($hrCanManage);
+if (!$hrCanManage)
+  {
+  // The locked employee role is never pre-selected on the creation form.
+  $personForm['role'] = array_values(array_filter(is_array($personForm['role'] ?? null) ? $personForm['role'] : explode(',', (string) ($personForm['role'] ?? '')), static fn($role): bool => trim((string) $role) !== 'employee'));
+  }
+
 $jsonFlags = JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT;
 ?>
 <link rel="stylesheet" href="<?= url('assets/css/people/create.css?v=1'); ?>">
@@ -71,15 +86,21 @@ $jsonFlags = JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JS
       </div>
 
       <div class="row g-3">
-        <div class="col-12 col-xl-6">
+        <div class="col-12 col-lg-4">
           <label class="form-label" for="personName">Nome *</label>
           <input autocomplete="off" class="form-control" id="personName" name="person[name]" placeholder="Nome completo ou razão social" type="text" required value="<?= htmlspecialchars($personForm['name'] ?? '', ENT_QUOTES, 'UTF-8'); ?>" />
           <div class="invalid-feedback">Informe o nome.</div>
         </div>
 
-        <div class="col-12 col-xl-6">
+        <div class="col-12 col-md-6 col-lg-4">
           <label class="form-label" for="personFantasy">Nome fantasia</label>
           <input autocomplete="off" class="form-control" id="personFantasy" name="person[fantasy]" placeholder="Nome fantasia" type="text" value="<?= htmlspecialchars($personForm['fantasy'] ?? '', ENT_QUOTES, 'UTF-8'); ?>" />
+        </div>
+
+        <div class="col-12 col-md-6 col-lg-4">
+          <label class="form-label" for="personDocument">Documento *</label>
+          <input autocomplete="off" class="form-control mask-cpf-cnpj" id="personDocument" name="person[document]" maxlength="18" placeholder="CPF ou CNPJ" type="text" required value="<?= htmlspecialchars($personForm['document'] ?? '', ENT_QUOTES, 'UTF-8'); ?>" />
+          <div class="invalid-feedback">Informe o documento.</div>
         </div>
 
         <div class="col-12 col-md-4">
@@ -93,9 +114,7 @@ $jsonFlags = JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JS
         </div>
 
         <div class="col-12 col-md-4">
-          <label class="form-label" for="personDocument">Documento *</label>
-          <input autocomplete="off" class="form-control mask-cpf-cnpj" id="personDocument" name="person[document]" maxlength="18" placeholder="CPF ou CNPJ" type="text" required value="<?= htmlspecialchars($personForm['document'] ?? '', ENT_QUOTES, 'UTF-8'); ?>" />
-          <div class="invalid-feedback">Informe o documento.</div>
+          <?php $roleValue = $personForm['role'] ?? ''; $roleHasEmployeeRecord = false; $roleEmployeeLocked = !$hrCanManage; require __DIR__ . '/_role_field.php'; ?>
         </div>
 
         <div class="col-12 col-md-4">
@@ -105,6 +124,9 @@ $jsonFlags = JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JS
         </div>
       </div>
     </section>
+
+    <?php // Employee card: toggled by the employee role checkbox (people/employee_card.js). ?>
+    <?php if ($hrCanManage) { require __DIR__ . '/_employee_card.php'; } ?>
 
     <section class="person-create-section" id="userFieldsSection">
       <div class="person-create-section-header">
@@ -311,4 +333,7 @@ $jsonFlags = JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JS
   const initialEmails = <?= json_encode($initialEmails, $jsonFlags); ?>;
   const initialUser = <?= json_encode($initialUser, $jsonFlags); ?>;
 </script>
-<script src="<?= url('assets/js/people/create.js?v=5'); ?>"></script>
+<script src="/manager_assets/masks/masks.js?v=7"></script>
+<script src="/manager_assets/autocomplete/autocomplete.js?v=2"></script>
+<?php if ($hrCanManage): ?><script src="<?= url('assets/js/people/employee_card.js?v=1'); ?>"></script><?php endif; ?>
+<script src="<?= url('assets/js/people/create.js?v=8'); ?>"></script>

@@ -39,6 +39,10 @@
   box-shadow: var(--app-shadow);
 }
 
+.support-widget-panel[hidden] {
+  display: none !important;
+}
+
 .support-widget-header {
   display: flex;
   align-items: flex-start;

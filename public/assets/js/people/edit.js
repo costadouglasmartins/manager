@@ -21,6 +21,8 @@
   const personNameInput = document.getElementById("personName");
   const personFantasyInput = document.getElementById("personFantasy");
   const personTypeSelect = document.getElementById("personType");
+  // Role checkboxes (person[role][]); several roles can be selected at once.
+  const personRoleInputs = Array.from(form.querySelectorAll(".js-person-role"));
   const personDocumentInput = document.getElementById("personDocument");
   const personBirthdateInput = document.getElementById("personBirthdate");
   const personActiveSelect = document.getElementById("personActive");
@@ -1098,6 +1100,19 @@
     setFieldValue(personNameInput, "");
     setFieldValue(personFantasyInput, "");
     setFieldValue(personTypeSelect, "");
+    // Uncheck every role and let the employee card hide/disable itself
+    personRoleInputs.forEach(function (input) {
+      if (input.checked) {
+        input.checked = false;
+        input.dispatchEvent(new Event("change", { bubbles: true }));
+      }
+    });
+
+    // Reset the employee fields to their defaults (selects without default are emptied)
+    form.querySelectorAll("[data-employee-draft]").forEach(function (field) {
+      const key = field.getAttribute("data-employee-draft");
+      setFieldValue(field, key === "employment_type" ? "clt" : (key === "status" ? "active" : ""));
+    });
     setFieldValue(personDocumentInput, "");
     setFieldValue(personBirthdateInput, "");
     setFieldValue(personActiveSelect, "");

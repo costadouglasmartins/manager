@@ -14,6 +14,8 @@
       const personNameInput = document.getElementById("personName");
       const personFantasyInput = document.getElementById("personFantasy");
       const personTypeSelect = document.getElementById("personType");
+      // Role checkboxes (person[role][]); several roles can be selected at once.
+      const personRoleInputs = Array.from(form.querySelectorAll(".js-person-role"));
       const personDocumentInput = document.getElementById("personDocument");
       const personBirthdateInput = document.getElementById("personBirthdate");
       const personActiveSelect = document.getElementById("personActive");
@@ -78,6 +80,81 @@
           field.value = (value === null || value === undefined) ? "" : String(value);
         }
 
+      function getRoleValues()
+        {
+          return personRoleInputs.filter(function (input)
+            {
+              return input.checked;
+            }).map(function (input)
+            {
+              return input.value;
+            });
+        }
+
+      // Accepts an array or a legacy CSV string and syncs the dependent employee card.
+      function setRoleValues(roles)
+        {
+          const list = Array.isArray(roles) ? roles : String(roles || "").split(",");
+          const normalized = list.map(function (role)
+            {
+              return String(role).trim();
+            });
+
+          personRoleInputs.forEach(function (input)
+            {
+              const wasChecked = input.checked;
+              input.checked = normalized.indexOf(input.value) !== -1;
+
+              if (wasChecked !== input.checked)
+                {
+                  input.dispatchEvent(new Event("change", {bubbles: true}));
+                }
+            });
+        }
+
+      // Collects the "Dados do funcionário" fields tagged with data-employee-draft.
+      function collectEmployeeDraft()
+        {
+          const data = {};
+
+          form.querySelectorAll("[data-employee-draft]").forEach(function (field)
+            {
+              data[field.getAttribute("data-employee-draft")] = field.value;
+            });
+
+          return data;
+        }
+
+      function restoreEmployeeDraft(data)
+        {
+          if (!data || typeof data !== "object")
+            {
+              return;
+            }
+
+          form.querySelectorAll("[data-employee-draft]").forEach(function (field)
+            {
+              const key = field.getAttribute("data-employee-draft");
+
+              if (Object.prototype.hasOwnProperty.call(data, key))
+                {
+                  setFieldValue(field, data[key]);
+                }
+            });
+        }
+
+      // Defaults used when the form is cleared (selects without a default are emptied).
+      function resetEmployeeFields()
+        {
+          const defaults = {employment_type: "clt", status: "active"};
+
+          form.querySelectorAll("[data-employee-draft]").forEach(function (field)
+            {
+              const key = field.getAttribute("data-employee-draft");
+              setFieldValue(field, Object.prototype.hasOwnProperty.call(defaults, key) ? defaults[key] : "");
+            });
+        }
+
       function assignDraftField(field, data, key)
         {
           if (!data || !Object.prototype.hasOwnProperty.call(data, key))
@@ -133,9 +210,11 @@
               name: getFieldValue(personNameInput),
               fantasy: getFieldValue(personFantasyInput),
               type: getFieldValue(personTypeSelect),
+              role: getRoleValues(),
               document: getFieldValue(personDocumentInput),
               birthdate: getFieldValue(personBirthdateInput)
             },
+            employee: collectEmployeeDraft(),
             create_user: getFieldValue(createUserSelect),
             user: {
               active: getFieldValue(userActiveSelect),
@@ -246,6 +325,8 @@
           assignDraftField(personNameInput, person, "name");
           assignDraftField(personFantasyInput, person, "fantasy");
           assignDraftField(personTypeSelect, person, "type");
+          setRoleValues(person.role);
+          restoreEmployeeDraft(draft.employee);
           assignDraftField(personDocumentInput, person, "document");
           assignDraftField(personBirthdateInput, person, "birthdate");
           assignDraftField(createUserSelect, draft, "create_user");
@@ -1616,6 +1697,8 @@
           setFieldValue(personNameInput, "");
           setFieldValue(personFantasyInput, "");
           setFieldValue(personTypeSelect, "");
+          setRoleValues([]);
+          resetEmployeeFields();
           setFieldValue(personDocumentInput, "");
           setFieldValue(personBirthdateInput, "");
           setFieldValue(userUsernameInput, "");

@@ -5,6 +5,7 @@ namespace App\Controllers;
 use App\Core\Authorization;
 use App\Core\TenantContext;
 use App\Core\TenantAwareController;
+use App\Models\HrEmployee;
 use App\Models\Person;
 use App\Models\Neighborhood;
 use App\Models\City;
@@ -83,7 +84,7 @@ class PersonController extends TenantAwareController
 	public function create()
 		{
 		$this->requirePermission('person.create');
-		$this->view('people/create', ['title' => 'Nova pessoa']);
+		$this->view('people/create', ['title' => 'Nova pessoa'] + $this->employeeViewData(null, null, $this->canManageEmployee(false)));
 		}
 
 	/**
@@ -217,7 +218,8 @@ class PersonController extends TenantAwareController
 
 			try
 				{
-				$person->create($_POST);
+				// HR data is only processed for users that may create employees.
+				$person->create($_POST, $this->canManageEmployee(false));
 				$this->redirectWithFlash('person', 'success', 'Pessoa salva com sucesso.');
 				}
 		catch (\InvalidArgumentException $e)
@@ -232,21 +234,23 @@ class PersonController extends TenantAwareController
 				'title' => 'Nova pessoa',
 				'formData' => $_POST,
 				'formError' => $e->getMessage(),
-			]);
+			] + $this->employeeViewData(null, $_POST, $this->canManageEmployee(false)));
 			}
 		catch (\Throwable $e)
 			{
+			// Errors raised on purpose by the HR flow carry a message written for the user.
+			$message = $this->userFacingFailure($e, 'Não foi possível salvar a pessoa agora.');
 			if ($this->wantsJson())
 				{
-				$this->json(['error' => 'Não foi possível salvar a pessoa agora.'], 500);
+				$this->json(['error' => $message], 500);
 				}
 
 			http_response_code(500);
 			$this->view('people/create', [
 				'title' => 'Nova pessoa',
 				'formData' => $_POST,
-				'formError' => 'Não foi possível salvar a pessoa agora.',
-			]);
+				'formError' => $message,
+			] + $this->employeeViewData(null, $_POST, $this->canManageEmployee(false)));
 			}
 		}
 
@@ -272,7 +276,7 @@ class PersonController extends TenantAwareController
 			'phones' => $data['phones'],
 			'emails' => $data['emails'],
 			'addresses' => $data['addresses'],
-		]);
+		] + $this->employeeViewData((int) $data['person']['id'], null, $this->canManageEmployee(true)));
 		}
 
 	/**
@@ -290,9 +294,195 @@ class PersonController extends TenantAwareController
 				$this->redirectWithFlash('person', 'danger', 'Pessoa não encontrada.');
 				}
 
-			$person->update($id, $_POST, $this->currentTenantId());
-			$this->redirectWithFlash('person', 'success', 'Pessoa atualizada com sucesso.');
+			try
+				{
+				// HR data is only processed for users that may edit employees.
+				$person->update($id, $_POST, $this->currentTenantId(), $this->canManageEmployee(true));
+				$this->redirectWithFlash('person', 'success', 'Pessoa atualizada com sucesso.');
+				}
+			catch (\InvalidArgumentException $e)
+				{
+				$this->renderEditError($data, $e->getMessage(), 422);
+				}
+			catch (\Throwable $e)
+				{
+				// Unexpected failures are logged; HR partial-failure messages are written for the user.
+				error_log('Person update failed: ' . $e->getMessage());
+				$this->renderEditError($data, $this->userFacingFailure($e, 'Não foi possível atualizar a pessoa agora.'), 500);
+				}
 			}
+
+	/**
+	 * Re-renders the edit form with the stored data overlaid by the submitted person and employee values.
+	 *
+	 * @param array $data Result of Person::findAllByPersonId() for the edited person.
+	 * @param string $message Error message shown to the user.
+	 * @param int $status HTTP status code.
+	 */
+	private function renderEditError(array $data, string $message, int $status): void
+		{
+		if ($this->wantsJson())
+			{
+			$this->json(['error' => $message], $status);
+			}
+
+		// Submitted values win over stored ones; role arrives as an array and the view expects the CSV form.
+		$personForm = (isset($_POST['person']) && is_array($_POST['person'])) ? $_POST['person'] : [];
+		$personForm['role'] = implode(',', Person::parseRoles($personForm['role'] ?? null));
+
+		// The view formats birthdate from Y-m-d, while the form posts dd/mm/aaaa.
+		if (array_key_exists('birthdate', $personForm))
+			{
+			$birthdate = trim((string) $personForm['birthdate']);
+			if (preg_match('#^(\d{2})/(\d{2})/(\d{4})$#', $birthdate, $matches) === 1)
+				{
+				$birthdate = $matches[3] . '-' . $matches[2] . '-' . $matches[1];
+				}
+			elseif (preg_match('/^\d{4}-\d{2}-\d{2}$/', $birthdate) !== 1)
+				{
+				// Unparseable text is dropped; the server already rejected it or will validate it again.
+				$birthdate = '';
+				}
+
+			$personForm['birthdate'] = $birthdate;
+			}
+
+		$formPerson = array_merge($data['person'], $personForm);
+
+		// Child rows come from the submission (not from the database) so unsaved edits survive the 422.
+		$phones = $data['phones'];
+		if (isset($_POST['phones']) && is_array($_POST['phones']))
+			{
+			$phones = array_map(static function ($row): array
+				{
+				$row = is_array($row) ? $row : [];
+				return [
+					'id' => (int) ($row['id'] ?? 0),
+					'phone_number' => (string) ($row['number'] ?? ''),
+					'observations' => (string) ($row['notes'] ?? ''),
+				];
+				}, array_values($_POST['phones']));
+			}
+
+		$emails = $data['emails'];
+		if (isset($_POST['emails']) && is_array($_POST['emails']))
+			{
+			$emails = array_map(static function ($row): array
+				{
+				$row = is_array($row) ? $row : [];
+				return [
+					'id' => (int) ($row['id'] ?? 0),
+					'email' => (string) ($row['address'] ?? ''),
+					'observations' => (string) ($row['description'] ?? ''),
+					'is_login' => (int) ($row['is_login'] ?? 0),
+				];
+				}, array_values($_POST['emails']));
+			}
+
+		$addresses = $data['addresses'];
+		if (isset($_POST['addresses']) && is_array($_POST['addresses']))
+			{
+			$addresses = array_map(static function ($row): array
+				{
+				$row = is_array($row) ? $row : [];
+				return [
+					'id' => (int) ($row['id'] ?? 0),
+					'zip_code' => (string) ($row['zip_code'] ?? ''),
+					'street' => (string) ($row['street'] ?? ''),
+					'number' => (string) ($row['number'] ?? ''),
+					'observations' => (string) ($row['observations'] ?? ''),
+					'neighborhood_id' => (int) ($row['neighborhood_id'] ?? 0),
+					// The posted label already has the "neighborhood - city" form the view builds.
+					'neighborhood_name' => (string) ($row['neighborhood_label'] ?? ''),
+					'neighborhood_city_name' => '',
+				];
+				}, array_values($_POST['addresses']));
+			}
+
+		http_response_code($status);
+		$this->view('people/edit', [
+			'title' => 'Editar pessoa',
+			'person' => $formPerson,
+			'phones' => $phones,
+			'emails' => $emails,
+			'addresses' => $addresses,
+			'formError' => $message,
+		] + $this->employeeViewData((int) $data['person']['id'], $_POST, $this->canManageEmployee(true)));
+		}
+
+	/**
+	 * Returns the message to show for an unexpected failure: HR partial-failure errors carry their own text.
+	 *
+	 * @param \Throwable $error Caught error.
+	 * @param string $fallback Generic message.
+	 * @return string Message for the user.
+	 */
+	private function userFacingFailure(\Throwable $error, string $fallback): string
+		{
+		if ($error instanceof \RuntimeException && $error->getCode() === Person::HR_PARTIAL_FAILURE_CODE)
+			{
+			return $error->getMessage();
+			}
+
+		return $fallback;
+		}
+
+	/**
+	 * Tells whether the user may read and write HR data through the person forms.
+	 * HR data (including salary) needs its own abilities: hr_employee.create on the creation form and hr_employee.edit on the edit form.
+	 *
+	 * @param bool $editing True for the edit form, false for the creation form.
+	 * @return bool True when the HR card may be shown and employee[...] processed.
+	 */
+	private function canManageEmployee(bool $editing): bool
+		{
+		return Authorization::can($editing ? 'hr_employee.edit' : 'hr_employee.create');
+		}
+
+	/**
+	 * Builds the HR variables shared by the person create/edit views.
+	 *
+	 * @param int|null $personId Person identifier, or null on the creation form.
+	 * @param array|null $formData Submitted payload when re-rendering after an error.
+	 * @param bool $canManage Whether the user holds the HR ability; without it no HR record is loaded or exposed.
+	 * @return array{employee: array|null, hrDepartments: array, hrPositions: array, hrAvailable: bool, hrCanManage: bool} View variables.
+	 */
+	private function employeeViewData(?int $personId, ?array $formData, bool $canManage): array
+		{
+		if (!$canManage)
+			{
+			// No HR ability: the HR card is not rendered and no HR data (salary included) reaches the view.
+			return [
+				'employee' => null,
+				'hrDepartments' => [],
+				'hrPositions' => [],
+				'hrAvailable' => false,
+				'hrCanManage' => false,
+			];
+			}
+
+		$submitted = (is_array($formData['employee'] ?? null)) ? $formData['employee'] : null;
+		$hr = (new Person())->employeeFormData($personId, $submitted);
+
+		// Stored record overlaid by the submitted fields, so the card shows what the user typed.
+		$employee = $hr['employee'];
+		if ($submitted !== null)
+			{
+			$employee = array_merge($employee ?? [], $submitted);
+
+			// The submitted manager id wins, so its name is looked up again (the stored name may belong to another manager).
+			$managerId = (int) ($submitted['manager_hr_employee_id'] ?? 0);
+			$employee['manager_name'] = ($managerId > 0 && $hr['hr_available']) ? (new HrEmployee())->employeeLabel($managerId) : '';
+			}
+
+		return [
+			'employee' => $employee,
+			'hrDepartments' => $hr['hr_departments'],
+			'hrPositions' => $hr['hr_positions'],
+			'hrAvailable' => $hr['hr_available'],
+			'hrCanManage' => true,
+		];
+		}
 
 	/**
 	 * Displays the details for the requested person and related tenant data.
@@ -316,6 +506,9 @@ class PersonController extends TenantAwareController
 			'phones' => $data['phones'],
 			'emails' => $data['emails'],
 			'addresses' => $data['addresses'],
+			// HR record of the person (null when none); Person::ROLE_LABELS maps the CSV roles to labels.
+			// Salary and other HR data are only exposed to users holding the HR informations ability.
+			'employee' => authCan('hr_employee.informations') ? (new Person())->employeeFormData((int) $data['person']['id'])['employee'] : null,
 		]);
 		}
 

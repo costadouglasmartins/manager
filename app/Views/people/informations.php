@@ -1,3 +1,27 @@
+<?php
+// Role labels; people.role is a CSV (SET) string such as "employee,customer".
+$personRoleLabels = [
+  'employee' => 'Funcionário',
+  'customer' => 'Cliente',
+  'user' => 'Usuário comum',
+];
+$personRoleRaw = $person['role'] ?? '';
+$personRoleKeys = is_array($personRoleRaw) ? $personRoleRaw : explode(',', (string) $personRoleRaw);
+$personRoleText = [];
+
+foreach ($personRoleKeys as $personRoleKey)
+  {
+  $personRoleKey = trim((string) $personRoleKey);
+
+  if (isset($personRoleLabels[$personRoleKey]))
+    {
+    $personRoleText[] = $personRoleLabels[$personRoleKey];
+    }
+  }
+
+$personRoleText = ($personRoleText !== [] ? implode(', ', $personRoleText) : 'Não se aplica');
+?>
+
 <div class="d-flex justify-content-between align-items-center mb-3">
   <h5 class="mb-0">Dados gerais da pessoa</h5>
 </div>
@@ -19,6 +43,10 @@
         <tr>
           <th class="text-muted">Tipo</th>
           <td><?= ($person['type'] === 'individual' ? 'Pessoa física' : 'Pessoa jurídica'); ?></td>
+        </tr>
+        <tr>
+          <th class="text-muted">Papel</th>
+          <td><?= htmlspecialchars($personRoleText, ENT_QUOTES, 'UTF-8'); ?></td>
         </tr>
         <tr>
           <th class="text-muted">Documento</th>

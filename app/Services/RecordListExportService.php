@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Core\Authorization;
 use App\Core\TenantContext;
 use App\Models\Address;
 use App\Models\Bank;
@@ -16,6 +17,9 @@ use App\Models\FinancialOperation;
 use App\Models\FinancialOperationCategory;
 use App\Models\FinancialOperationPayment;
 use App\Models\FinancialOperationSubcategory;
+use App\Models\HrDepartment;
+use App\Models\HrEmployee;
+use App\Models\HrPosition;
 use App\Models\Neighborhood;
 use App\Models\Permission;
 use App\Models\Person;
@@ -507,6 +511,48 @@ class RecordListExportService
 				['label' => 'Criado em', 'callback' => fn (array $row): string => $this->dateTime($row['created'] ?? '')],
 				['label' => 'Modificado em', 'callback' => fn (array $row): string => $this->dateTime($row['modified'] ?? '')],
 			], ['needsTenant' => true]),
+			'hr_employee' => $this->standardDefinition(HrEmployee::class, 'Lista de funcionários', 'funcionarios', ['id', 'name', 'document', 'registration_number', 'hr_department_id', 'hr_position_id', 'employment_type', 'status', 'active'], [
+				['label' => '#', 'field' => 'id', 'align' => 'right'],
+				['label' => 'Funcionário', 'field' => 'person_name'],
+				['label' => 'Documento', 'callback' => fn (array $row): string => maskCpfCnpj((string) ($row['person_document'] ?? ''))],
+				['label' => 'Matrícula', 'field' => 'registration_number'],
+				['label' => 'Departamento', 'field' => 'department_name'],
+				['label' => 'Cargo', 'field' => 'position_name'],
+				['label' => 'Gestor', 'field' => 'manager_name'],
+				['label' => 'Tipo de contrato', 'callback' => fn (array $row): string => HrEmployee::employmentTypeLabel((string) ($row['employment_type'] ?? ''))],
+				['label' => 'Situação', 'callback' => fn (array $row): string => HrEmployee::statusLabel((string) ($row['status'] ?? ''))],
+				['label' => 'Admissão', 'callback' => fn (array $row): string => HrEmployee::formatDate($row['admission_date'] ?? '')],
+				['label' => 'Desligamento', 'callback' => fn (array $row): string => HrEmployee::formatDate($row['termination_date'] ?? '')],
+				// Salary is sensitive: the column only exists for users holding hr_employee.informations (the picker and the
+				// export read the same definition, so it cannot be requested otherwise) and is unticked by default.
+				...(Authorization::can('hr_employee.informations')
+					? [['label' => 'Salário', 'callback' => fn (array $row): string => HrEmployee::formatSalary($row['salary'] ?? null), 'align' => 'right', 'checked' => false]]
+					: []),
+				['label' => 'Vínculo', 'callback' => fn (array $row): string => $this->activeLabel($row['active'] ?? null)],
+				['label' => 'Criado em', 'callback' => fn (array $row): string => $this->dateTime($row['created'] ?? '')],
+				['label' => 'Modificado em', 'callback' => fn (array $row): string => $this->dateTime($row['modified'] ?? '')],
+			], [
+				'needsTenant' => true,
+				'searchArguments' => fn (array $filters, array $query, int $total): array => [$filters, max(1, $total), 0, $this->hrEmployeeSort($query), $this->hrEmployeeDirection($query)],
+			]),
+			'hr_department' => $this->standardDefinition(HrDepartment::class, 'Lista de departamentos', 'departamentos', ['id', 'name', 'active'], [
+				['label' => '#', 'field' => 'id', 'align' => 'right'],
+				['label' => 'Nome', 'field' => 'name'],
+				['label' => 'Descrição', 'field' => 'description'],
+				['label' => 'Funcionários', 'field' => 'employees_count', 'align' => 'right'],
+				['label' => 'Status', 'callback' => fn (array $row): string => $this->activeLabel($row['active'] ?? null)],
+				['label' => 'Criado em', 'callback' => fn (array $row): string => $this->dateTime($row['created'] ?? '')],
+				['label' => 'Modificado em', 'callback' => fn (array $row): string => $this->dateTime($row['modified'] ?? '')],
+			], ['needsTenant' => true]),
+			'hr_position' => $this->standardDefinition(HrPosition::class, 'Lista de cargos', 'cargos', ['id', 'name', 'active'], [
+				['label' => '#', 'field' => 'id', 'align' => 'right'],
+				['label' => 'Nome', 'field' => 'name'],
+				['label' => 'Descrição', 'field' => 'description'],
+				['label' => 'Funcionários', 'field' => 'employees_count', 'align' => 'right'],
+				['label' => 'Status', 'callback' => fn (array $row): string => $this->activeLabel($row['active'] ?? null)],
+				['label' => 'Criado em', 'callback' => fn (array $row): string => $this->dateTime($row['created'] ?? '')],
+				['label' => 'Modificado em', 'callback' => fn (array $row): string => $this->dateTime($row['modified'] ?? '')],
+			], ['needsTenant' => true]),
 			'schedule' => $this->standardDefinition(ScheduleEvent::class, 'Lista de eventos da agenda', 'eventos_agenda', ['id', 'schedule_category_id', 'status', 'participant_person_id', 'title', 'location', 'starts_from', 'starts_to'], [
 				['label' => '#', 'field' => 'id', 'align' => 'right'],
 				['label' => 'Categoria ID', 'field' => 'schedule_category_id', 'align' => 'right'],
@@ -802,9 +848,36 @@ class RecordListExportService
 			'created_from' => 'Criada de',
 			'created_to' => 'Criada até',
 			'user_id' => 'Usuário',
+			'hr_department_id' => 'Departamento',
+			'hr_position_id' => 'Cargo',
+			'employment_type' => 'Tipo de contrato',
+			'registration_number' => 'Matrícula',
 		];
 
 		return $labels[$key] ?? ucwords(str_replace('_', ' ', $key));
+		}
+
+	/**
+	 * Resolves the employee export sort key from the query, falling back to the name.
+	 *
+	 * @param array<string, mixed> $query Request query.
+	 * @return string
+	 */
+	private function hrEmployeeSort(array $query): string
+		{
+		$sort = trim((string) ($query['sort'] ?? ''));
+		return in_array($sort, HrEmployee::SORT_KEYS, true) ? $sort : 'name';
+		}
+
+	/**
+	 * Resolves the employee export sort direction from the query.
+	 *
+	 * @param array<string, mixed> $query Request query.
+	 * @return string
+	 */
+	private function hrEmployeeDirection(array $query): string
+		{
+		return strtolower(trim((string) ($query['direction'] ?? 'asc'))) === 'desc' ? 'desc' : 'asc';
 		}
 
 	/**

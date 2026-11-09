@@ -151,6 +151,11 @@ class InternalChat extends Model
 			WHERE Chat.tenant_id = :tenant_id
 			  AND Chat.status = 'active'
 			  AND Participant.archived_at IS NULL
+			  AND EXISTS (
+			    SELECT 1
+			    FROM {$messagesTable} AS ExistingMessage
+			    WHERE ExistingMessage.internal_chat_id = Chat.id
+			  )
 			GROUP BY Chat.id,
 			         Chat.tenant_id,
 			         Chat.tenant_database_number,
@@ -162,7 +167,12 @@ class InternalChat extends Model
 			         Chat.created,
 			         Chat.modified,
 			         Participant.last_seen_at
-			ORDER BY COALESCE(Chat.last_message_at, Chat.created) DESC,
+			ORDER BY Chat.last_message_at DESC,
+			         (
+			           SELECT MAX(OrderMessage.id)
+			           FROM {$messagesTable} AS OrderMessage
+			           WHERE OrderMessage.internal_chat_id = Chat.id
+			         ) DESC,
 			         Chat.id DESC
 			LIMIT :limit
 		");

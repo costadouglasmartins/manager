@@ -202,6 +202,7 @@ class UserController extends Controller
 						'name'			=> $user['name'],
 						'tenant_id'	=> (int) ($user['tenant_id'] ?? 0)
 					];
+					$_SESSION['manager']['reset_chat_panel'] = true;
 
 					// Select the user's own tenant first, then fall back to the accessible tenant list.
 					$authenticationLogged = false;
