@@ -56,9 +56,9 @@ As credenciais do banco de dados e a chave compartilhada do chat ficam centraliz
 app/Core/Config.php
 ```
 
-O arquivo define `APP_ENV` como `development` no Docker (pela presença de `/.dockerenv`) e como `production` fora dele, sem consultar o domínio. A variável de ambiente `APP_ENV` tem prioridade sobre essa detecção e aceita `development` ou `production`, inclusive para executar produção em Docker.
+Os dois arquivos `Config.php` mantêm os mesmos blocos de configuração, separados em `production` e `docker`. A variável de ambiente `APP_ENV` seleciona o bloco e tem prioridade sobre a detecção automática, inclusive para executar produção em Docker. Quando ela não está definida, a presença de `/.dockerenv` seleciona `docker`; fora do contêiner, o padrão é `production`. O valor `development` continua aceito como alias de `docker`, para compatibilidade com o Compose atual.
 
-Em desenvolvimento, o banco usa o host `mysql` e a senha do Docker local; em produção, mantém o host `127.0.0.1` e as credenciais já configuradas. Os demais valores padrão são compartilhados. Todas as constantes `DB_HOST`, `DB_PORT`, `DB_DATABASE_MANAGER`, `DB_USERNAME`, `DB_PASSWORD`, `DB_CHARSET`, `SUPPORT_CHAT_SECRET`, `SUPPORT_CHAT_WS_HOST` e `SUPPORT_CHAT_WS_PORT` podem ser substituídas por variáveis de ambiente com os mesmos nomes. Mantenha os valores consistentes entre `manager`, `manager_main` e o processo do chat.
+No bloco `docker`, o banco usa o host `mariadb`, o usuário `manager_app` e as credenciais locais existentes. Em `production`, mantém o host `127.0.0.1`, o usuário `root` e as credenciais já configuradas. O chat escuta em `0.0.0.0` no Docker e em `127.0.0.1` na produção. Todas as constantes `DB_HOST`, `DB_PORT`, `DB_DATABASE_MANAGER`, `DB_USERNAME`, `DB_PASSWORD`, `DB_CHARSET`, `SUPPORT_CHAT_SECRET`, `SUPPORT_CHAT_WS_HOST` e `SUPPORT_CHAT_WS_PORT` podem ser substituídas por variáveis de ambiente com os mesmos nomes, lidas por `getenv()`. Mantenha os valores consistentes entre `manager`, `manager_main` e o processo do chat.
 
 Defina as variáveis no ambiente do PHP-FPM e dos processos CLI; este arquivo não carrega `.env` automaticamente. Se preferir editar os padrões no próprio `Config.php`, mantenha os dois arquivos sincronizados. O deploy atual preserva os `Config.php` da VPS, portanto esta atualização precisa ser copiada para eles separadamente.
 
@@ -69,7 +69,7 @@ SUPPORT_CHAT_WS_URL=wss://seu-dominio.com/ws
 SHARED_ASSETS_PATH=/var/www/html/manager_assets
 ```
 
-No Docker local, o host do banco é `mysql`, a porta é `3306` e o Redis fica disponível no host `redis`. Em um servidor tradicional, ajuste as variáveis de ambiente ou os padrões das constantes e a conexão do Redis conforme a infraestrutura instalada.
+No Docker local, o host do banco é `mariadb`, a porta é `3306` e o Redis fica disponível no host `redis`. Em um servidor tradicional, ajuste as variáveis de ambiente ou os padrões das constantes e a conexão do Redis conforme a infraestrutura instalada.
 
 ### Banco de dados
 
