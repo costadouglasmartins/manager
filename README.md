@@ -214,6 +214,25 @@ php manager_main/app/SupportChat/server.php
 
 Em produção, execute esse processo com `systemd`, Supervisor ou outro gerenciador de processos. Se expuser o WebSocket direto, libere a porta `8081`; se usar proxy reverso, encaminhe a rota pública configurada em `SUPPORT_CHAT_WS_URL` para esse serviço.
 
+## Presença no login e logoff
+
+O login só cria a sessão autenticada depois de gravar `online` em `user_presences`.
+Quando o limite `max_online_users` do tenant é atingido, o login é recusado e a
+tela informa que é necessário aguardar outro usuário sair. Uma falha ao gravar a
+presença também impede o login, com uma mensagem genérica para tentar novamente.
+
+Quem ainda precisa escolher um tenant entra como `online` com `tenant_id` nulo.
+A seleção e a troca de tenant verificam o limite antes de mudar o contexto;
+quando não há vaga, preservam a presença e o tenant anteriores. O limite mantém
+o critério existente de contar apenas usuários com status `online`.
+
+O logoff grava `offline` e limpa o `tenant_id` da presença antes de destruir a
+sessão. Para verificar esses fluxos sem acessar o banco da aplicação, execute:
+
+```sh
+php tests/user_presence_authentication_test.php
+```
+
 # Regras de programação do projeto
 
 Este documento registra as convenções de desenvolvimento que devem ser seguidas neste projeto.

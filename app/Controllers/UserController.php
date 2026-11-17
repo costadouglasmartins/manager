@@ -8,6 +8,7 @@ use App\Core\TenantContext;
 use App\Models\Tenant;
 use App\Models\User;
 use App\Services\AuditLogService;
+use App\Services\UserPresenceLimitException;
 use App\Services\UserPresenceService;
 
 class UserController extends Controller
@@ -191,92 +192,82 @@ class UserController extends Controller
 			$userModel = new \App\Models\User();
 			$user = $userModel->authenticate($email, $password);
 
-				if ($user)
-					{
-					\App\Core\Authorization::clearCache();
-					$_SESSION['manager']['user'] = [
-						'id'				=> $user['id'],
-						'username'	=> $user['username'],
-						'email'			=> $user['email'],
-						'type'			=> $user['type'],
-						'name'			=> $user['name'],
-						'tenant_id'	=> (int) ($user['tenant_id'] ?? 0)
-					];
-					$_SESSION['manager']['reset_chat_panel'] = true;
-
-					// Select the user's own tenant first, then fall back to the accessible tenant list.
-					$authenticationLogged = false;
-					try
-						{
-						$tenantModel = new Tenant();
-						$userId = (int) $user['id'];
-						$userTenantId = (int) ($user['tenant_id'] ?? 0);
-
-						if ($userTenantId > 0)
-							{
-							$tenant = $tenantModel->findByIdForUser($userTenantId, $userId);
-
-							if ($tenant)
-								{
-								TenantContext::setTenant($tenant);
-								$this->setInitialPresence($user, $tenant);
-								$this->writeAuthenticationLog('login', $user, $tenant, [
-									'tenant_selection' => 'primary_user_tenant',
-								]);
-								$this->redirect('/');
-								exit;
-								}
-							}
-
-						$tenants = $tenantModel->getAccessibleByUserId($userId);
-
-						if (count($tenants) === 1)
-							{
-							TenantContext::setTenant($tenants[0]);
-							$this->setInitialPresence($user, $tenants[0]);
-							$this->writeAuthenticationLog('login', $user, $tenants[0], [
-								'tenant_selection' => 'single_accessible_tenant',
-							]);
-							$this->redirect('/');
-							exit;
-							}
-						elseif (count($tenants) > 1)
-							{
-							$this->writeAuthenticationLog('login', $user, null, [
-								'tenant_selection' => 'pending_user_choice',
-								'available_tenants_count' => count($tenants),
-							]);
-							$this->redirect('tenant/select');
-							exit;
-							}
-						}
-					catch (\Exception $e)
-						{
-						error_log('ERROR LOGIN: Exception during tenant selection: ' . $e->getMessage());
-						error_log('ERROR LOGIN: Trace: ' . $e->getTraceAsString());
-						$this->writeAuthenticationLog('login', $user, null, [
-							'tenant_selection' => 'selection_error',
-							'error_message' => $e->getMessage(),
-						]);
-						$authenticationLogged = true;
-						}
-
-				// If execution reaches this point, no tenant was found or an error occurred, so redirect home anyway.
-				if (!$authenticationLogged)
-					{
-					$this->writeAuthenticationLog('login', $user, TenantContext::tenant(), [
-						'tenant_selection' => TenantContext::hasTenant() ? 'already_selected' : 'not_found',
-					]);
-					}
-				$this->redirect('/');
-				exit;
-				}
-			else
+			if (!$user)
 				{
 				$error = 'Email ou senha inválidos.';
 				$this->view('users/login', ['error' => $error, 'title' => 'Login']);
 				return;
 				}
+
+			// Resolve the tenant and persist online presence before granting a session.
+			$tenant = null;
+			$tenantSelection = 'not_found';
+			$availableTenantsCount = 0;
+			try
+				{
+				$tenantModel = new Tenant();
+				$userId = (int) $user['id'];
+				$userTenantId = (int) ($user['tenant_id'] ?? 0);
+				if ($userTenantId > 0)
+					{
+					$tenant = $tenantModel->findByIdForUser($userTenantId, $userId);
+					if ($tenant !== null)
+						{
+						$tenantSelection = 'primary_user_tenant';
+						}
+					}
+
+				if ($tenant === null)
+					{
+					$tenants = $tenantModel->getAccessibleByUserId($userId);
+					$availableTenantsCount = count($tenants);
+					if ($availableTenantsCount === 1)
+						{
+						$tenant = $tenants[0];
+						$tenantSelection = 'single_accessible_tenant';
+						}
+					elseif ($availableTenantsCount > 1)
+						{
+						$tenantSelection = 'pending_user_choice';
+						}
+					}
+
+				$presence = (new UserPresenceService())->setStatus($userId, $tenant !== null ? (int) $tenant['id'] : null, UserPresenceService::STATUS_ONLINE);
+				}
+			catch (UserPresenceLimitException $e)
+				{
+				$this->view('users/login', ['error' => $e->getMessage(), 'title' => 'Login']);
+				return;
+				}
+			catch (\Throwable $e)
+				{
+				error_log('ERROR LOGIN: ' . $e->getMessage());
+				$this->view('users/login', ['error' => 'Não foi possível concluir o login agora. Tente novamente.', 'title' => 'Login']);
+				return;
+				}
+
+			\App\Core\Authorization::clearCache();
+			TenantContext::clear();
+			$_SESSION['manager']['user'] = [
+				'id' => $user['id'],
+				'username' => $user['username'],
+				'email' => $user['email'],
+				'type' => $user['type'],
+				'name' => $user['name'],
+				'tenant_id' => (int) ($user['tenant_id'] ?? 0),
+				'presence_status' => $presence['status'],
+			];
+			$_SESSION['manager']['reset_chat_panel'] = true;
+			if ($tenant !== null)
+				{
+				TenantContext::setTenant($tenant);
+				}
+			$this->writeAuthenticationLog('login', $user, $tenant, [
+				'tenant_selection' => $tenantSelection,
+				'available_tenants_count' => $availableTenantsCount,
+			]);
+			$this->redirect($tenantSelection === 'pending_user_choice' ? 'tenant/select' : '/');
+			return;
 			}
 
 		// GET request: render the login form.
@@ -313,34 +304,6 @@ class UserController extends Controller
 		session_destroy();
 		$this->redirect('user/login');
 		exit;
-		}
-
-	/**
-	 * Sets the authenticated user initial presence.
-	 * @param array<string, mixed> $user Authenticated user payload.
-	 * @param array<string, mixed>|null $tenant Selected tenant payload.
-	 * @return void
-	 **/
-	private function setInitialPresence(array $user, ?array $tenant): void
-		{
-		$userId = (int) ($user['id'] ?? 0);
-		$tenantId = isset($tenant['id']) && (int) $tenant['id'] > 0 ? (int) $tenant['id'] : null;
-
-		if ($userId <= 0)
-			{
-			return;
-			}
-
-		try
-			{
-			$presence = (new UserPresenceService())->setStatus($userId, $tenantId, UserPresenceService::STATUS_ONLINE);
-			$_SESSION['manager']['user']['presence_status'] = $presence['status'];
-			}
-		catch (\RuntimeException $e)
-			{
-			$presence = (new UserPresenceService())->setStatus($userId, $tenantId, UserPresenceService::STATUS_OFFLINE);
-			$_SESSION['manager']['user']['presence_status'] = $presence['status'];
-			}
 		}
 
   /**

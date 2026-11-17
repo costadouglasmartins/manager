@@ -2,3 +2,4 @@
 /vendor/
 public/tenant_files/*
 tmp/
+tests

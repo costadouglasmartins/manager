@@ -4,7 +4,6 @@ namespace App\Services;
 
 use App\Core\Database;
 use PDO;
-use RuntimeException;
 
 class UserPresenceService
 	{
@@ -115,35 +114,66 @@ class UserPresenceService
 	 * @param int|null $tenantId Tenant identifier.
 	 * @param string $status Requested status.
 	 * @return array<string, mixed> Updated presence row with metadata.
+	 * @throws UserPresenceLimitException When the tenant has no online capacity.
 	 **/
 	public function setStatus(int $userId, ?int $tenantId, string $status): array
 		{
 		$status = $this->normalizeStatus($status);
-
-		if ($status === self::STATUS_ONLINE && $tenantId !== null && $tenantId > 0)
+		// Serialize capacity checks and presence writes for the selected tenant.
+		$requiresCapacity = $status === self::STATUS_ONLINE && $tenantId !== null && $tenantId > 0;
+		// Leave transaction ownership with the caller when one is already open.
+		$ownsTransaction = $requiresCapacity && !$this->db->inTransaction();
+		if ($ownsTransaction)
 			{
-			$this->assertOnlineCapacity($tenantId, $userId);
+			$this->db->beginTransaction();
 			}
 
-		$now = date('Y-m-d H:i:s');
-		$stmt = $this->db->prepare("INSERT INTO user_presences (user_id, tenant_id, status, last_seen_at, status_changed_at, created, modified)
-		                            VALUES (:user_id, :tenant_id, :status, :last_seen_at, :status_changed_at, :created, :modified)
-		                            ON DUPLICATE KEY UPDATE tenant_id = VALUES(tenant_id),
-		                                                    status = VALUES(status),
-		                                                    last_seen_at = VALUES(last_seen_at),
-		                                                    status_changed_at = VALUES(status_changed_at),
-		                                                    modified = VALUES(modified)");
-		$stmt->execute([
+		try
+			{
+			if ($requiresCapacity)
+				{
+				$this->assertOnlineCapacity($tenantId, $userId);
+				}
+
+			$now = date('Y-m-d H:i:s');
+			$stmt = $this->db->prepare("INSERT INTO user_presences (user_id, tenant_id, status, last_seen_at, status_changed_at, created, modified)
+		                             VALUES (:user_id, :tenant_id, :status, :last_seen_at, :status_changed_at, :created, :modified)
+		                             ON DUPLICATE KEY UPDATE tenant_id = VALUES(tenant_id),
+		                                                     status = VALUES(status),
+		                                                     last_seen_at = VALUES(last_seen_at),
+		                                                     status_changed_at = VALUES(status_changed_at),
+		                                                     modified = VALUES(modified)");
+			$stmt->execute([
+				'user_id' => $userId,
+				'tenant_id' => $tenantId,
+				'status' => $status,
+				'last_seen_at' => $now,
+				'status_changed_at' => $now,
+				'created' => $now,
+				'modified' => $now,
+			]);
+
+			if ($ownsTransaction)
+				{
+				$this->db->commit();
+				}
+			}
+		catch (\Throwable $e)
+			{
+			if ($ownsTransaction && $this->db->inTransaction())
+				{
+				$this->db->rollBack();
+				}
+			throw $e;
+			}
+
+		return $this->withMeta([
 			'user_id' => $userId,
 			'tenant_id' => $tenantId,
 			'status' => $status,
 			'last_seen_at' => $now,
 			'status_changed_at' => $now,
-			'created' => $now,
-			'modified' => $now,
 		]);
-
-		return $this->current($userId);
 		}
 
 	/**
@@ -180,6 +210,14 @@ class UserPresenceService
 	 **/
 	private function assertOnlineCapacity(int $tenantId, int $userId): void
 		{
+		// A tenant row lock prevents simultaneous logins from taking the same slot.
+		$tenantStatement = $this->db->prepare("SELECT Tenant.id
+		                                      FROM tenants AS Tenant
+		                                      WHERE Tenant.id = :tenant_id
+		                                      FOR UPDATE");
+		$tenantStatement->execute(['tenant_id' => $tenantId]);
+		$tenantStatement->fetchColumn();
+
 		$limit = $this->settings->getInt($tenantId, 'max_online_users');
 		$stmt = $this->db->prepare("SELECT COUNT(*) AS total
 		                            FROM user_presences AS UserPresence
@@ -194,7 +232,7 @@ class UserPresenceService
 
 		if ((int) $stmt->fetchColumn() >= $limit)
 			{
-			throw new RuntimeException('The tenant online user limit was reached.');
+			throw new UserPresenceLimitException('O limite de usuários online deste tenant foi atingido. Tente novamente após outro usuário sair.');
 			}
 		}
 

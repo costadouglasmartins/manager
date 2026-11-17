@@ -4,6 +4,7 @@ namespace App\Controllers;
 
 use App\Core\Controller;
 use App\Core\TenantContext;
+use App\Services\UserPresenceLimitException;
 use App\Services\UserPresenceService;
 
 class UserPresenceController extends Controller
@@ -46,12 +47,18 @@ class UserPresenceController extends Controller
 			{
 			$presence = (new UserPresenceService())->setStatus($userId, $tenantId, $status);
 			$_SESSION['manager']['user']['presence_status'] = $presence['status'];
-			$this->json(['presence' => $presence]);
 			}
-		catch (\RuntimeException $e)
+		catch (UserPresenceLimitException $e)
 			{
 			$this->json(['error' => 'online_limit_reached', 'message' => $e->getMessage()], 409);
 			}
+		catch (\Throwable $e)
+			{
+			error_log('USER PRESENCE ERROR: ' . $e->getMessage());
+			$this->json(['error' => 'presence_unavailable', 'message' => 'Não foi possível atualizar a presença agora. Tente novamente.'], 503);
+			}
+
+		$this->json(['presence' => $presence]);
 		}
 	}
 ?>

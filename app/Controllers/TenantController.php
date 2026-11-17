@@ -5,6 +5,7 @@ namespace App\Controllers;
 use App\Core\Controller;
 use App\Core\TenantContext;
 use App\Models\Tenant;
+use App\Services\UserPresenceLimitException;
 use App\Services\UserPresenceService;
 
 class TenantController extends Controller
@@ -28,12 +29,28 @@ class TenantController extends Controller
 
 			if ($tenant)
 			  {
-				TenantContext::setTenant($tenant);
-				$this->setTenantPresence($userId, $tenant);
-				$this->redirect('/');
+				try
+				  {
+					$this->setTenantPresence($userId, $tenant);
+				  }
+				catch (UserPresenceLimitException $e)
+				  {
+					$error = $e->getMessage();
+				  }
+				catch (\Throwable $e)
+				  {
+					error_log('TENANT PRESENCE ERROR: ' . $e->getMessage());
+					$error = 'Não foi possível acessar o tenant agora. Tente novamente.';
+				  }
+				if ($error === null)
+				  {
+					$this->redirect('/');
+				  }
 			  }
-
-			$error = 'Tenant nao encontrado ou sem acesso para o usuario autenticado.';
+			else
+			  {
+				$error = 'Tenant nao encontrado ou sem acesso para o usuario autenticado.';
+			  }
 		  }
 
 		$tenants = $tenantModel->getAccessibleByUserId($userId);
@@ -84,8 +101,19 @@ class TenantController extends Controller
 			], 404);
 		  }
 
-		TenantContext::setTenant($tenant);
-		$this->setTenantPresence((int) ($user['id'] ?? 0), $tenant);
+		try
+		  {
+			$this->setTenantPresence((int) ($user['id'] ?? 0), $tenant);
+		  }
+		catch (UserPresenceLimitException $e)
+		  {
+			$this->json(['error' => 'online_limit_reached', 'message' => $e->getMessage()], 409);
+		  }
+		catch (\Throwable $e)
+		  {
+			error_log('TENANT PRESENCE ERROR: ' . $e->getMessage());
+			$this->json(['error' => 'presence_unavailable', 'message' => 'Não foi possível acessar o tenant agora. Tente novamente.'], 503);
+		  }
 
 		$this->json([
 			'message' => 'Tenant selecionado com sucesso.',
@@ -125,16 +153,9 @@ class TenantController extends Controller
 			return;
 		  }
 
-		try
-		  {
-			$presence = (new UserPresenceService())->setStatus($userId, (int) ($tenant['id'] ?? 0), UserPresenceService::STATUS_ONLINE);
-			$_SESSION['manager']['user']['presence_status'] = $presence['status'];
-		  }
-		catch (\RuntimeException $e)
-		  {
-			$presence = (new UserPresenceService())->setStatus($userId, (int) ($tenant['id'] ?? 0), UserPresenceService::STATUS_OFFLINE);
-			$_SESSION['manager']['user']['presence_status'] = $presence['status'];
-		  }
+		$presence = (new UserPresenceService())->setStatus($userId, (int) ($tenant['id'] ?? 0), UserPresenceService::STATUS_ONLINE);
+		TenantContext::setTenant($tenant);
+		$_SESSION['manager']['user']['presence_status'] = $presence['status'];
 	  }
   }
 ?>
