@@ -2,8 +2,8 @@
 $resetChatPanel = !empty($_SESSION['manager']['reset_chat_panel']);
 unset($_SESSION['manager']['reset_chat_panel']);
 ?>
-<link rel="stylesheet" href="<?= url('assets/css/support_chats/widget.css?v=6'); ?>">
-<link rel="stylesheet" href="<?= url('assets/css/internal_chats/widget.css?v=1'); ?>">
+<link rel="stylesheet" href="<?= url('assets/css/support_chats/widget.css?v=8'); ?>">
+<link rel="stylesheet" href="<?= url('assets/css/internal_chats/widget.css?v=2'); ?>">
 
 <div class="support-widget" id="supportWidget" data-bootstrap-url="<?= url('support_chat/bootstrap'); ?>" data-chat-url-base="<?= url('support_chat/show'); ?>" data-ws-auth-url="<?= url('support_chat/wsAuth'); ?>" data-reset-panel="<?= $resetChatPanel ? 'true' : 'false'; ?>">
   <button class="support-widget-toggle" id="supportWidgetToggle" type="button" aria-expanded="false" aria-controls="supportWidgetPanel">
@@ -57,8 +57,8 @@ unset($_SESSION['manager']['reset_chat_panel']);
         </div>
 
         <aside class="support-widget-history" aria-labelledby="supportWidgetHistoryTitle">
-          <div class="support-widget-history-header">
-            <strong id="supportWidgetHistoryTitle">Histórico</strong>
+          <div class="support-widget-history-header" id="supportWidgetHistoryHeader">
+            <strong id="supportWidgetHistoryTitle">Histórico <span class="support-widget-history-count" id="supportWidgetHistoryCount"></span></strong>
             <button class="support-widget-history-toggle" id="supportWidgetHistoryToggle" type="button" aria-label="Recolher histórico" aria-expanded="true" aria-controls="supportWidgetHistoryList" title="Recolher histórico">
               <i class="bi bi-chevron-right"></i>
             </button>
@@ -78,18 +78,20 @@ unset($_SESSION['manager']['reset_chat_panel']);
             </button>
           </div>
           <div class="internal-chat-list" id="internalChatConversationList"></div>
-
-          <div class="internal-chat-section-header">
-            <strong>Usuários</strong>
-          </div>
-          <div class="internal-chat-list internal-chat-user-list" id="internalChatUserList"></div>
         </aside>
 
         <div class="internal-chat-main">
+          <div class="internal-chat-thread-header" id="internalChatThreadHeader" hidden>
+            <button class="internal-chat-icon-button internal-chat-back" id="internalChatBack" type="button" aria-label="Voltar para as conversas" title="Voltar para as conversas">
+              <i class="bi bi-arrow-left"></i>
+            </button>
+            <div class="internal-chat-thread-identity" id="internalChatThreadIdentity"></div>
+          </div>
+
           <div class="support-widget-body">
             <div id="internalChatMessages" class="support-widget-messages internal-chat-messages">
               <div class="support-widget-empty">
-                <p class="mb-0">Selecione um usuário para iniciar uma conversa interna.</p>
+                <p class="mb-0">Escolha uma conversa ou alguém da Equipe para conversar.</p>
               </div>
             </div>
             <div class="support-widget-typing-wrap">
@@ -105,6 +107,14 @@ unset($_SESSION['manager']['reset_chat_panel']);
             </div>
           </form>
         </div>
+
+        <aside class="internal-chat-team" aria-labelledby="internalChatTeamTitle">
+          <div class="internal-chat-section-header">
+            <strong id="internalChatTeamTitle">Equipe</strong>
+            <span class="internal-chat-team-count" id="internalChatTeamCount"></span>
+          </div>
+          <div class="internal-chat-team-list" id="internalChatUserList"></div>
+        </aside>
       </div>
     </div>
   </section>
@@ -127,5 +137,5 @@ unset($_SESSION['manager']['reset_chat_panel']);
   </div>
 </div>
 
-<script src="<?= url('assets/js/support_chats/widget.js?v=7'); ?>"></script>
-<script src="<?= url('assets/js/internal_chats/widget.js?v=2'); ?>"></script>
+<script src="<?= url('assets/js/support_chats/widget.js?v=8'); ?>"></script>
+<script src="<?= url('assets/js/internal_chats/widget.js?v=3'); ?>"></script>

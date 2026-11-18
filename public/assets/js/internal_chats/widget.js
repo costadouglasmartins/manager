@@ -28,7 +28,11 @@ document.addEventListener("DOMContentLoaded", () => {
     internalMeta: document.getElementById("internalChatHeaderMeta"),
     conversationList: document.getElementById("internalChatConversationList"),
     userList: document.getElementById("internalChatUserList"),
+    teamCount: document.getElementById("internalChatTeamCount"),
     refresh: document.getElementById("internalChatRefresh"),
+    threadHeader: document.getElementById("internalChatThreadHeader"),
+    threadIdentity: document.getElementById("internalChatThreadIdentity"),
+    back: document.getElementById("internalChatBack"),
     messages: document.getElementById("internalChatMessages"),
     typing: document.getElementById("internalChatTyping"),
     form: document.getElementById("internalChatComposer"),
@@ -52,7 +56,22 @@ document.addEventListener("DOMContentLoaded", () => {
     typingTimer: null,
     lastTypingState: false,
     lastTypingSentAt: 0,
+    renderedMessagesKey: "",
+    renderedChatId: 0,
+    forceScrollToBottom: false,
+    renderedConversationHtml: "",
+    renderedUserHtml: "",
   };
+
+  // Touch devices: focusing the textarea would pop the virtual keyboard over the chat.
+  const coarsePointerQuery = window.matchMedia("(pointer: coarse)");
+  const presenceLabels = {
+    online: "Online",
+    away: "Ausente",
+    busy: "Ocupado",
+    offline: "Offline",
+  };
+  const presenceOrder = ["online", "away", "busy", "offline"];
 
   function readStoredValue(key) {
     try {
@@ -120,6 +139,67 @@ document.addEventListener("DOMContentLoaded", () => {
     }).format(date);
   }
 
+  function presenceStatus(user) {
+    const status = String((user && user.presence_status) || "offline");
+    return Object.prototype.hasOwnProperty.call(presenceLabels, status) ? status : "offline";
+  }
+
+  function initials(name) {
+    const parts = String(name || "").trim().split(/\s+/).filter(Boolean);
+    if (!parts.length) {
+      return "?";
+    }
+
+    const first = Array.from(parts[0]);
+    const last = parts.length > 1 ? Array.from(parts[parts.length - 1]) : [];
+    return ((first[0] || "") + (last[0] || first[1] || "")).toUpperCase();
+  }
+
+  function avatarHtml(name, status) {
+    return `<span class="internal-chat-avatar" data-presence="${status}" aria-hidden="true">${escapeHtml(initials(name))}<span class="internal-chat-presence-dot"></span></span>`;
+  }
+
+  function tenantUsers() {
+    return (state.bootstrap && state.bootstrap.users) || [];
+  }
+
+  // Chats are direct (one other participant) and only expose usernames, so
+  // the partner's presence is looked up in the tenant user list.
+  function chatPartner(chat) {
+    const usernames = String((chat && chat.participant_usernames) || "")
+      .split(",")
+      .map((username) => username.trim())
+      .filter(Boolean);
+
+    if (usernames.length !== 1) {
+      return null;
+    }
+
+    return tenantUsers().find((user) => user.username === usernames[0]) || null;
+  }
+
+  function formatListDate(value) {
+    const date = parseLocalDateTime(value);
+    if (!date || Number.isNaN(date.getTime())) {
+      return "";
+    }
+
+    const now = new Date();
+    const isToday = date.getFullYear() === now.getFullYear()
+      && date.getMonth() === now.getMonth()
+      && date.getDate() === now.getDate();
+
+    return new Intl.DateTimeFormat("pt-BR", isToday
+      ? { hour: "2-digit", minute: "2-digit" }
+      : { day: "2-digit", month: "2-digit" }).format(date);
+  }
+
+  function focusInput() {
+    if (!coarsePointerQuery.matches && !elements.panel.hidden) {
+      elements.input.focus();
+    }
+  }
+
   function currentUserId() {
     return Number((state.bootstrap && state.bootstrap.currentUser && state.bootstrap.currentUser.id) || 0);
   }
@@ -170,8 +250,8 @@ document.addEventListener("DOMContentLoaded", () => {
       startRefreshTimer();
       syncTypingPollTimer();
 
-      if (state.activeChatId > 0 && !elements.panel.hidden) {
-        elements.input.focus();
+      if (state.activeChatId > 0) {
+        focusInput();
       }
       return;
     }
@@ -225,7 +305,15 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   async function refreshBootstrap() {
+    const requestedChatId = state.activeChatId;
     const payload = await fetchJson(bootstrapEndpoint());
+
+    // The user opened or left a conversation while this request was in flight;
+    // applying it would switch the thread back. The newer action refreshes itself.
+    if (requestedChatId !== state.activeChatId) {
+      return;
+    }
+
     state.bootstrap = payload;
     state.activeChat = payload.activeChat || null;
     state.messages = payload.messages || [];
@@ -245,7 +333,9 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function render() {
+    root.classList.toggle("has-active-thread", Boolean(state.activeChat));
     renderHeader();
+    renderThreadHeader();
     renderConversationList();
     renderUserList();
     renderMessages();
@@ -261,70 +351,117 @@ document.addEventListener("DOMContentLoaded", () => {
     elements.internalMeta.textContent = `${tenantName()} | Chat interno`;
   }
 
-  function renderConversationList() {
-    const chats = (state.bootstrap && state.bootstrap.chats) || [];
-
-    if (!chats.length) {
-      elements.conversationList.innerHTML = '<div class="internal-chat-list-empty">Nenhuma conversa interna.</div>';
+  function renderThreadHeader() {
+    if (!elements.threadHeader || !elements.threadIdentity) {
       return;
     }
 
-    elements.conversationList.innerHTML = chats.map((chat) => {
-      const isActive = Number(chat.id || 0) === Number(state.activeChatId || 0);
-      const unread = Number(chat.unread_count || 0);
-      const activeClass = isActive ? " is-active" : "";
-      const lastMessage = chat.last_message_text ? escapeHtml(chat.last_message_text) : "Sem mensagens";
-      const chatDate = chat.last_message_at || chat.created;
+    if (!state.activeChat) {
+      elements.threadHeader.hidden = true;
+      elements.threadIdentity.innerHTML = "";
+      return;
+    }
 
-      return `
-        <button type="button" class="internal-chat-list-item${activeClass}" data-internal-chat-id="${Number(chat.id)}">
-          <span class="internal-chat-list-item-title">
-            <strong>${escapeHtml(chatTitle(chat))}</strong>
-            ${unread > 0 ? `<span class="badge text-bg-primary">${unread}</span>` : ""}
-          </span>
-          <span class="internal-chat-list-item-meta">${escapeHtml(lastMessage)}</span>
-          <span class="internal-chat-list-item-meta">${escapeHtml(formatDate(chatDate))}</span>
-        </button>
-      `;
-    }).join("");
+    const partner = chatPartner(state.activeChat);
+    const status = partner ? presenceStatus(partner) : "offline";
+    const title = chatTitle(state.activeChat);
 
-    elements.conversationList.querySelectorAll("[data-internal-chat-id]").forEach((button) => {
-      button.addEventListener("click", () => {
-        const chatId = Number(button.dataset.internalChatId || 0);
-        if (chatId > 0) {
-          openChat(chatId);
+    elements.threadHeader.hidden = false;
+    elements.threadIdentity.dataset.presence = status;
+    elements.threadIdentity.innerHTML = `
+      ${avatarHtml(title, status)}
+      <span class="internal-chat-thread-text">
+        <span class="internal-chat-thread-name">${escapeHtml(title)}</span>
+        ${partner ? `<span class="internal-chat-thread-status">${escapeHtml(presenceLabels[status])}</span>` : ""}
+      </span>
+    `;
+  }
+
+  function renderConversationList() {
+    const chats = (state.bootstrap && state.bootstrap.chats) || [];
+    let html = "";
+
+    if (!chats.length) {
+      html = '<div class="internal-chat-list-empty">Nenhuma conversa ainda. Escolha alguém da Equipe para começar.</div>';
+    } else {
+      html = chats.map((chat) => {
+        const isActive = Number(chat.id || 0) === Number(state.activeChatId || 0);
+        const unread = isActive ? 0 : Number(chat.unread_count || 0);
+        const title = chatTitle(chat);
+        const partner = chatPartner(chat);
+        const status = partner ? presenceStatus(partner) : "offline";
+        const lastMessage = chat.last_message_text || "Sem mensagens";
+        const classes = ["internal-chat-conversation"];
+
+        if (isActive) {
+          classes.push("is-active");
         }
-      });
-    });
+
+        if (unread > 0) {
+          classes.push("has-unread");
+        }
+
+        return `
+          <button type="button" class="${classes.join(" ")}" data-internal-chat-id="${Number(chat.id)}" title="${escapeHtml(title)}${partner ? ` (${presenceLabels[status]})` : ""}">
+            ${avatarHtml(title, status)}
+            <span class="internal-chat-conversation-text">
+              <span class="internal-chat-conversation-row">
+                <span class="internal-chat-conversation-name">${escapeHtml(title)}</span>
+                <span class="internal-chat-conversation-time">${escapeHtml(formatListDate(chat.last_message_at || chat.created))}</span>
+              </span>
+              <span class="internal-chat-conversation-row">
+                <span class="internal-chat-conversation-preview">${escapeHtml(lastMessage)}</span>
+                ${unread > 0 ? `<span class="badge rounded-pill text-bg-primary">${unread}</span>` : ""}
+              </span>
+            </span>
+          </button>
+        `;
+      }).join("");
+    }
+
+    // Re-rendering identical markup every poll would drop focus and hover.
+    if (html !== state.renderedConversationHtml) {
+      state.renderedConversationHtml = html;
+      elements.conversationList.innerHTML = html;
+    }
   }
 
   function renderUserList() {
-    const users = (state.bootstrap && state.bootstrap.users) || [];
+    const users = tenantUsers()
+      .map((user, index) => ({ user, index, status: presenceStatus(user) }))
+      .sort((a, b) => (presenceOrder.indexOf(a.status) - presenceOrder.indexOf(b.status)) || (a.index - b.index));
+    const partner = chatPartner(state.activeChat);
+    const onlineCount = users.filter((entry) => entry.status === "online").length;
+    let html = "";
 
-    if (!users.length) {
-      elements.userList.innerHTML = '<div class="internal-chat-list-empty">Nenhum outro usuário neste tenant.</div>';
-      return;
+    if (elements.teamCount) {
+      elements.teamCount.textContent = users.length ? `${onlineCount} online` : "";
     }
 
-    elements.userList.innerHTML = users.map((user) => {
-      return `
-        <button type="button" class="internal-chat-list-item" data-internal-user-id="${Number(user.id)}">
-          <span class="internal-chat-list-item-title">
-            <strong>${escapeHtml(user.name || user.username)}</strong>
-          </span>
-          <span class="internal-chat-list-item-meta">${escapeHtml(user.username || "")} | ${escapeHtml(user.role || "user")}</span>
-        </button>
-      `;
-    }).join("");
+    if (!users.length) {
+      html = '<div class="internal-chat-list-empty">Nenhum outro usuário neste tenant.</div>';
+    } else {
+      html = users.map(({ user, status }) => {
+        const name = user.name || user.username || "Usuário";
+        const label = presenceLabels[status];
+        const isActive = partner && Number(partner.id) === Number(user.id);
 
-    elements.userList.querySelectorAll("[data-internal-user-id]").forEach((button) => {
-      button.addEventListener("click", () => {
-        const userId = Number(button.dataset.internalUserId || 0);
-        if (userId > 0) {
-          startDirectChat(userId);
-        }
-      });
-    });
+        return `
+          <button type="button" class="internal-chat-user${isActive ? " is-active" : ""}" data-internal-user-id="${Number(user.id)}" data-presence="${status}" title="${escapeHtml(name)} (${label})" aria-label="Conversar com ${escapeHtml(name)}, ${label}">
+            ${avatarHtml(name, status)}
+            <span class="internal-chat-user-text">
+              <span class="internal-chat-user-name">${escapeHtml(name)}</span>
+              <span class="internal-chat-user-status">${label}</span>
+            </span>
+          </button>
+        `;
+      }).join("");
+    }
+
+    if (html !== state.renderedUserHtml) {
+      state.renderedUserHtml = html;
+      elements.userList.innerHTML = html;
+    }
   }
 
   function renderMessages() {
@@ -334,15 +471,37 @@ document.addEventListener("DOMContentLoaded", () => {
     elements.sendButton.disabled = !state.activeChat;
 
     if (!state.activeChat) {
-      elements.messages.innerHTML = '<div class="support-widget-empty"><p class="mb-0">Selecione um usuário para iniciar uma conversa interna.</p></div>';
+      state.renderedMessagesKey = "";
+      state.renderedChatId = 0;
+      elements.messages.innerHTML = '<div class="support-widget-empty"><p class="mb-0">Escolha uma conversa ou alguém da Equipe para conversar.</p></div>';
       elements.typing.textContent = "";
       return;
     }
 
     if (!messages.length) {
+      state.renderedMessagesKey = "";
+      state.renderedChatId = state.activeChatId;
       elements.messages.innerHTML = '<div class="support-widget-empty"><p class="mb-0">Nenhuma mensagem nesta conversa.</p></div>';
       return;
     }
+
+    // The 5s poll re-renders constantly: skip unchanged threads and only follow
+    // new messages when the reader is already at the bottom, so scrolling back
+    // through older messages is not interrupted.
+    const lastMessage = messages[messages.length - 1] || {};
+    const messagesKey = `${state.activeChatId}:${messages.length}:${lastMessage.id || ""}`;
+    if (messagesKey === state.renderedMessagesKey && !state.forceScrollToBottom) {
+      return;
+    }
+
+    const container = elements.messages;
+    const isSameChat = state.renderedChatId === state.activeChatId;
+    const wasNearBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 60;
+    const shouldScroll = !isSameChat || wasNearBottom || state.forceScrollToBottom;
+
+    state.renderedMessagesKey = messagesKey;
+    state.renderedChatId = state.activeChatId;
+    state.forceScrollToBottom = false;
 
     elements.messages.innerHTML = messages.map((message) => {
       const isSelf = Number(message.sender_user_id || 0) === currentUserId();
@@ -356,7 +515,9 @@ document.addEventListener("DOMContentLoaded", () => {
       `;
     }).join("");
 
-    elements.messages.scrollTop = elements.messages.scrollHeight;
+    if (shouldScroll) {
+      elements.messages.scrollTop = elements.messages.scrollHeight;
+    }
   }
 
   function renderTyping() {
@@ -395,10 +556,25 @@ document.addEventListener("DOMContentLoaded", () => {
       state.typingUsers = payload.typingUsers || [];
       await refreshBootstrap();
       syncTypingPollTimer();
-      elements.input.focus();
+      focusInput();
     } catch (error) {
       setConnectionStatus("Falha ao abrir conversa", false);
     }
+  }
+
+  // Leaves the thread (compact layouts go back to the conversation list).
+  function closeChat() {
+    sendTyping(false);
+    state.activeChatId = 0;
+    state.activeChat = null;
+    state.messages = [];
+    state.typingUsers = [];
+    writeStoredValue(storageKeys.activeChat, "");
+    render();
+    syncTypingPollTimer();
+    refreshBootstrap().catch(() => {
+      setConnectionStatus("Falha ao atualizar", false);
+    });
   }
 
   async function startDirectChat(userId) {
@@ -420,7 +596,7 @@ document.addEventListener("DOMContentLoaded", () => {
       };
       await refreshBootstrap();
       syncTypingPollTimer();
-      elements.input.focus();
+      focusInput();
     } catch (error) {
       setConnectionStatus("Falha ao iniciar conversa", false);
     }
@@ -448,6 +624,7 @@ document.addEventListener("DOMContentLoaded", () => {
         ...state.bootstrap,
         chats: payload.chats || ((state.bootstrap && state.bootstrap.chats) || []),
       };
+      state.forceScrollToBottom = true;
       render();
       sendTyping(false);
       setConnectionStatus(state.socketAuthenticated ? "Conectado" : "Atualizando automaticamente", state.socketAuthenticated);
@@ -652,11 +829,31 @@ document.addEventListener("DOMContentLoaded", () => {
   elements.internalTab.addEventListener("click", () => setActiveTab("internal"));
   elements.toggle.addEventListener("click", () => {
     window.setTimeout(() => {
-      if (state.activeTab === "internal" && state.activeChatId > 0 && !elements.panel.hidden) {
-        elements.input.focus();
+      if (state.activeTab === "internal" && state.activeChatId > 0) {
+        focusInput();
       }
     }, 0);
   });
+
+  elements.conversationList.addEventListener("click", (event) => {
+    const button = event.target.closest("[data-internal-chat-id]");
+    const chatId = Number((button && button.dataset.internalChatId) || 0);
+    if (chatId > 0) {
+      openChat(chatId);
+    }
+  });
+
+  elements.userList.addEventListener("click", (event) => {
+    const button = event.target.closest("[data-internal-user-id]");
+    const userId = Number((button && button.dataset.internalUserId) || 0);
+    if (userId > 0) {
+      startDirectChat(userId);
+    }
+  });
+
+  if (elements.back) {
+    elements.back.addEventListener("click", () => closeChat());
+  }
   elements.refresh.addEventListener("click", () => {
     refreshBootstrap().catch(() => {
       setConnectionStatus("Falha ao atualizar", false);

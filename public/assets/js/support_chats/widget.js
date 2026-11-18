@@ -20,6 +20,8 @@ document.addEventListener("DOMContentLoaded", () => {
     headerMeta: document.getElementById("supportWidgetHeaderMeta"),
     messages: document.getElementById("supportWidgetMessages"),
     historyList: document.getElementById("supportWidgetHistoryList"),
+    historyHeader: document.getElementById("supportWidgetHistoryHeader"),
+    historyCount: document.getElementById("supportWidgetHistoryCount"),
     historyToggle: document.getElementById("supportWidgetHistoryToggle"),
     historyModal: document.getElementById("supportWidgetHistoryModal"),
     historyModalTitle: document.getElementById("supportWidgetHistoryModalTitle"),
@@ -43,7 +45,13 @@ document.addEventListener("DOMContentLoaded", () => {
     lastTypingState: false,
     historyModalChatId: null,
     historyCollapsed: false,
+    compactHistoryOpen: false,
   };
+
+  // Must match the compact breakpoint in support_chats/widget.css.
+  const compactQuery = window.matchMedia("(max-width: 767.98px)");
+  // Touch devices: focusing the textarea would pop the virtual keyboard over the chat.
+  const coarsePointerQuery = window.matchMedia("(pointer: coarse)");
 
   function readStoredValue(key) {
     try {
@@ -164,13 +172,14 @@ document.addEventListener("DOMContentLoaded", () => {
 
   function setPanelOpen(isOpen, shouldPersist = true, shouldFocus = true) {
     elements.panel.hidden = !isOpen;
+    root.classList.toggle("is-open", isOpen);
     elements.toggle.setAttribute("aria-expanded", isOpen ? "true" : "false");
 
     if (shouldPersist) {
       writeStoredValue(storageKeys.panel, isOpen ? "open" : "closed");
     }
 
-    if (isOpen && shouldFocus) {
+    if (isOpen && shouldFocus && !coarsePointerQuery.matches) {
       elements.input.focus();
     }
   }
@@ -180,25 +189,52 @@ document.addEventListener("DOMContentLoaded", () => {
     setPanelOpen(shouldOpen);
   }
 
+  // Wide panels keep the persisted side-rail state; compact panels show the
+  // history as a bar that is closed by default and never persisted.
+  function syncHistoryToggle() {
+    const isCompact = compactQuery.matches;
+    const isExpanded = isCompact ? state.compactHistoryOpen : !state.historyCollapsed;
+    const label = isExpanded ? "Recolher histórico" : "Expandir histórico";
+
+    root.classList.toggle("is-compact-history-open", isCompact && state.compactHistoryOpen);
+
+    if (!elements.historyToggle) {
+      return;
+    }
+
+    elements.historyToggle.setAttribute("aria-expanded", isExpanded ? "true" : "false");
+    elements.historyToggle.setAttribute("aria-label", label);
+    elements.historyToggle.setAttribute("title", label);
+
+    const icon = elements.historyToggle.querySelector("i");
+    if (icon) {
+      icon.classList.remove("bi-chevron-right", "bi-chevron-left", "bi-chevron-up", "bi-chevron-down");
+      if (isCompact) {
+        icon.classList.add(isExpanded ? "bi-chevron-up" : "bi-chevron-down");
+      } else {
+        icon.classList.add(isExpanded ? "bi-chevron-right" : "bi-chevron-left");
+      }
+    }
+  }
+
   function setHistoryCollapsed(isCollapsed, shouldPersist = true) {
     state.historyCollapsed = Boolean(isCollapsed);
     root.classList.toggle("is-history-collapsed", state.historyCollapsed);
-
-    if (elements.historyToggle) {
-      elements.historyToggle.setAttribute("aria-expanded", state.historyCollapsed ? "false" : "true");
-      elements.historyToggle.setAttribute("aria-label", state.historyCollapsed ? "Expandir histórico" : "Recolher histórico");
-      elements.historyToggle.setAttribute("title", state.historyCollapsed ? "Expandir histórico" : "Recolher histórico");
-
-      const icon = elements.historyToggle.querySelector("i");
-      if (icon) {
-        icon.classList.toggle("bi-chevron-right", !state.historyCollapsed);
-        icon.classList.toggle("bi-chevron-left", state.historyCollapsed);
-      }
-    }
+    syncHistoryToggle();
 
     if (shouldPersist) {
       writeStoredValue(storageKeys.history, state.historyCollapsed ? "collapsed" : "expanded");
     }
+  }
+
+  function toggleHistory() {
+    if (compactQuery.matches) {
+      state.compactHistoryOpen = !state.compactHistoryOpen;
+      syncHistoryToggle();
+      return;
+    }
+
+    setHistoryCollapsed(!state.historyCollapsed);
   }
 
   function renderMessages() {
@@ -300,6 +336,10 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     const history = historyChats();
+
+    if (elements.historyCount) {
+      elements.historyCount.textContent = history.length ? `(${history.length})` : "";
+    }
 
     if (!history.length) {
       state.historyModalChatId = null;
@@ -501,8 +541,24 @@ document.addEventListener("DOMContentLoaded", () => {
 
   if (elements.historyToggle) {
     elements.historyToggle.addEventListener("click", () => {
-      setHistoryCollapsed(!state.historyCollapsed);
+      toggleHistory();
     });
+  }
+
+  // On compact panels the whole history bar is the tap target.
+  if (elements.historyHeader) {
+    elements.historyHeader.addEventListener("click", (event) => {
+      if (compactQuery.matches && !event.target.closest("button")) {
+        toggleHistory();
+      }
+    });
+  }
+
+  const onCompactChange = () => syncHistoryToggle();
+  if (typeof compactQuery.addEventListener === "function") {
+    compactQuery.addEventListener("change", onCompactChange);
+  } else if (typeof compactQuery.addListener === "function") {
+    compactQuery.addListener(onCompactChange);
   }
 
   elements.form.addEventListener("submit", (event) => {

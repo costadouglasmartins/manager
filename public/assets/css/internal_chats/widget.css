@@ -1,3 +1,5 @@
+/* Layout: conversations | thread | team on wide panels.
+   Below 768px it becomes list -> thread navigation (see the compact block). */
 .internal-chat-widget {
   min-height: 0;
 }
@@ -6,16 +8,27 @@
   display: grid;
   min-height: 0;
   flex: 1;
-  grid-template-columns: 260px minmax(0, 1fr);
+  grid-template-columns: 200px minmax(0, 1fr) 176px;
+  grid-template-areas: "conversations thread team";
 }
 
-.internal-chat-sidebar {
+.internal-chat-sidebar,
+.internal-chat-team {
   display: flex;
   min-width: 0;
   min-height: 0;
   flex-direction: column;
-  border-right: 1px solid var(--app-border);
   background: rgba(248, 250, 252, 0.72);
+}
+
+.internal-chat-sidebar {
+  grid-area: conversations;
+  border-right: 1px solid var(--app-border);
+}
+
+.internal-chat-team {
+  grid-area: team;
+  border-left: 1px solid var(--app-border);
 }
 
 .internal-chat-section-header {
@@ -24,12 +37,18 @@
   align-items: center;
   justify-content: space-between;
   gap: 0.5rem;
-  padding: 0.65rem 0.75rem;
+  padding: 0.5rem 0.75rem;
   border-bottom: 1px solid var(--app-border);
 }
 
 .internal-chat-section-header strong {
   font-size: 0.84rem;
+}
+
+.internal-chat-team-count {
+  color: var(--app-muted);
+  font-size: 0.72rem;
+  white-space: nowrap;
 }
 
 .internal-chat-icon-button {
@@ -45,7 +64,7 @@
   color: var(--app-text);
 }
 
-.internal-chat-icon-button:focus,
+.internal-chat-icon-button:focus-visible,
 .internal-chat-icon-button:hover {
   border-color: rgba(37, 99, 235, 0.45);
   outline: none;
@@ -54,23 +73,83 @@
 .internal-chat-list {
   display: flex;
   min-height: 0;
-  max-height: 190px;
+  flex: 1;
   flex-direction: column;
-  gap: 0.45rem;
-  padding: 0.65rem;
+  gap: 0.4rem;
+  padding: 0.6rem;
   overflow-y: auto;
 }
 
-.internal-chat-user-list {
-  flex: 1;
-  max-height: none;
+.internal-chat-list-empty {
+  padding: 0.75rem 0.35rem;
+  color: var(--app-muted);
+  font-size: 0.74rem;
+  text-align: center;
 }
 
-.internal-chat-list-item {
-  display: grid;
+/* Presence colors follow the account menu: online, ausente, ocupado, offline. */
+.internal-chat-widget [data-presence] {
+  --presence-color: var(--app-muted);
+}
+
+.internal-chat-widget [data-presence="online"] {
+  --presence-color: var(--app-success);
+}
+
+.internal-chat-widget [data-presence="away"] {
+  --presence-color: var(--app-warning);
+}
+
+.internal-chat-widget [data-presence="busy"] {
+  --presence-color: var(--app-danger);
+}
+
+.internal-chat-avatar {
+  position: relative;
+  display: inline-flex;
+  width: 32px;
+  height: 32px;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--presence-color) 14%, var(--app-surface-solid));
+  box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--presence-color) 50%, transparent);
+  color: color-mix(in srgb, var(--presence-color) 70%, var(--app-text));
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  line-height: 1;
+}
+
+.internal-chat-presence-dot {
+  position: absolute;
+  right: -1px;
+  bottom: -1px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--presence-color);
+  box-shadow: 0 0 0 2px var(--app-surface-solid);
+}
+
+.internal-chat-avatar[data-presence="offline"] {
+  background: var(--app-surface-raised);
+  color: var(--app-muted);
+}
+
+.internal-chat-avatar[data-presence="offline"] .internal-chat-presence-dot {
+  background: var(--app-surface-solid);
+  box-shadow: inset 0 0 0 2px var(--app-muted), 0 0 0 2px var(--app-surface-solid);
+}
+
+/* Conversation list */
+.internal-chat-conversation {
+  display: flex;
   width: 100%;
-  gap: 0.18rem;
-  padding: 0.6rem;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.5rem;
   border: 1px solid var(--app-border);
   border-radius: 6px;
   background: var(--app-surface-solid);
@@ -78,87 +157,291 @@
   text-align: left;
 }
 
-.internal-chat-list-item:focus,
-.internal-chat-list-item:hover,
-.internal-chat-list-item.is-active {
+.internal-chat-conversation:focus-visible,
+.internal-chat-conversation:hover,
+.internal-chat-conversation.is-active {
   border-color: rgba(37, 99, 235, 0.45);
   outline: none;
 }
 
-.internal-chat-list-item-title {
+.internal-chat-conversation.is-active {
+  background: color-mix(in srgb, var(--app-accent) 7%, var(--app-surface-solid));
+}
+
+.internal-chat-conversation-text {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.internal-chat-conversation-row {
   display: flex;
   min-width: 0;
   align-items: center;
   justify-content: space-between;
-  gap: 0.5rem;
+  gap: 0.4rem;
 }
 
-.internal-chat-list-item-title strong {
+.internal-chat-conversation-name,
+.internal-chat-conversation-preview {
   min-width: 0;
   overflow: hidden;
-  font-size: 0.82rem;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.internal-chat-list-item-title .badge {
-  flex: 0 0 auto;
+.internal-chat-conversation-name {
+  font-size: 0.82rem;
+  font-weight: 700;
 }
 
-.internal-chat-list-item-meta,
-.internal-chat-list-empty {
+.internal-chat-conversation-time {
+  flex: 0 0 auto;
+  color: var(--app-muted);
+  font-size: 0.68rem;
+}
+
+.internal-chat-conversation-preview {
   color: var(--app-muted);
   font-size: 0.74rem;
 }
 
-.internal-chat-list-empty {
-  padding: 0.75rem 0.35rem;
-  text-align: center;
+.internal-chat-conversation.has-unread .internal-chat-conversation-preview {
+  color: var(--app-text);
+  font-weight: 600;
 }
 
+.internal-chat-conversation .badge {
+  flex: 0 0 auto;
+}
+
+/* Team list */
+.internal-chat-team-list {
+  display: flex;
+  min-height: 0;
+  flex: 1;
+  flex-direction: column;
+  gap: 0.15rem;
+  padding: 0.45rem;
+  overflow-y: auto;
+}
+
+.internal-chat-user {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.4rem 0.45rem;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--app-text);
+  text-align: left;
+}
+
+.internal-chat-user:focus-visible,
+.internal-chat-user:hover,
+.internal-chat-user.is-active {
+  border-color: color-mix(in srgb, var(--presence-color) 40%, var(--app-border));
+  background: var(--app-surface-solid);
+  outline: none;
+}
+
+.internal-chat-user-text {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  line-height: 1.2;
+}
+
+.internal-chat-user-name {
+  overflow: hidden;
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.internal-chat-user-status {
+  color: var(--presence-color);
+  font-size: 0.7rem;
+  font-weight: 600;
+}
+
+.internal-chat-user[data-presence="offline"] .internal-chat-user-name,
+.internal-chat-user[data-presence="offline"] .internal-chat-user-status {
+  color: var(--app-muted);
+  font-weight: 400;
+}
+
+/* Thread */
 .internal-chat-main {
   display: flex;
   min-width: 0;
   min-height: 0;
+  grid-area: thread;
   flex-direction: column;
 }
 
-.internal-chat-messages {
-  min-height: 250px;
+.internal-chat-thread-header {
+  display: flex;
+  min-height: 50px;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.45rem 0.85rem;
+  border-bottom: 1px solid var(--app-border);
+}
+
+.internal-chat-thread-header[hidden],
+.internal-chat-back {
+  display: none !important;
+}
+
+.internal-chat-thread-identity {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.internal-chat-thread-text {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  line-height: 1.2;
+}
+
+.internal-chat-thread-name {
+  overflow: hidden;
+  font-size: 0.9rem;
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.internal-chat-thread-status {
+  color: var(--presence-color);
+  font-size: 0.72rem;
+  font-weight: 600;
+}
+
+.internal-chat-thread-identity[data-presence="offline"] .internal-chat-thread-status {
+  font-weight: 400;
 }
 
 .internal-chat-composer textarea {
   min-height: 84px;
 }
 
-[data-bs-theme="dark"] .internal-chat-sidebar {
+[data-bs-theme="dark"] .internal-chat-sidebar,
+[data-bs-theme="dark"] .internal-chat-team {
   background: color-mix(in srgb, var(--app-surface-raised) 88%, transparent);
 }
 
-[data-bs-theme="dark"] .internal-chat-list-item {
+[data-bs-theme="dark"] .internal-chat-conversation {
   background: var(--app-surface-raised);
 }
 
-@media (max-width: 575.98px) {
+/* Compact: team strip + conversation list, or the open thread alone. */
+@media (max-width: 767.98px) {
   .internal-chat-content {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto minmax(0, 1fr);
+    grid-template-areas:
+      "team"
+      "conversations";
+  }
+
+  .internal-chat-main {
+    display: none;
   }
 
   .internal-chat-sidebar {
-    max-height: 270px;
     border-right: 0;
+    background: transparent;
+  }
+
+  .internal-chat-team {
     border-bottom: 1px solid var(--app-border);
+    border-left: 0;
   }
 
-  .internal-chat-list {
-    max-height: 120px;
+  .internal-chat-team-list {
+    flex-direction: row;
+    gap: 0.25rem;
+    padding: 0.5rem 0.6rem 0.6rem;
+    overflow-x: auto;
+    overflow-y: hidden;
+    overscroll-behavior-x: contain;
+    scroll-snap-type: x proximity;
   }
 
-  .internal-chat-user-list {
-    max-height: 130px;
+  .internal-chat-user {
+    width: 64px;
+    flex: 0 0 64px;
+    flex-direction: column;
+    gap: 0.3rem;
+    padding: 0.35rem 0.15rem;
+    scroll-snap-align: start;
+    text-align: center;
   }
 
-  .internal-chat-messages {
-    min-height: 280px;
+  .internal-chat-user .internal-chat-avatar {
+    width: 42px;
+    height: 42px;
+    font-size: 0.82rem;
+  }
+
+  .internal-chat-user .internal-chat-presence-dot {
+    width: 12px;
+    height: 12px;
+  }
+
+  .internal-chat-user-text {
+    width: 100%;
+    align-items: center;
+  }
+
+  .internal-chat-user-name {
+    display: -webkit-box;
+    max-width: 100%;
+    font-size: 0.7rem;
+    line-height: 1.15;
+    white-space: normal;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    overflow-wrap: anywhere;
+  }
+
+  .internal-chat-user-status {
+    display: none;
+  }
+
+  .internal-chat-list-empty {
+    width: 100%;
+  }
+
+  .internal-chat-widget.has-active-thread .internal-chat-content {
+    grid-template-rows: minmax(0, 1fr);
+    grid-template-areas: "thread";
+  }
+
+  .internal-chat-widget.has-active-thread .internal-chat-main {
+    display: flex;
+  }
+
+  .internal-chat-widget.has-active-thread .internal-chat-sidebar,
+  .internal-chat-widget.has-active-thread .internal-chat-team {
+    display: none;
+  }
+
+  .internal-chat-back {
+    display: inline-flex !important;
+  }
+
+  .internal-chat-thread-header {
+    padding: 0.4rem 0.65rem;
   }
 }

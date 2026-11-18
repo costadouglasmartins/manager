@@ -27,10 +27,13 @@
   font-size: 1rem;
 }
 
+/* Fixed size so switching between the Suporte and Interno tabs (or collapsing
+   the history) never resizes the panel; each pane fills it and scrolls inside. */
 .support-widget-panel {
   display: flex;
-  width: min(720px, calc(100vw - 1.5rem));
-  max-height: min(640px, calc(100vh - 100px));
+  width: min(780px, calc(100vw - 1.5rem));
+  height: min(640px, calc(100vh - 100px));
+  height: min(640px, calc(100dvh - 100px));
   flex-direction: column;
   overflow: hidden;
   border: 1px solid var(--app-border);
@@ -101,24 +104,11 @@
   display: none !important;
 }
 
-.support-widget.is-history-collapsed .support-widget-panel {
-  width: min(460px, calc(100vw - 1.5rem));
-}
-
-.support-widget.has-internal-active .support-widget-panel,
-.support-widget.has-internal-active.is-history-collapsed .support-widget-panel {
-  width: min(780px, calc(100vw - 1.5rem));
-}
-
 .support-widget-content {
   display: grid;
   min-height: 0;
   flex: 1;
   grid-template-columns: minmax(0, 1fr) 260px;
-}
-
-.support-widget.is-history-collapsed .support-widget-content {
-  grid-template-columns: minmax(0, 1fr) 48px;
 }
 
 .support-widget-main {
@@ -147,7 +137,7 @@
 
 .support-widget-empty {
   display: flex;
-  min-height: 200px;
+  flex: 1;
   align-items: center;
   justify-content: center;
   color: var(--app-muted);
@@ -262,20 +252,40 @@
   outline: none;
 }
 
-.support-widget.is-history-collapsed .support-widget-history-header {
-  justify-content: center;
-  padding-right: 0.45rem;
-  padding-left: 0.45rem;
+.support-widget-history-count {
+  margin-left: 0.2rem;
+  color: var(--app-muted);
+  font-size: 0.74rem;
+  font-weight: 600;
 }
 
-.support-widget.is-history-collapsed .support-widget-history-header strong,
-.support-widget.is-history-collapsed .support-widget-history-list {
+.support-widget-history-count:empty {
   display: none;
+}
+
+/* The collapsed 48px history rail only exists on wide panels; compact
+   layouts use the bar defined further below. */
+@media (min-width: 768px) {
+  .support-widget.is-history-collapsed .support-widget-content {
+    grid-template-columns: minmax(0, 1fr) 48px;
+  }
+
+  .support-widget.is-history-collapsed .support-widget-history-header {
+    justify-content: center;
+    padding-right: 0.45rem;
+    padding-left: 0.45rem;
+  }
+
+  .support-widget.is-history-collapsed .support-widget-history-header strong,
+  .support-widget.is-history-collapsed .support-widget-history-list {
+    display: none;
+  }
 }
 
 .support-widget-history-list {
   display: flex;
-  max-height: 220px;
+  min-height: 0;
+  flex: 1;
   flex-direction: column;
   gap: 0.5rem;
   padding: 0.75rem;
@@ -392,45 +402,164 @@
   background: var(--app-surface-raised);
 }
 
-@media (max-width: 575.98px) {
-  .support-widget {
-    right: 0.75rem;
-    left: 0.75rem;
-    align-items: stretch;
-  }
-
-  .support-widget-toggle {
-    justify-content: center;
-  }
-
-  .support-widget-panel {
-    width: 100%;
-  }
-
-  .support-widget.has-internal-active .support-widget-panel,
-  .support-widget.has-internal-active.is-history-collapsed .support-widget-panel {
-    width: 100%;
-  }
-
+/* Compact panel (tablets and phones): history becomes a bar above the
+   conversation; opening it swaps the conversation for the list. */
+@media (max-width: 767.98px) {
   .support-widget-content {
-    grid-template-columns: 1fr;
+    display: flex;
+    flex-direction: column;
   }
 
-  .support-widget.is-history-collapsed .support-widget-content {
-    grid-template-columns: 1fr;
+  .support-widget-main {
+    flex: 1;
   }
 
   .support-widget-history {
-    max-height: 250px;
-    border-top: 1px solid var(--app-border);
+    flex: 0 0 auto;
+    order: -1;
+    border-bottom: 1px solid var(--app-border);
     border-left: 0;
   }
 
-  .support-widget-history-list {
-    max-height: 120px;
+  .support-widget-history-header {
+    padding: 0.35rem 0.5rem 0.35rem 0.85rem;
+    border-bottom: 0;
+    cursor: pointer;
   }
 
-  .support-widget.is-history-collapsed .support-widget-history {
-    max-height: 51px;
+  .support-widget-history-list {
+    display: none;
+  }
+
+  .support-widget.is-compact-history-open .support-widget-main {
+    display: none;
+  }
+
+  .support-widget.is-compact-history-open .support-widget-history {
+    flex: 1;
+    min-height: 0;
+    border-bottom: 0;
+  }
+
+  .support-widget.is-compact-history-open .support-widget-history-header {
+    border-bottom: 1px solid var(--app-border);
+  }
+
+  .support-widget.is-compact-history-open .support-widget-history-list {
+    display: flex;
+    min-height: 0;
+    flex: 1;
+    max-height: none;
+  }
+}
+
+/* Small or short screens: tighter chrome and a one-row composer
+   (textarea + send button side by side). */
+@media (max-width: 767.98px), (max-height: 539.98px) {
+  .support-widget-header {
+    padding: 0.65rem 0.9rem;
+  }
+
+  .support-widget-tab {
+    min-height: 40px;
+  }
+
+  .support-widget-messages {
+    gap: 0.6rem;
+    padding: 0.75rem;
+  }
+
+  .support-widget-typing-wrap {
+    min-height: 18px;
+    padding: 0 0.75rem 0.3rem;
+  }
+
+  .support-widget .support-widget-composer {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: end;
+    gap: 0.3rem 0.5rem;
+    padding: 0.6rem 0.75rem;
+  }
+
+  .support-widget .support-widget-composer textarea {
+    grid-row: 1;
+    grid-column: 1;
+    height: 3.9rem;
+    min-height: 3.9rem;
+    resize: none;
+  }
+
+  .support-widget .support-widget-footer {
+    display: contents;
+  }
+
+  .support-widget .support-widget-footer .btn {
+    grid-row: 1;
+    grid-column: 2;
+    min-height: 2.75rem;
+    padding-right: 0.9rem;
+    padding-left: 0.9rem;
+  }
+
+  .support-widget .support-widget-connection {
+    grid-row: 2;
+    grid-column: 1 / -1;
+    font-size: 0.72rem;
+  }
+}
+
+/* Phones (and landscape phones): round launcher, full-screen panel. */
+@media (max-width: 575.98px) {
+  .support-widget {
+    right: max(0.75rem, env(safe-area-inset-right));
+    bottom: max(0.75rem, env(safe-area-inset-bottom));
+  }
+
+  .support-widget-toggle {
+    width: 54px;
+    height: 54px;
+    min-height: 0;
+    justify-content: center;
+    padding: 0;
+    border-radius: 50%;
+  }
+
+  .support-widget-toggle i {
+    font-size: 1.3rem;
+  }
+
+  .support-widget-toggle span {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+}
+
+@media (max-width: 575.98px), (max-height: 539.98px) {
+  .support-widget.is-open {
+    top: 0;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    align-items: stretch;
+    gap: 0;
+  }
+
+  .support-widget.is-open .support-widget-toggle {
+    display: none;
+  }
+
+  .support-widget.is-open .support-widget-panel {
+    width: 100%;
+    height: auto;
+    min-height: 0;
+    flex: 1;
+    padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+    border: 0;
+    border-radius: 0;
   }
 }
