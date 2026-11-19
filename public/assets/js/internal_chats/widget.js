@@ -10,6 +10,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const chatUrlBase = (root.dataset.chatUrlBase || "").replace(/\/$/, "");
   const startUrl = root.dataset.startUrl || "";
   const sendUrl = root.dataset.sendUrl || "";
+  const seenUrl = root.dataset.seenUrl || "";
   const typingUrl = root.dataset.typingUrl || "";
   const typingStatusUrlBase = (root.dataset.typingStatusUrlBase || "").replace(/\/$/, "");
   const wsAuthUrl = root.dataset.wsAuthUrl || "";
@@ -23,10 +24,12 @@ document.addEventListener("DOMContentLoaded", () => {
     internalTab: document.getElementById("internalChatTab"),
     toggle: document.getElementById("supportWidgetToggle"),
     panel: document.getElementById("supportWidgetPanel"),
+    unread: document.getElementById("internalChatUnreadCount"),
+    supportUnread: document.getElementById("supportWidgetSupportUnreadCount"),
+    totalUnread: document.getElementById("supportWidgetUnreadCount"),
     supportPane: document.getElementById("supportWidgetSupportPane"),
     supportMeta: document.getElementById("supportWidgetHeaderMeta"),
     internalMeta: document.getElementById("internalChatHeaderMeta"),
-    conversationList: document.getElementById("internalChatConversationList"),
     userList: document.getElementById("internalChatUserList"),
     teamCount: document.getElementById("internalChatTeamCount"),
     refresh: document.getElementById("internalChatRefresh"),
@@ -59,9 +62,78 @@ document.addEventListener("DOMContentLoaded", () => {
     renderedMessagesKey: "",
     renderedChatId: 0,
     forceScrollToBottom: false,
-    renderedConversationHtml: "",
     renderedUserHtml: "",
+    refreshVersion: 0,
+    seenRequests: new Set(),
+    seenMessages: new Map(),
   };
+
+  const unreadCounts = { support: 0, internal: 0 };
+
+  function renderUnreadBadge(element, count) {
+    if (!element) {
+      return;
+    }
+
+    element.textContent = count > 0 ? String(count) : "";
+    element.hidden = count === 0;
+    element.setAttribute("aria-label", `${count} ${count === 1 ? "mensagem não lida" : "mensagens não lidas"}`);
+  }
+
+  shell.addEventListener("chat:unread", (event) => {
+    const detail = event.detail || {};
+    if (!Object.prototype.hasOwnProperty.call(unreadCounts, detail.channel)) {
+      return;
+    }
+
+    unreadCounts[detail.channel] = Math.max(0, Math.trunc(Number(detail.count) || 0));
+    const total = unreadCounts.support + unreadCounts.internal;
+    renderUnreadBadge(elements.totalUnread, total);
+    renderUnreadBadge(elements.supportUnread, unreadCounts.support);
+    renderUnreadBadge(elements.unread, unreadCounts.internal);
+    elements.toggle.setAttribute("aria-label", total > 0
+      ? `Chat, ${total} ${total === 1 ? "mensagem não lida" : "mensagens não lidas"}`
+      : "Chat");
+  });
+
+  function publishUnreadCount(count) {
+    shell.dispatchEvent(new CustomEvent("chat:unread", {
+      detail: { channel: "internal", count },
+    }));
+  }
+
+  function isThreadVisible() {
+    return !elements.panel.hidden && !root.hidden && state.activeTab === "internal"
+      && document.visibilityState === "visible";
+  }
+
+  async function markVisibleMessagesSeen() {
+    const lastMessage = state.messages[state.messages.length - 1];
+    const id = state.activeChatId;
+    const messageId = Number((lastMessage && lastMessage.id) || 0);
+    const requestKey = `${id}:${messageId}`;
+    if (!seenUrl || !isThreadVisible() || !state.activeChat || !messageId
+      || state.seenMessages.get(id) >= messageId || state.seenRequests.has(requestKey)) {
+      return;
+    }
+
+    state.seenRequests.add(requestKey);
+    try {
+      // Let the browser paint the thread before acknowledging its messages.
+      await new Promise((resolve) => window.requestAnimationFrame(resolve));
+      if (!isThreadVisible() || state.activeChatId !== id) {
+        return;
+      }
+
+      await postJson(seenUrl, { chat_id: id, last_message_id: messageId });
+      state.seenMessages.set(id, Math.max(state.seenMessages.get(id) || 0, messageId));
+      await refreshBootstrap();
+    } catch (error) {
+      // Keep the count until the acknowledgement succeeds on a later refresh.
+    } finally {
+      state.seenRequests.delete(requestKey);
+    }
+  }
 
   // Touch devices: focusing the textarea would pop the virtual keyboard over the chat.
   const coarsePointerQuery = window.matchMedia("(pointer: coarse)");
@@ -72,6 +144,8 @@ document.addEventListener("DOMContentLoaded", () => {
     offline: "Offline",
   };
   const presenceOrder = ["online", "away", "busy", "offline"];
+  // Consecutive messages from one sender inside this window share one name/time line.
+  const messageGroupWindowMs = 5 * 60 * 1000;
 
   function readStoredValue(key) {
     try {
@@ -139,6 +213,27 @@ document.addEventListener("DOMContentLoaded", () => {
     }).format(date);
   }
 
+  // Today: "21:10"; this year: "19/11 21:10"; older: "19/11/2025 21:10".
+  function formatMessageTime(value) {
+    const date = parseLocalDateTime(value);
+    if (!date || Number.isNaN(date.getTime())) {
+      return String(value || "");
+    }
+
+    const now = new Date();
+    const sameYear = date.getFullYear() === now.getFullYear();
+    const sameDay = sameYear && date.getMonth() === now.getMonth() && date.getDate() === now.getDate();
+    const time = new Intl.DateTimeFormat("pt-BR", { hour: "2-digit", minute: "2-digit" }).format(date);
+    if (sameDay) {
+      return time;
+    }
+
+    const day = new Intl.DateTimeFormat("pt-BR", sameYear
+      ? { day: "2-digit", month: "2-digit" }
+      : { day: "2-digit", month: "2-digit", year: "numeric" }).format(date);
+    return `${day} ${time}`;
+  }
+
   function presenceStatus(user) {
     const status = String((user && user.presence_status) || "offline");
     return Object.prototype.hasOwnProperty.call(presenceLabels, status) ? status : "offline";
@@ -156,7 +251,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function avatarHtml(name, status) {
-    return `<span class="internal-chat-avatar" data-presence="${status}" aria-hidden="true">${escapeHtml(initials(name))}<span class="internal-chat-presence-dot"></span></span>`;
+    return `<span class="chat-avatar" data-presence="${status}" aria-hidden="true">${escapeHtml(initials(name))}<span class="chat-presence-dot"></span></span>`;
   }
 
   function tenantUsers() {
@@ -176,22 +271,6 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     return tenantUsers().find((user) => user.username === usernames[0]) || null;
-  }
-
-  function formatListDate(value) {
-    const date = parseLocalDateTime(value);
-    if (!date || Number.isNaN(date.getTime())) {
-      return "";
-    }
-
-    const now = new Date();
-    const isToday = date.getFullYear() === now.getFullYear()
-      && date.getMonth() === now.getMonth()
-      && date.getDate() === now.getDate();
-
-    return new Intl.DateTimeFormat("pt-BR", isToday
-      ? { hour: "2-digit", minute: "2-digit" }
-      : { day: "2-digit", month: "2-digit" }).format(date);
   }
 
   function focusInput() {
@@ -242,12 +321,12 @@ document.addEventListener("DOMContentLoaded", () => {
     shell.classList.toggle("has-internal-active", isInternal);
 
     writeStoredValue(storageKeys.activeTab, state.activeTab);
+    shell.dispatchEvent(new CustomEvent("chat:visibility"));
 
     if (isInternal) {
       refreshBootstrap().catch(() => {
         setConnectionStatus("Falha ao carregar", false);
       });
-      startRefreshTimer();
       syncTypingPollTimer();
 
       if (state.activeChatId > 0) {
@@ -256,7 +335,6 @@ document.addEventListener("DOMContentLoaded", () => {
       return;
     }
 
-    stopRefreshTimer();
     stopTypingPollTimer();
   }
 
@@ -305,12 +383,13 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   async function refreshBootstrap() {
+    const version = ++state.refreshVersion;
     const requestedChatId = state.activeChatId;
     const payload = await fetchJson(bootstrapEndpoint());
 
     // The user opened or left a conversation while this request was in flight;
     // applying it would switch the thread back. The newer action refreshes itself.
-    if (requestedChatId !== state.activeChatId) {
+    if (requestedChatId !== state.activeChatId || version !== state.refreshVersion) {
       return;
     }
 
@@ -328,6 +407,8 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     render();
+    publishUnreadCount(payload.unread_count || 0);
+    markVisibleMessagesSeen();
     syncTypingPollTimer();
     setConnectionStatus(state.socketAuthenticated ? "Conectado" : "Atualizando automaticamente", state.socketAuthenticated);
   }
@@ -336,19 +417,14 @@ document.addEventListener("DOMContentLoaded", () => {
     root.classList.toggle("has-active-thread", Boolean(state.activeChat));
     renderHeader();
     renderThreadHeader();
-    renderConversationList();
     renderUserList();
     renderMessages();
     renderTyping();
   }
 
+  // The open conversation is named in the thread header, so this only gives context.
   function renderHeader() {
-    if (state.activeChat) {
-      elements.internalMeta.textContent = `${tenantName()} | ${chatTitle(state.activeChat)}`;
-      return;
-    }
-
-    elements.internalMeta.textContent = `${tenantName()} | Chat interno`;
+    elements.internalMeta.textContent = tenantName();
   }
 
   function renderThreadHeader() {
@@ -370,94 +446,87 @@ document.addEventListener("DOMContentLoaded", () => {
     elements.threadIdentity.dataset.presence = status;
     elements.threadIdentity.innerHTML = `
       ${avatarHtml(title, status)}
-      <span class="internal-chat-thread-text">
-        <span class="internal-chat-thread-name">${escapeHtml(title)}</span>
-        ${partner ? `<span class="internal-chat-thread-status">${escapeHtml(presenceLabels[status])}</span>` : ""}
+      <span class="chat-thread-text">
+        <span class="chat-thread-name">${escapeHtml(title)}</span>
+        ${partner ? `<span class="chat-thread-status"><span class="chat-thread-presence">${escapeHtml(presenceLabels[status])}</span></span>` : ""}
       </span>
     `;
   }
 
-  function renderConversationList() {
+  // One list for the whole team: each tenant user is one line tinted with the
+  // presence color, carrying the unread count of the conversation with them.
+  // Clicking a user opens that conversation (or starts it).
+  function teamRows() {
+    const users = tenantUsers();
     const chats = (state.bootstrap && state.bootstrap.chats) || [];
+    const chatByUserId = new Map();
+    const rows = [];
+
+    chats.forEach((chat) => {
+      const partner = chatPartner(chat);
+      if (partner && !chatByUserId.has(Number(partner.id))) {
+        chatByUserId.set(Number(partner.id), chat);
+      } else if (!partner) {
+        // A conversation whose partner left the tenant stays reachable.
+        rows.push({ userId: 0, name: chatTitle(chat), status: "offline", chat });
+      }
+    });
+
+    users.forEach((user) => {
+      rows.push({
+        userId: Number(user.id),
+        name: user.name || user.username || "Usuário",
+        status: presenceStatus(user),
+        chat: chatByUserId.get(Number(user.id)) || null,
+      });
+    });
+
+    // Unread first, then by presence; the server order (by name) breaks ties.
+    return rows
+      .map((row, index) => ({ ...row, index, unread: Math.max(0, Number((row.chat && row.chat.unread_count) || 0)) }))
+      .sort((a, b) => (Number(b.unread > 0) - Number(a.unread > 0))
+        || (presenceOrder.indexOf(a.status) - presenceOrder.indexOf(b.status))
+        || (a.index - b.index));
+  }
+
+  function renderUserList() {
+    const rows = teamRows();
+    const onlineCount = tenantUsers().filter((user) => presenceStatus(user) === "online").length;
     let html = "";
 
-    if (!chats.length) {
-      html = '<div class="internal-chat-list-empty">Nenhuma conversa ainda. Escolha alguém da Equipe para começar.</div>';
-    } else {
-      html = chats.map((chat) => {
-        const isActive = Number(chat.id || 0) === Number(state.activeChatId || 0);
-        const unread = isActive ? 0 : Number(chat.unread_count || 0);
-        const title = chatTitle(chat);
-        const partner = chatPartner(chat);
-        const status = partner ? presenceStatus(partner) : "offline";
-        const lastMessage = chat.last_message_text || "Sem mensagens";
-        const classes = ["internal-chat-conversation"];
+    if (elements.teamCount) {
+      elements.teamCount.textContent = tenantUsers().length ? `${onlineCount} online` : "";
+    }
 
+    if (!rows.length) {
+      html = '<div class="chat-people-empty">Nenhum outro usuário neste tenant.</div>';
+    } else {
+      html = rows.map((row) => {
+        const label = presenceLabels[row.status];
+        const isActive = Boolean(row.chat) && Number(row.chat.id) === Number(state.activeChatId || 0);
+        const classes = ["chat-person"];
         if (isActive) {
           classes.push("is-active");
         }
-
-        if (unread > 0) {
+        if (row.unread > 0) {
           classes.push("has-unread");
+        }
+        const details = [label];
+        if (row.unread > 0) {
+          details.push(`${row.unread} ${row.unread === 1 ? "mensagem não lida" : "mensagens não lidas"}`);
         }
 
         return `
-          <button type="button" class="${classes.join(" ")}" data-internal-chat-id="${Number(chat.id)}" title="${escapeHtml(title)}${partner ? ` (${presenceLabels[status]})` : ""}">
-            ${avatarHtml(title, status)}
-            <span class="internal-chat-conversation-text">
-              <span class="internal-chat-conversation-row">
-                <span class="internal-chat-conversation-name">${escapeHtml(title)}</span>
-                <span class="internal-chat-conversation-time">${escapeHtml(formatListDate(chat.last_message_at || chat.created))}</span>
-              </span>
-              <span class="internal-chat-conversation-row">
-                <span class="internal-chat-conversation-preview">${escapeHtml(lastMessage)}</span>
-                ${unread > 0 ? `<span class="badge rounded-pill text-bg-primary">${unread}</span>` : ""}
-              </span>
-            </span>
+          <button type="button" class="${classes.join(" ")}" data-internal-user-id="${row.userId}" data-internal-chat-id="${row.chat ? Number(row.chat.id) : 0}" data-presence="${row.status}" title="${escapeHtml(row.name)} (${escapeHtml(details.join(", "))})" aria-label="Conversar com ${escapeHtml(row.name)}, ${escapeHtml(details.join(", "))}">
+            <span class="chat-person-dot" aria-hidden="true"></span>
+            <span class="chat-person-name">${escapeHtml(row.name)}</span>
+            ${row.unread > 0 ? `<span class="chat-unread-badge" aria-hidden="true">${row.unread}</span>` : ""}
           </button>
         `;
       }).join("");
     }
 
     // Re-rendering identical markup every poll would drop focus and hover.
-    if (html !== state.renderedConversationHtml) {
-      state.renderedConversationHtml = html;
-      elements.conversationList.innerHTML = html;
-    }
-  }
-
-  function renderUserList() {
-    const users = tenantUsers()
-      .map((user, index) => ({ user, index, status: presenceStatus(user) }))
-      .sort((a, b) => (presenceOrder.indexOf(a.status) - presenceOrder.indexOf(b.status)) || (a.index - b.index));
-    const partner = chatPartner(state.activeChat);
-    const onlineCount = users.filter((entry) => entry.status === "online").length;
-    let html = "";
-
-    if (elements.teamCount) {
-      elements.teamCount.textContent = users.length ? `${onlineCount} online` : "";
-    }
-
-    if (!users.length) {
-      html = '<div class="internal-chat-list-empty">Nenhum outro usuário neste tenant.</div>';
-    } else {
-      html = users.map(({ user, status }) => {
-        const name = user.name || user.username || "Usuário";
-        const label = presenceLabels[status];
-        const isActive = partner && Number(partner.id) === Number(user.id);
-
-        return `
-          <button type="button" class="internal-chat-user${isActive ? " is-active" : ""}" data-internal-user-id="${Number(user.id)}" data-presence="${status}" title="${escapeHtml(name)} (${label})" aria-label="Conversar com ${escapeHtml(name)}, ${label}">
-            ${avatarHtml(name, status)}
-            <span class="internal-chat-user-text">
-              <span class="internal-chat-user-name">${escapeHtml(name)}</span>
-              <span class="internal-chat-user-status">${label}</span>
-            </span>
-          </button>
-        `;
-      }).join("");
-    }
-
     if (html !== state.renderedUserHtml) {
       state.renderedUserHtml = html;
       elements.userList.innerHTML = html;
@@ -473,7 +542,7 @@ document.addEventListener("DOMContentLoaded", () => {
     if (!state.activeChat) {
       state.renderedMessagesKey = "";
       state.renderedChatId = 0;
-      elements.messages.innerHTML = '<div class="support-widget-empty"><p class="mb-0">Escolha uma conversa ou alguém da Equipe para conversar.</p></div>';
+      elements.messages.innerHTML = '<div class="support-widget-empty"><p class="mb-0">Escolha alguém da equipe para conversar.</p></div>';
       elements.typing.textContent = "";
       return;
     }
@@ -503,14 +572,26 @@ document.addEventListener("DOMContentLoaded", () => {
     state.renderedChatId = state.activeChatId;
     state.forceScrollToBottom = false;
 
+    // The sender line is shown only when the sender changes or a few minutes
+    // passed; the full date stays available on hover.
+    let previous = null;
     elements.messages.innerHTML = messages.map((message) => {
-      const isSelf = Number(message.sender_user_id || 0) === currentUserId();
-      const cssClass = isSelf ? "is-self" : "is-other";
+      const senderId = Number(message.sender_user_id || 0);
+      const isSelf = senderId === currentUserId();
+      const date = parseLocalDateTime(message.created);
+      const time = date && !Number.isNaN(date.getTime()) ? date.getTime() : null;
+      const isContinued = Boolean(previous) && previous.senderId === senderId
+        && time !== null && previous.time !== null
+        && time - previous.time >= 0 && time - previous.time < messageGroupWindowMs;
+      previous = { senderId, time };
+
+      const when = escapeHtml(formatMessageTime(message.created));
+      const meta = isSelf ? when : `${escapeHtml(message.sender_name || "")} · ${when}`;
 
       return `
-        <div class="support-widget-message ${cssClass}">
-          <div class="support-widget-message-meta">${escapeHtml(message.sender_name || "")} | ${escapeHtml(formatDate(message.created))}</div>
-          <div class="support-widget-bubble">${escapeHtml(message.message_text || "")}</div>
+        <div class="support-widget-message ${isSelf ? "is-self" : "is-other"}${isContinued ? " is-continued" : ""}">
+          ${isContinued ? "" : `<div class="support-widget-message-meta">${meta}</div>`}
+          <div class="support-widget-bubble" title="${escapeHtml(formatDate(message.created))}">${escapeHtml(message.message_text || "")}</div>
         </div>
       `;
     }).join("");
@@ -562,7 +643,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
-  // Leaves the thread (compact layouts go back to the conversation list).
+  // Leaves the thread (compact layouts go back to the team list).
   function closeChat() {
     sendTyping(false);
     state.activeChatId = 0;
@@ -626,6 +707,7 @@ document.addEventListener("DOMContentLoaded", () => {
       };
       state.forceScrollToBottom = true;
       render();
+      await refreshBootstrap();
       sendTyping(false);
       setConnectionStatus(state.socketAuthenticated ? "Conectado" : "Atualizando automaticamente", state.socketAuthenticated);
       syncTypingPollTimer();
@@ -744,6 +826,7 @@ document.addEventListener("DOMContentLoaded", () => {
         if (payload.type === "auth_ok") {
           state.socketAuthenticated = true;
           setConnectionStatus("Conectado", true);
+          await refreshBootstrap();
           return;
         }
 
@@ -787,11 +870,9 @@ document.addEventListener("DOMContentLoaded", () => {
   function startRefreshTimer() {
     stopRefreshTimer();
     state.refreshTimer = window.setInterval(() => {
-      if (state.activeTab === "internal") {
-        refreshBootstrap().catch(() => {
-          setConnectionStatus("Falha ao atualizar", false);
-        });
-      }
+      refreshBootstrap().catch(() => {
+        setConnectionStatus("Falha ao atualizar", false);
+      });
     }, 5000);
   }
 
@@ -835,18 +916,31 @@ document.addEventListener("DOMContentLoaded", () => {
     }, 0);
   });
 
-  elements.conversationList.addEventListener("click", (event) => {
-    const button = event.target.closest("[data-internal-chat-id]");
-    const chatId = Number((button && button.dataset.internalChatId) || 0);
-    if (chatId > 0) {
-      openChat(chatId);
+  shell.addEventListener("chat:visibility", () => {
+    markVisibleMessagesSeen();
+    if (isThreadVisible()) {
+      refreshBootstrap().catch(() => setConnectionStatus("Falha ao atualizar", false));
     }
   });
 
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible") {
+      refreshBootstrap().catch(() => setConnectionStatus("Falha ao atualizar", false));
+    }
+  });
+
+  // An existing conversation opens directly; otherwise one is started.
   elements.userList.addEventListener("click", (event) => {
     const button = event.target.closest("[data-internal-user-id]");
-    const userId = Number((button && button.dataset.internalUserId) || 0);
-    if (userId > 0) {
+    if (!button) {
+      return;
+    }
+
+    const chatId = Number(button.dataset.internalChatId || 0);
+    const userId = Number(button.dataset.internalUserId || 0);
+    if (chatId > 0) {
+      openChat(chatId);
+    } else if (userId > 0) {
       startDirectChat(userId);
     }
   });
@@ -879,6 +973,7 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 
   setActiveTab(state.activeTab);
+  startRefreshTimer();
   refreshBootstrap().catch(() => {
     setConnectionStatus("Falha ao carregar", false);
   });

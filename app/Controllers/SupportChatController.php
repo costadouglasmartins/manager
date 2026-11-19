@@ -62,6 +62,50 @@ class SupportChatController extends Controller
 			'chat' => $chat,
 			'messages' => $messages,
 			'history' => $history,
+			'attendants' => $model->listOnlineAttendants((int) ($user['id'] ?? 0)),
+			'unread_count' => $model->getUnreadCount((int) ($user['id'] ?? 0), (int) ($tenant['id'] ?? 0)),
+		]);
+		}
+
+	/**
+	 * Acknowledges only support messages displayed to the current customer.
+	 */
+	public function seen()
+		{
+		if (strtoupper((string) ($_SERVER['REQUEST_METHOD'] ?? 'GET')) !== 'POST')
+			{
+			$this->json([
+				'error' => 'method_not_allowed',
+				'message' => 'Método não permitido.',
+			], 405);
+			}
+
+		$context = $this->currentContext();
+		$userId = (int) ($context['user']['id'] ?? 0);
+		$tenantId = (int) ($context['tenant']['id'] ?? 0);
+		$input = $_POST;
+		$json = json_decode((string) file_get_contents('php://input'), true);
+		if (is_array($json))
+			{
+			$input = array_merge($input, $json);
+			}
+		$chatId = (int) ($input['chat_id'] ?? 0);
+		$lastMessageId = (int) ($input['last_message_id'] ?? 0);
+		$model = new SupportChat();
+
+		if (!$model->markSeen($chatId, $userId, $tenantId, $lastMessageId))
+			{
+			$this->json([
+				'error' => 'chat_not_found',
+				'message' => 'Chat ou mensagem não encontrada.',
+			], 404);
+			}
+
+		$chat = $model->findChatForCustomer($chatId, $userId, $tenantId);
+		$this->json([
+			'chat_id' => $chatId,
+			'unread_count' => $model->getUnreadCount($userId, $tenantId),
+			'chat_unread_count' => (int) ($chat['unread_count'] ?? 0),
 		]);
 		}
 

@@ -321,16 +321,25 @@ class InternalChat extends Model
 		{
 		$messagesTable = $this->managerTable('internal_chat_messages');
 		$stmt = $this->db->prepare("
-			SELECT id,
-			       internal_chat_id,
-			       sender_user_id,
-			       sender_name,
-			       message_text,
-			       created
-			FROM {$messagesTable}
-			WHERE internal_chat_id = :chat_id
-			ORDER BY id ASC
-			LIMIT :limit
+			SELECT RecentMessage.id,
+			       RecentMessage.internal_chat_id,
+			       RecentMessage.sender_user_id,
+			       RecentMessage.sender_name,
+			       RecentMessage.message_text,
+			       RecentMessage.created
+			FROM (
+				SELECT id,
+				       internal_chat_id,
+				       sender_user_id,
+				       sender_name,
+				       message_text,
+				       created
+				FROM {$messagesTable}
+				WHERE internal_chat_id = :chat_id
+				ORDER BY id DESC
+				LIMIT :limit
+			) AS RecentMessage
+			ORDER BY RecentMessage.id ASC
 		");
 		$stmt->bindValue(':chat_id', $chatId, PDO::PARAM_INT);
 		$stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
@@ -389,21 +398,83 @@ class InternalChat extends Model
 		}
 
 	/**
-	 * Marks the internal chat as seen by the participant.
+	 * Counts unread incoming messages without the conversation list limit.
 	 */
-	public function markSeen(int $chatId, int $userId): void
+	public function getUnreadCount(int $tenantId, int $userId): int
 		{
+		$chatsTable = $this->managerTable('internal_chats');
 		$participantsTable = $this->managerTable('internal_chat_participants');
+		$messagesTable = $this->managerTable('internal_chat_messages');
+		$stmt = $this->db->prepare("
+			SELECT COUNT(*)
+			FROM {$messagesTable} AS Message
+			INNER JOIN {$chatsTable} AS Chat ON Chat.id = Message.internal_chat_id
+			INNER JOIN {$participantsTable} AS Participant
+				ON Participant.internal_chat_id = Chat.id
+				AND Participant.user_id = :participant_user_id
+			WHERE Chat.tenant_id = :tenant_id
+			  AND Chat.status = 'active'
+			  AND Participant.archived_at IS NULL
+			  AND Message.sender_user_id <> :user_id
+			  AND (Participant.last_seen_at IS NULL OR Message.created > Participant.last_seen_at)
+		");
+		$stmt->execute(['tenant_id' => $tenantId, 'user_id' => $userId, 'participant_user_id' => $userId]);
+
+		return (int) $stmt->fetchColumn();
+		}
+
+	/**
+	 * Advances the participant cursor only through a displayed, scoped message.
+	 */
+	public function markSeen(int $chatId, int $tenantId, int $userId, int $lastMessageId): bool
+		{
+		$chatsTable = $this->managerTable('internal_chats');
+		$participantsTable = $this->managerTable('internal_chat_participants');
+		$messagesTable = $this->managerTable('internal_chat_messages');
+		$seen = $this->db->prepare("
+			SELECT Message.created
+			FROM {$messagesTable} AS Message
+			INNER JOIN {$chatsTable} AS Chat ON Chat.id = Message.internal_chat_id
+			INNER JOIN {$participantsTable} AS Participant
+				ON Participant.internal_chat_id = Chat.id
+				AND Participant.user_id = :user_id
+			WHERE Chat.id = :chat_id
+			  AND Chat.tenant_id = :tenant_id
+			  AND Chat.status = 'active'
+			  AND Participant.archived_at IS NULL
+			  AND Message.id = :last_message_id
+			LIMIT 1
+		");
+		$seen->execute([
+			'chat_id' => $chatId,
+			'tenant_id' => $tenantId,
+			'user_id' => $userId,
+			'last_message_id' => $lastMessageId,
+		]);
+		$seenAt = $seen->fetchColumn();
+		if ($seenAt === false)
+			{
+			return false;
+			}
+
 		$stmt = $this->db->prepare("
 			UPDATE {$participantsTable}
-			SET last_seen_at = NOW(), modified = NOW()
+			SET last_seen_at = CASE
+					WHEN last_seen_at IS NULL OR last_seen_at < :seen_at THEN :seen_value
+					ELSE last_seen_at
+				END,
+			    modified = NOW()
 			WHERE internal_chat_id = :chat_id
 			  AND user_id = :user_id
 		");
 		$stmt->execute([
 			'chat_id' => $chatId,
 			'user_id' => $userId,
+			'seen_at' => $seenAt,
+			'seen_value' => $seenAt,
 		]);
+
+		return true;
 		}
 
 	/**

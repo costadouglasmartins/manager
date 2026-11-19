@@ -10,6 +10,7 @@
 }
 
 .support-widget-toggle {
+  position: relative;
   display: inline-flex;
   min-height: 52px;
   align-items: center;
@@ -25,6 +26,33 @@
 
 .support-widget-toggle i {
   font-size: 1rem;
+}
+
+.chat-unread-badge {
+  display: inline-flex;
+  min-width: 22px;
+  height: 22px;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: #dc3545;
+  color: #fff;
+  font-size: 0.75rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.chat-unread-badge[hidden] {
+  display: none !important;
+}
+
+.support-widget-toggle-badge {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  box-shadow: 0 0 0 2px var(--app-surface-solid);
 }
 
 /* Fixed size so switching between the Suporte and Interno tabs (or collapsing
@@ -104,13 +132,427 @@
   display: none !important;
 }
 
+/* Both tabs share one layout: people on the left, the conversation on the
+   right. Below 768px the list and the conversation take turns (see the
+   compact block). */
 .support-widget-content {
   display: grid;
   min-height: 0;
   flex: 1;
-  grid-template-columns: minmax(0, 1fr) 260px;
+  grid-template-columns: 220px minmax(0, 1fr);
 }
 
+/* Presence colors follow the account menu: online, ausente, ocupado, offline. */
+.support-widget [data-presence] {
+  --presence-color: var(--app-muted);
+}
+
+.support-widget [data-presence="online"] {
+  --presence-color: var(--app-success);
+}
+
+.support-widget [data-presence="away"] {
+  --presence-color: var(--app-warning);
+}
+
+.support-widget [data-presence="busy"] {
+  --presence-color: var(--app-danger);
+}
+
+/* Left column of both tabs */
+.chat-sidebar {
+  display: flex;
+  min-width: 0;
+  min-height: 0;
+  flex-direction: column;
+  border-right: 1px solid var(--app-border);
+  background: rgba(248, 250, 252, 0.72);
+}
+
+[data-bs-theme="dark"] .chat-sidebar {
+  background: color-mix(in srgb, var(--app-surface-raised) 88%, transparent);
+}
+
+.chat-section-header {
+  display: flex;
+  min-height: 42px;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  border-bottom: 1px solid var(--app-border);
+}
+
+.chat-section-header strong {
+  margin-right: auto;
+  font-size: 0.84rem;
+}
+
+.chat-section-count {
+  color: var(--app-muted);
+  font-size: 0.72rem;
+  white-space: nowrap;
+}
+
+.chat-icon-button {
+  display: inline-flex;
+  width: 30px;
+  height: 30px;
+  flex: 0 0 30px;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--app-border);
+  border-radius: 6px;
+  background: var(--app-surface-solid);
+  color: var(--app-text);
+}
+
+.chat-icon-button:focus-visible,
+.chat-icon-button:hover {
+  border-color: rgba(37, 99, 235, 0.45);
+  outline: none;
+}
+
+/* Only the compact list -> conversation navigation needs a way back. */
+.chat-back {
+  display: none !important;
+}
+
+/* People lists (Atendentes, Equipe): one line per person, tinted with the
+   presence color so status reads at a glance. Clicking opens the conversation. */
+.chat-people-list {
+  display: flex;
+  min-height: 0;
+  flex: 1;
+  flex-direction: column;
+  gap: 2px;
+  padding: 0.45rem;
+  overflow-y: auto;
+}
+
+.chat-person {
+  display: flex;
+  width: 100%;
+  min-height: 32px;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.25rem 0.55rem;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--presence-color) 10%, transparent);
+  color: color-mix(in srgb, var(--presence-color) 75%, var(--app-text));
+  font-size: 0.8rem;
+  font-weight: 600;
+  line-height: 1.2;
+  text-align: left;
+}
+
+.chat-person:focus-visible,
+.chat-person:hover,
+.chat-person.is-active {
+  border-color: color-mix(in srgb, var(--presence-color) 50%, transparent);
+  outline: none;
+}
+
+.chat-person.is-active {
+  background: color-mix(in srgb, var(--presence-color) 18%, transparent);
+}
+
+.chat-person-dot {
+  width: 8px;
+  height: 8px;
+  flex: 0 0 8px;
+  border-radius: 50%;
+  background: var(--presence-color);
+}
+
+.chat-person-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.chat-person .chat-unread-badge {
+  min-width: 18px;
+  height: 18px;
+  margin-left: auto;
+  padding: 0 5px;
+  font-size: 0.68rem;
+}
+
+.chat-person[data-presence="offline"] {
+  background: transparent;
+  color: var(--app-muted);
+  font-weight: 400;
+}
+
+.chat-person[data-presence="offline"] .chat-person-dot {
+  background: transparent;
+  box-shadow: inset 0 0 0 1.5px var(--app-muted);
+}
+
+.chat-person[data-presence="offline"]:focus-visible,
+.chat-person[data-presence="offline"]:hover,
+.chat-person[data-presence="offline"].is-active {
+  border-color: var(--app-border);
+  background: var(--app-surface-solid);
+}
+
+.chat-person.has-unread .chat-person-name {
+  color: var(--app-text);
+  font-weight: 700;
+}
+
+.chat-people-empty {
+  padding: 0.75rem 0.35rem;
+  color: var(--app-muted);
+  font-size: 0.74rem;
+  text-align: center;
+}
+
+.chat-people-action {
+  width: 100%;
+  margin-top: 0.15rem;
+  padding: 0.4rem 0.55rem;
+  border: 1px dashed var(--app-border);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--app-text);
+  font-size: 0.76rem;
+}
+
+.chat-people-action:focus-visible,
+.chat-people-action:hover {
+  border-color: rgba(37, 99, 235, 0.45);
+  outline: none;
+}
+
+/* Avatar and header of the open conversation */
+.chat-avatar {
+  position: relative;
+  display: inline-flex;
+  width: 32px;
+  height: 32px;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--presence-color) 14%, var(--app-surface-solid));
+  box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--presence-color) 50%, transparent);
+  color: color-mix(in srgb, var(--presence-color) 70%, var(--app-text));
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  line-height: 1;
+}
+
+.chat-avatar .bi {
+  font-size: 0.95rem;
+}
+
+.chat-presence-dot {
+  position: absolute;
+  right: -1px;
+  bottom: -1px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--presence-color);
+  box-shadow: 0 0 0 2px var(--app-surface-solid);
+}
+
+.chat-avatar[data-presence="offline"] {
+  background: var(--app-surface-raised);
+  color: var(--app-muted);
+}
+
+.chat-avatar[data-presence="offline"] .chat-presence-dot {
+  background: var(--app-surface-solid);
+  box-shadow: inset 0 0 0 2px var(--app-muted), 0 0 0 2px var(--app-surface-solid);
+}
+
+.chat-thread-header {
+  display: flex;
+  min-height: 50px;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.45rem 0.85rem;
+  border-bottom: 1px solid var(--app-border);
+}
+
+.chat-thread-header[hidden] {
+  display: none !important;
+}
+
+.chat-thread-identity {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.chat-thread-text {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  line-height: 1.2;
+}
+
+.chat-thread-name {
+  overflow: hidden;
+  font-size: 0.9rem;
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.chat-thread-status {
+  overflow: hidden;
+  color: var(--app-muted);
+  font-size: 0.72rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.chat-thread-presence {
+  color: var(--presence-color);
+  font-weight: 600;
+}
+
+.chat-thread-identity[data-presence="offline"] .chat-thread-presence {
+  font-weight: 400;
+}
+
+/* Suporte: online attendants on top, history below. */
+.support-widget-attendant-list {
+  flex: 0 1 auto;
+  max-height: 45%;
+}
+
+.support-widget-history {
+  display: flex;
+  min-height: 0;
+  flex: 1 1 auto;
+  flex-direction: column;
+  border-top: 1px solid var(--app-border);
+}
+
+.support-widget-history-header {
+  cursor: pointer;
+}
+
+.support-widget-history-count {
+  margin-left: 0.2rem;
+  color: var(--app-muted);
+  font-size: 0.74rem;
+  font-weight: 600;
+}
+
+.support-widget-history-count:empty {
+  display: none;
+}
+
+.support-widget.is-history-collapsed .support-widget-history {
+  flex: 0 0 auto;
+}
+
+.support-widget.is-history-collapsed .support-widget-history-header {
+  border-bottom: 0;
+}
+
+.support-widget.is-history-collapsed .support-widget-history-list {
+  display: none;
+}
+
+.support-widget-history-list {
+  display: flex;
+  min-height: 0;
+  flex: 1;
+  flex-direction: column;
+  gap: 0.35rem;
+  padding: 0.45rem;
+  overflow-y: auto;
+}
+
+.support-widget-history-item {
+  width: 100%;
+  padding: 0.45rem 0.55rem;
+  border: 1px solid var(--app-border);
+  border-radius: 6px;
+  background: var(--app-surface-solid);
+  color: var(--app-text);
+  text-align: left;
+}
+
+.support-widget-history-item.is-active,
+.support-widget-history-item:focus,
+.support-widget-history-item:hover {
+  border-color: rgba(37, 99, 235, 0.45);
+  outline: none;
+}
+
+/* The ongoing chat sits first in the list and opens the conversation. */
+.support-widget-history-item.is-current {
+  border-color: color-mix(in srgb, var(--app-accent) 45%, var(--app-border));
+  background: color-mix(in srgb, var(--app-accent) 8%, var(--app-surface-solid));
+}
+
+.support-widget-history-item-top .support-widget-history-item-status {
+  color: var(--app-accent);
+  font-weight: 600;
+}
+
+.support-widget-history-item-top,
+.support-widget-history-item-bottom {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.support-widget-history-item-top strong {
+  font-size: 0.8rem;
+}
+
+.support-widget-history-item-top span,
+.support-widget-history-item-bottom {
+  color: var(--app-muted);
+  font-size: 0.72rem;
+}
+
+.support-widget-history-item-bottom > span:first-child {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.support-widget-history-item-bottom .chat-unread-badge {
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  font-size: 0.68rem;
+}
+
+[data-bs-theme="dark"] .support-widget-history-item {
+  background: var(--app-surface-raised);
+}
+
+[data-bs-theme="dark"] .support-widget-history-item.is-current {
+  background: color-mix(in srgb, var(--app-accent) 10%, var(--app-surface-raised));
+}
+
+.support-widget-history-empty,
+.support-widget-history-loading {
+  padding: 0.8rem 0.65rem;
+  color: var(--app-muted);
+  font-size: 0.76rem;
+  text-align: center;
+}
+
+/* Conversation */
 .support-widget-main {
   display: flex;
   min-width: 0;
@@ -159,9 +601,18 @@
   align-self: flex-start;
 }
 
+/* Follow-up from the same sender a few minutes later: no repeated name/time. */
+.support-widget-message.is-continued {
+  margin-top: -0.45rem;
+}
+
 .support-widget-message-meta {
   color: var(--app-muted);
   font-size: 0.74rem;
+}
+
+.support-widget-message.is-self .support-widget-message-meta {
+  text-align: right;
 }
 
 .support-widget-bubble {
@@ -195,7 +646,7 @@
 }
 
 .support-widget-composer textarea {
-  min-height: 90px;
+  min-height: 64px;
   resize: vertical;
 }
 
@@ -211,131 +662,7 @@
   font-size: 0.78rem;
 }
 
-.support-widget-history {
-  display: flex;
-  min-width: 0;
-  min-height: 0;
-  flex-direction: column;
-  border-left: 1px solid var(--app-border);
-  background: rgba(248, 250, 252, 0.72);
-}
-
-.support-widget-history-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.5rem;
-  padding: 0.85rem 0.9rem;
-  border-bottom: 1px solid var(--app-border);
-}
-
-.support-widget-history-header strong {
-  font-size: 0.88rem;
-}
-
-.support-widget-history-toggle {
-  display: inline-flex;
-  width: 32px;
-  height: 32px;
-  flex: 0 0 32px;
-  align-items: center;
-  justify-content: center;
-  border: 1px solid var(--app-border);
-  border-radius: 6px;
-  background: var(--app-surface-solid);
-  color: var(--app-text);
-}
-
-.support-widget-history-toggle:focus,
-.support-widget-history-toggle:hover {
-  border-color: rgba(37, 99, 235, 0.45);
-  outline: none;
-}
-
-.support-widget-history-count {
-  margin-left: 0.2rem;
-  color: var(--app-muted);
-  font-size: 0.74rem;
-  font-weight: 600;
-}
-
-.support-widget-history-count:empty {
-  display: none;
-}
-
-/* The collapsed 48px history rail only exists on wide panels; compact
-   layouts use the bar defined further below. */
-@media (min-width: 768px) {
-  .support-widget.is-history-collapsed .support-widget-content {
-    grid-template-columns: minmax(0, 1fr) 48px;
-  }
-
-  .support-widget.is-history-collapsed .support-widget-history-header {
-    justify-content: center;
-    padding-right: 0.45rem;
-    padding-left: 0.45rem;
-  }
-
-  .support-widget.is-history-collapsed .support-widget-history-header strong,
-  .support-widget.is-history-collapsed .support-widget-history-list {
-    display: none;
-  }
-}
-
-.support-widget-history-list {
-  display: flex;
-  min-height: 0;
-  flex: 1;
-  flex-direction: column;
-  gap: 0.5rem;
-  padding: 0.75rem;
-  overflow-y: auto;
-}
-
-.support-widget-history-item {
-  width: 100%;
-  padding: 0.65rem;
-  border: 1px solid var(--app-border);
-  border-radius: 6px;
-  background: var(--app-surface-solid);
-  color: var(--app-text);
-  text-align: left;
-}
-
-.support-widget-history-item.is-active,
-.support-widget-history-item:focus,
-.support-widget-history-item:hover {
-  border-color: rgba(37, 99, 235, 0.45);
-  outline: none;
-}
-
-.support-widget-history-item-top,
-.support-widget-history-item-bottom {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.5rem;
-  flex-wrap: wrap;
-}
-
-.support-widget-history-item-top strong {
-  font-size: 0.82rem;
-}
-
-.support-widget-history-item-top span,
-.support-widget-history-item-bottom {
-  color: var(--app-muted);
-  font-size: 0.72rem;
-}
-
-.support-widget-history-empty,
-.support-widget-history-loading {
-  padding: 0.8rem 0.65rem;
-  color: var(--app-muted);
-  font-size: 0.78rem;
-  text-align: center;
-}
-
+/* History modal */
 .support-widget-history-modal-meta {
   color: var(--app-muted);
   font-size: 0.8rem;
@@ -394,62 +721,41 @@
   text-align: center;
 }
 
-[data-bs-theme="dark"] .support-widget-history {
-  background: color-mix(in srgb, var(--app-surface-raised) 88%, transparent);
-}
-
-[data-bs-theme="dark"] .support-widget-history-item {
-  background: var(--app-surface-raised);
-}
-
-/* Compact panel (tablets and phones): history becomes a bar above the
-   conversation; opening it swaps the conversation for the list. */
+/* Compact panel (tablets and phones): the list fills the tab; choosing a
+   person opens the conversation, and the back button returns to the list. */
 @media (max-width: 767.98px) {
   .support-widget-content {
-    display: flex;
-    flex-direction: column;
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .support-widget-main {
-    flex: 1;
-  }
-
-  .support-widget-history {
-    flex: 0 0 auto;
-    order: -1;
-    border-bottom: 1px solid var(--app-border);
-    border-left: 0;
-  }
-
-  .support-widget-history-header {
-    padding: 0.35rem 0.5rem 0.35rem 0.85rem;
-    border-bottom: 0;
-    cursor: pointer;
-  }
-
-  .support-widget-history-list {
     display: none;
   }
 
-  .support-widget.is-compact-history-open .support-widget-main {
-    display: none;
-  }
-
-  .support-widget.is-compact-history-open .support-widget-history {
-    flex: 1;
-    min-height: 0;
-    border-bottom: 0;
-  }
-
-  .support-widget.is-compact-history-open .support-widget-history-header {
-    border-bottom: 1px solid var(--app-border);
-  }
-
-  .support-widget.is-compact-history-open .support-widget-history-list {
+  .support-widget.is-support-thread-open .support-widget-main {
     display: flex;
-    min-height: 0;
-    flex: 1;
-    max-height: none;
+  }
+
+  .support-widget.is-support-thread-open .support-widget-sidebar {
+    display: none;
+  }
+
+  .chat-sidebar {
+    border-right: 0;
+    background: transparent;
+  }
+
+  .chat-back {
+    display: inline-flex !important;
+  }
+
+  .chat-person {
+    min-height: 40px;
+    font-size: 0.86rem;
+  }
+
+  .support-widget-attendant-list {
+    max-height: 50%;
   }
 }
 
@@ -462,6 +768,11 @@
 
   .support-widget-tab {
     min-height: 40px;
+  }
+
+  .chat-thread-header {
+    min-height: 44px;
+    padding: 0.35rem 0.65rem;
   }
 
   .support-widget-messages {
@@ -529,7 +840,8 @@
     font-size: 1.3rem;
   }
 
-  .support-widget-toggle span {
+  /* Hide the "Chat" label but keep the unread badge visible. */
+  .support-widget-toggle span:not(.chat-unread-badge) {
     position: absolute;
     width: 1px;
     height: 1px;

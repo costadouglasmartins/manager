@@ -214,6 +214,38 @@ php manager_main/app/SupportChat/server.php
 
 Em produção, execute esse processo com `systemd`, Supervisor ou outro gerenciador de processos. Se expuser o WebSocket direto, libere a porta `8081`; se usar proxy reverso, encaminhe a rota pública configurada em `SUPPORT_CHAT_WS_URL` para esse serviço.
 
+As abas Suporte e Interno usam o mesmo layout: lista à esquerda e conversa à
+direita. Abaixo de 768px a lista ocupa a aba e tocar em alguém abre a conversa,
+com um botão para voltar.
+
+- Interno: a lista Equipe mostra todos os usuários do tenant, uma linha por
+  pessoa colorida pela presença e com o total de mensagens não lidas. Clicar
+  abre a conversa com a pessoa (ou cria uma, se ainda não existir). Conversas
+  internas não são encerradas: o histórico fica sempre disponível.
+- Suporte: Atendentes lista só usuários `root` ativos com presença `online`, a
+  mesma regra que o servidor usa para atribuir atendimentos
+  (`support_chat/bootstrap` devolve essa lista em `attendants`). Clicar em um
+  deles abre o atendimento; quem atende continua sendo escolhido pelo servidor.
+  Abaixo, Atendimentos mostra o atendimento atual e os encerrados no último mês.
+  Os mais antigos saem da lista e da contagem de não lidas, mas continuam
+  gravados no banco.
+
+O botão Chat mostra um badge vermelho com o total de mensagens não lidas do suporte
+e das conversas internas no tenant atual. Cada aba mostra sua própria contagem.
+Carregar conversas em segundo plano não marca mensagens como lidas: a confirmação
+ocorre quando a conversa está aberta e a página está visível. Mensagens de suporte
+continuam na contagem quando o atendimento é encerrado, até abri-lo na lista (no máximo por um mês).
+
+Os endpoints POST `internal_chat/seen` e `support_chat/seen` recebem `chat_id` e
+`last_message_id`, validam o usuário e o tenant e avançam a leitura até a data da
+mensagem exibida. Os campos de leitura existentes têm precisão de segundos.
+As consultas retornam as 200 mensagens mais recentes em ordem cronológica.
+Para verificar os totais e as confirmações sem usar o banco da aplicação:
+
+```sh
+php tests/chat_unread_test.php
+```
+
 ## Presença no login e logoff
 
 O login só cria a sessão autenticada depois de gravar `online` em `user_presences`.

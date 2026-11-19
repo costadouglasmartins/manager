@@ -45,7 +45,6 @@ class InternalChatController extends Controller
 		if ($activeChat)
 			{
 			$messages = $model->getMessages((int) $activeChat['id']);
-			$model->markSeen((int) $activeChat['id'], $userId);
 			$typingUsers = $model->listTypingUsers((int) $activeChat['id'], $tenantId, $userId);
 			}
 
@@ -54,6 +53,7 @@ class InternalChatController extends Controller
 			'tenant' => $this->serializeTenant($tenant),
 			'users' => $model->listTenantUsers($tenantId, $userId),
 			'chats' => $model->listChatsForUser($tenantId, $userId),
+			'unread_count' => $model->getUnreadCount($tenantId, $userId),
 			'activeChat' => $activeChat,
 			'messages' => $messages,
 			'typingUsers' => $typingUsers,
@@ -84,12 +84,39 @@ class InternalChatController extends Controller
 			], 404);
 			}
 
-		$model->markSeen((int) $chat['id'], $userId);
-
 		$this->json([
 			'chat' => $chat,
 			'messages' => $model->getMessages((int) $chat['id']),
 			'typingUsers' => $model->listTypingUsers((int) $chat['id'], $tenantId, $userId),
+		]);
+		}
+
+	/**
+	 * Acknowledges only messages displayed to the current participant.
+	 */
+	public function seen()
+		{
+		$this->requirePost();
+		$context = $this->currentContext();
+		$userId = (int) ($context['user']['id'] ?? 0);
+		$tenantId = (int) ($context['tenant']['id'] ?? 0);
+		$input = $this->requestData();
+		$chatId = (int) ($input['chat_id'] ?? 0);
+		$lastMessageId = (int) ($input['last_message_id'] ?? 0);
+		$model = new InternalChat();
+
+		if (!$model->markSeen($chatId, $tenantId, $userId, $lastMessageId))
+			{
+			$this->json([
+				'error' => 'chat_not_found',
+				'message' => 'Conversa ou mensagem interna não encontrada.',
+			], 404);
+			}
+
+		$this->json([
+			'chat_id' => $chatId,
+			'unread_count' => $model->getUnreadCount($tenantId, $userId),
+			'chats' => $model->listChatsForUser($tenantId, $userId),
 		]);
 		}
 
@@ -123,13 +150,12 @@ class InternalChatController extends Controller
 			], 422);
 			}
 
-		$model->markSeen((int) $chat['id'], $userId);
-
 		$this->json([
 			'chat' => $chat,
 			'messages' => $model->getMessages((int) $chat['id']),
 			'typingUsers' => $model->listTypingUsers((int) $chat['id'], $tenantId, $userId),
 			'chats' => $model->listChatsForUser($tenantId, $userId),
+			'unread_count' => $model->getUnreadCount($tenantId, $userId),
 		]);
 		}
 
@@ -167,7 +193,6 @@ class InternalChatController extends Controller
 			], 422);
 			}
 
-		$model->markSeen($chatId, $userId);
 		$model->setTypingState($chatId, $tenantId, $userId, false);
 		$chat = $model->findChatForParticipant($chatId, $tenantId, $userId);
 
@@ -177,6 +202,7 @@ class InternalChatController extends Controller
 			'messages' => $model->getMessages($chatId),
 			'typingUsers' => $model->listTypingUsers($chatId, $tenantId, $userId),
 			'chats' => $model->listChatsForUser($tenantId, $userId),
+			'unread_count' => $model->getUnreadCount($tenantId, $userId),
 		]);
 		}
 

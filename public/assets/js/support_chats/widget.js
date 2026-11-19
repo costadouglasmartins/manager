@@ -6,6 +6,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   const bootstrapUrl = root.dataset.bootstrapUrl || "";
+  const seenUrl = root.dataset.seenUrl || bootstrapUrl.replace(/bootstrap$/, "seen");
   const chatUrlBase = (root.dataset.chatUrlBase || "").replace(/\/$/, "");
   const wsAuthUrl = root.dataset.wsAuthUrl || "";
   const storageKeys = {
@@ -17,7 +18,12 @@ document.addEventListener("DOMContentLoaded", () => {
     toggle: document.getElementById("supportWidgetToggle"),
     close: document.getElementById("supportWidgetClose"),
     panel: document.getElementById("supportWidgetPanel"),
+    supportPane: document.getElementById("supportWidgetSupportPane"),
     headerMeta: document.getElementById("supportWidgetHeaderMeta"),
+    threadIdentity: document.getElementById("supportWidgetThreadIdentity"),
+    back: document.getElementById("supportWidgetBack"),
+    attendantList: document.getElementById("supportWidgetAttendantList"),
+    attendantsCount: document.getElementById("supportWidgetAttendantsCount"),
     messages: document.getElementById("supportWidgetMessages"),
     historyList: document.getElementById("supportWidgetHistoryList"),
     historyHeader: document.getElementById("supportWidgetHistoryHeader"),
@@ -45,8 +51,27 @@ document.addEventListener("DOMContentLoaded", () => {
     lastTypingState: false,
     historyModalChatId: null,
     historyCollapsed: false,
-    compactHistoryOpen: false,
+    compactThreadOpen: false,
+    historyModalPayload: null,
+    historyModalOpen: false,
+    refreshPromise: null,
+    seenRequests: new Set(),
+    acknowledgedMessages: new Map(),
+    renderedMessagesKey: "",
+    renderedChatId: 0,
+    renderedThreadHeaderHtml: "",
+    renderedAttendantsHtml: "",
+    renderedHistoryHtml: "",
   };
+
+  const presenceLabels = {
+    online: "Online",
+    away: "Ausente",
+    busy: "Ocupado",
+    offline: "Offline",
+  };
+  // Consecutive messages from one sender inside this window share one name/time line.
+  const messageGroupWindowMs = 5 * 60 * 1000;
 
   // Must match the compact breakpoint in support_chats/widget.css.
   const compactQuery = window.matchMedia("(max-width: 767.98px)");
@@ -119,6 +144,84 @@ document.addEventListener("DOMContentLoaded", () => {
     }).format(date);
   }
 
+  // Today: "21:10"; this year: "19/11 21:10"; older: "19/11/2025 21:10".
+  function formatMessageTime(value) {
+    const date = parseLocalDateTime(value);
+    if (!date || Number.isNaN(date.getTime())) {
+      return String(value || "");
+    }
+
+    const now = new Date();
+    const sameYear = date.getFullYear() === now.getFullYear();
+    const sameDay = sameYear && date.getMonth() === now.getMonth() && date.getDate() === now.getDate();
+    const time = new Intl.DateTimeFormat("pt-BR", { hour: "2-digit", minute: "2-digit" }).format(date);
+    if (sameDay) {
+      return time;
+    }
+
+    const day = new Intl.DateTimeFormat("pt-BR", sameYear
+      ? { day: "2-digit", month: "2-digit" }
+      : { day: "2-digit", month: "2-digit", year: "numeric" }).format(date);
+    return `${day} ${time}`;
+  }
+
+  // Renders a thread, showing the sender line only when the sender changes or
+  // a few minutes passed; the full date stays available on hover.
+  function messagesHtml(messages, isSelfMessage) {
+    let previous = null;
+
+    return messages.map((message) => {
+      const isSelf = isSelfMessage(message);
+      const senderKey = `${message.sender_role || ""}:${Number(message.sender_user_id || 0)}`;
+      const date = parseLocalDateTime(message.created);
+      const time = date && !Number.isNaN(date.getTime()) ? date.getTime() : null;
+      const isContinued = Boolean(previous) && previous.senderKey === senderKey
+        && time !== null && previous.time !== null
+        && time - previous.time >= 0 && time - previous.time < messageGroupWindowMs;
+      previous = { senderKey, time };
+
+      const when = escapeHtml(formatMessageTime(message.created));
+      const meta = isSelf ? when : `${escapeHtml(message.sender_name || message.sender_role)} · ${when}`;
+
+      return `
+        <div class="support-widget-message ${isSelf ? "is-self" : "is-other"}${isContinued ? " is-continued" : ""}">
+          ${isContinued ? "" : `<div class="support-widget-message-meta">${meta}</div>`}
+          <div class="support-widget-bubble" title="${escapeHtml(formatDate(message.created))}">${escapeHtml(message.message_text || "")}</div>
+        </div>
+      `;
+    }).join("");
+  }
+
+  function presenceStatus(value) {
+    const status = String(value || "offline");
+    return Object.prototype.hasOwnProperty.call(presenceLabels, status) ? status : "offline";
+  }
+
+  function initials(name) {
+    const parts = String(name || "").trim().split(/\s+/).filter(Boolean);
+    if (!parts.length) {
+      return "?";
+    }
+
+    const first = Array.from(parts[0]);
+    const last = parts.length > 1 ? Array.from(parts[parts.length - 1]) : [];
+    return ((first[0] || "") + (last[0] || first[1] || "")).toUpperCase();
+  }
+
+  // contentHtml must already be escaped.
+  function avatarHtml(contentHtml, status) {
+    return `<span class="chat-avatar" data-presence="${status}" aria-hidden="true">${contentHtml}<span class="chat-presence-dot"></span></span>`;
+  }
+
+  function onlineAttendants() {
+    return (state.bootstrap && state.bootstrap.attendants) || [];
+  }
+
+  function tenantName() {
+    const tenant = state.bootstrap && state.bootstrap.tenant;
+    return tenant ? (tenant.fantasy || tenant.name || ("Tenant " + tenant.database_number)) : "Suporte";
+  }
+
   function statusLabel(status) {
     switch (status) {
       case "pending":
@@ -182,6 +285,8 @@ document.addEventListener("DOMContentLoaded", () => {
     if (isOpen && shouldFocus && !coarsePointerQuery.matches) {
       elements.input.focus();
     }
+
+    root.dispatchEvent(new CustomEvent("chat:visibility"));
   }
 
   function togglePanel(forceOpen) {
@@ -189,14 +294,11 @@ document.addEventListener("DOMContentLoaded", () => {
     setPanelOpen(shouldOpen);
   }
 
-  // Wide panels keep the persisted side-rail state; compact panels show the
-  // history as a bar that is closed by default and never persisted.
+  // The chat list is a section below the attendants; its collapsed state is
+  // persisted for every layout.
   function syncHistoryToggle() {
-    const isCompact = compactQuery.matches;
-    const isExpanded = isCompact ? state.compactHistoryOpen : !state.historyCollapsed;
-    const label = isExpanded ? "Recolher histórico" : "Expandir histórico";
-
-    root.classList.toggle("is-compact-history-open", isCompact && state.compactHistoryOpen);
+    const isExpanded = !state.historyCollapsed;
+    const label = isExpanded ? "Recolher atendimentos" : "Expandir atendimentos";
 
     if (!elements.historyToggle) {
       return;
@@ -208,12 +310,33 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const icon = elements.historyToggle.querySelector("i");
     if (icon) {
-      icon.classList.remove("bi-chevron-right", "bi-chevron-left", "bi-chevron-up", "bi-chevron-down");
-      if (isCompact) {
-        icon.classList.add(isExpanded ? "bi-chevron-up" : "bi-chevron-down");
-      } else {
-        icon.classList.add(isExpanded ? "bi-chevron-right" : "bi-chevron-left");
-      }
+      icon.classList.remove("bi-chevron-up", "bi-chevron-down");
+      icon.classList.add(isExpanded ? "bi-chevron-up" : "bi-chevron-down");
+    }
+  }
+
+  // Compact panels show either the attendant list or the conversation.
+  function isConversationVisible() {
+    return !compactQuery.matches || state.compactThreadOpen;
+  }
+
+  function setCompactThreadOpen(isOpen) {
+    state.compactThreadOpen = Boolean(isOpen);
+    root.classList.toggle("is-support-thread-open", state.compactThreadOpen);
+
+    if (state.compactThreadOpen) {
+      elements.messages.scrollTop = elements.messages.scrollHeight;
+      scheduleReadAcknowledgement();
+    }
+  }
+
+  // Assignment stays automatic on the server: any attendant opens the
+  // customer's single support conversation.
+  function openSupportConversation() {
+    setCompactThreadOpen(true);
+
+    if (!coarsePointerQuery.matches) {
+      elements.input.focus();
     }
   }
 
@@ -228,42 +351,134 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function toggleHistory() {
-    if (compactQuery.matches) {
-      state.compactHistoryOpen = !state.compactHistoryOpen;
-      syncHistoryToggle();
-      return;
-    }
-
     setHistoryCollapsed(!state.historyCollapsed);
   }
 
   function renderMessages() {
     const chat = activeChat();
     const messages = chat ? ((state.bootstrap && state.bootstrap.messages) || []) : [];
-    const tenant = state.bootstrap && state.bootstrap.tenant;
-    const tenantName = tenant ? (tenant.fantasy || tenant.name || ("Tenant " + tenant.database_number)) : "Suporte";
 
-    elements.headerMeta.textContent = chat ? `${tenantName} | ${statusLabel(chat.status)}` : `${tenantName} | Sem conversa iniciada`;
+    elements.headerMeta.textContent = tenantName();
     elements.typing.textContent = "";
 
     if (!messages.length) {
+      state.renderedMessagesKey = "";
+      state.renderedChatId = Number((chat && chat.id) || 0);
       elements.messages.innerHTML = '<div class="support-widget-empty"><p class="mb-0">Digite a primeira mensagem para iniciar o atendimento.</p></div>';
       return;
     }
 
-    elements.messages.innerHTML = messages.map((message) => {
-      const isSelf = Number(message.sender_user_id || 0) === currentUserId() && message.sender_role === "customer";
-      const cssClass = isSelf ? "is-self" : "is-other";
+    const id = Number(chat.id || 0);
+    const lastMessage = messages[messages.length - 1] || {};
+    const messagesKey = `${id}:${messages.length}:${lastMessage.id || ""}`;
+    if (messagesKey === state.renderedMessagesKey) {
+      return;
+    }
 
-      return `
-        <div class="support-widget-message ${cssClass}">
-          <div class="support-widget-message-meta">${escapeHtml(message.sender_name || message.sender_role)} | ${escapeHtml(formatDate(message.created))}</div>
-          <div class="support-widget-bubble">${escapeHtml(message.message_text || "")}</div>
-        </div>
+    const shouldScroll = state.renderedChatId !== id
+      || elements.messages.scrollHeight - elements.messages.scrollTop - elements.messages.clientHeight < 60;
+    state.renderedMessagesKey = messagesKey;
+    state.renderedChatId = id;
+
+    elements.messages.innerHTML = messagesHtml(messages, (message) => (
+      Number(message.sender_user_id || 0) === currentUserId() && message.sender_role === "customer"
+    ));
+
+    if (shouldScroll) {
+      elements.messages.scrollTop = elements.messages.scrollHeight;
+    }
+  }
+
+  // Who answers this chat: the assigned attendant with their presence, or
+  // "Suporte" with the queue state while nobody has taken it.
+  function renderThreadHeader() {
+    if (!elements.threadIdentity) {
+      return;
+    }
+
+    const chat = activeChat();
+    const attendantName = chat && Number(chat.attendant_user_id || 0) > 0
+      ? (chat.attendant_name || chat.attendant_username || "")
+      : "";
+    let status = "offline";
+    let html = "";
+
+    if (attendantName) {
+      status = presenceStatus(chat.attendant_presence_status);
+      html = `
+        ${avatarHtml(escapeHtml(initials(attendantName)), status)}
+        <span class="chat-thread-text">
+          <span class="chat-thread-name">${escapeHtml(attendantName)}</span>
+          <span class="chat-thread-status"><span class="chat-thread-presence">${presenceLabels[status]}</span> · ${escapeHtml(statusLabel(chat.status))}</span>
+        </span>
       `;
-    }).join("");
+    } else {
+      const hasAttendants = onlineAttendants().length > 0;
+      let detail = statusLabel(chat && chat.status);
+      if (!chat) {
+        detail = hasAttendants ? "Envie uma mensagem para iniciar o atendimento" : "Nenhum atendente online no momento";
+      }
 
-    elements.messages.scrollTop = elements.messages.scrollHeight;
+      status = hasAttendants ? "online" : "offline";
+      html = `
+        ${avatarHtml('<i class="bi bi-headset"></i>', status)}
+        <span class="chat-thread-text">
+          <span class="chat-thread-name">Suporte</span>
+          <span class="chat-thread-status">${escapeHtml(detail)}</span>
+        </span>
+      `;
+    }
+
+    elements.threadIdentity.dataset.presence = status;
+    if (html !== state.renderedThreadHeaderHtml) {
+      state.renderedThreadHeaderHtml = html;
+      elements.threadIdentity.innerHTML = html;
+    }
+  }
+
+  // Only roots that can take a chat right now (active, presence online).
+  // Each one opens the support conversation; the server picks who answers.
+  function renderAttendants() {
+    if (!elements.attendantList) {
+      return;
+    }
+
+    const attendants = onlineAttendants();
+    const chat = activeChat();
+    const assignedId = Number((chat && chat.attendant_user_id) || 0);
+    let html = "";
+
+    if (elements.attendantsCount) {
+      elements.attendantsCount.textContent = attendants.length ? `${attendants.length} online` : "";
+    }
+
+    if (!attendants.length) {
+      // The queue still accepts messages, so a new conversation must stay
+      // reachable; a current one is already listed under Atendimentos.
+      html = `
+        <div class="chat-people-empty">Nenhum atendente online. Sua mensagem fica na fila.</div>
+        ${chat ? "" : '<button type="button" class="chat-people-action" data-support-open-chat="true">Deixar mensagem</button>'}
+      `;
+    } else {
+      html = attendants.map((attendant) => {
+        const name = attendant.name || attendant.username || "Atendente";
+        const status = presenceStatus(attendant.presence_status);
+        const isAssigned = Number(attendant.id) === assignedId;
+        const details = `${presenceLabels[status]}${isAssigned ? ", seu atendente" : ""}`;
+
+        return `
+          <button type="button" class="chat-person${isAssigned ? " is-active" : ""}" data-support-open-chat="true" data-presence="${status}" title="${escapeHtml(name)} (${escapeHtml(details)})" aria-label="Abrir atendimento: ${escapeHtml(name)}, ${escapeHtml(details)}">
+            <span class="chat-person-dot" aria-hidden="true"></span>
+            <span class="chat-person-name">${escapeHtml(name)}</span>
+          </button>
+        `;
+      }).join("");
+    }
+
+    if (html !== state.renderedAttendantsHtml) {
+      state.renderedAttendantsHtml = html;
+      elements.attendantList.innerHTML = html;
+    }
   }
 
   function historyModalInstance() {
@@ -330,21 +545,21 @@ document.addEventListener("DOMContentLoaded", () => {
     }).join("");
   }
 
+  // Support chats of the last month: the current one first (it opens the
+  // conversation), then the closed ones (read-only, in the modal). The server
+  // stops sending chats closed more than a month ago; they stay in the database.
   function renderHistory() {
     if (!elements.historyList) {
       return;
     }
 
+    const current = activeChat();
     const history = historyChats();
+    const total = history.length + (current ? 1 : 0);
+    let html = "";
 
     if (elements.historyCount) {
-      elements.historyCount.textContent = history.length ? `(${history.length})` : "";
-    }
-
-    if (!history.length) {
-      state.historyModalChatId = null;
-      elements.historyList.innerHTML = '<div class="support-widget-history-empty">Nenhum histórico finalizado.</div>';
-      return;
+      elements.historyCount.textContent = total ? `(${total})` : "";
     }
 
     const historyIds = history.map((chat) => Number(chat.id));
@@ -352,24 +567,54 @@ document.addEventListener("DOMContentLoaded", () => {
       state.historyModalChatId = null;
     }
 
-    elements.historyList.innerHTML = history.map((chat) => {
-      const chatDate = chat.closed_at || chat.last_message_at || chat.created;
-      const activeClass = Number(chat.id) === Number(state.historyModalChatId) ? " is-active" : "";
-      const attendantName = chat.attendant_name || chat.attendant_username || "Sem atendente";
+    if (!total) {
+      html = '<div class="support-widget-history-empty">Nenhum atendimento no último mês.</div>';
+    } else {
+      if (current) {
+        const unread = Math.max(0, Number(current.unread_count || 0));
+        const attendantName = current.attendant_name || current.attendant_username || "Aguardando atendente";
+        html += `
+          <button type="button" class="support-widget-history-item is-current" data-support-open-chat="true" title="Abrir o atendimento atual">
+            <span class="support-widget-history-item-top">
+              <strong>Chat #${Number(current.id)}</strong>
+              <span class="support-widget-history-item-status">${current.status === "pending" ? "Na fila" : "Em andamento"}</span>
+            </span>
+            <span class="support-widget-history-item-bottom">
+              <span>${escapeHtml(attendantName)}</span>
+              ${unread > 0 ? `<span class="chat-unread-badge" aria-label="${unread} mensagens não lidas">${unread}</span>` : ""}
+            </span>
+          </button>
+        `;
+      }
 
-      return `
-        <button type="button" class="support-widget-history-item${activeClass}" data-history-chat-id="${Number(chat.id)}">
-          <span class="support-widget-history-item-top">
-            <strong>Chat #${Number(chat.id)}</strong>
-            <span>${escapeHtml(formatDate(chatDate))}</span>
-          </span>
-          <span class="support-widget-history-item-bottom">
-            <span>${escapeHtml(attendantName)}</span>
-          </span>
-        </button>
-      `;
-    }).join("");
+      html += history.map((chat) => {
+        const chatDate = chat.closed_at || chat.last_message_at || chat.created;
+        const activeClass = Number(chat.id) === Number(state.historyModalChatId) ? " is-active" : "";
+        const attendantName = chat.attendant_name || chat.attendant_username || "Sem atendente";
+        const unread = Math.max(0, Number(chat.unread_count || 0));
 
+        return `
+          <button type="button" class="support-widget-history-item${activeClass}" data-history-chat-id="${Number(chat.id)}" title="Encerrado em ${escapeHtml(formatDate(chatDate))}">
+            <span class="support-widget-history-item-top">
+              <strong>Chat #${Number(chat.id)}</strong>
+              <span>${escapeHtml(formatMessageTime(chatDate))}</span>
+            </span>
+            <span class="support-widget-history-item-bottom">
+              <span>${escapeHtml(attendantName)}</span>
+              ${unread > 0 ? `<span class="chat-unread-badge" aria-label="${unread} mensagens não lidas">${unread}</span>` : ""}
+            </span>
+          </button>
+        `;
+      }).join("");
+    }
+
+    // The 5s poll re-renders constantly; identical markup would drop hover and focus.
+    if (html === state.renderedHistoryHtml) {
+      return;
+    }
+
+    state.renderedHistoryHtml = html;
+    elements.historyList.innerHTML = html;
     elements.historyList.querySelectorAll("[data-history-chat-id]").forEach((button) => {
       button.addEventListener("click", () => {
         const chatId = Number(button.dataset.historyChatId || 0);
@@ -382,11 +627,12 @@ document.addEventListener("DOMContentLoaded", () => {
 
   async function fetchJson(url, options) {
     const response = await fetch(url, {
+      ...options,
       headers: {
         Accept: "application/json",
         "X-Requested-With": "XMLHttpRequest",
+        ...((options && options.headers) || {}),
       },
-      ...options,
     });
 
     const payload = await response.json();
@@ -398,20 +644,108 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   async function refreshBootstrap() {
-    state.bootstrap = await fetchJson(bootstrapUrl);
-    renderMessages();
-    renderHistory();
+    if (state.refreshPromise) {
+      return state.refreshPromise;
+    }
+
+    state.refreshPromise = fetchJson(bootstrapUrl).then((payload) => {
+      state.bootstrap = payload;
+      renderMessages();
+      renderThreadHeader();
+      renderAttendants();
+      renderHistory();
+      publishUnreadCount();
+      scheduleReadAcknowledgement();
+    }).finally(() => {
+      state.refreshPromise = null;
+    });
+
+    return state.refreshPromise;
+  }
+
+  function publishUnreadCount() {
+    root.dispatchEvent(new CustomEvent("chat:unread", {
+      detail: {
+        channel: "support",
+        count: Math.max(0, Number((state.bootstrap && state.bootstrap.unread_count) || 0)),
+      },
+    }));
+  }
+
+  function scheduleReadAcknowledgement() {
+    window.requestAnimationFrame(() => {
+      markVisibleMessagesSeen();
+    });
+  }
+
+  async function markVisibleMessagesSeen() {
+    if (document.visibilityState !== "visible") {
+      return;
+    }
+
+    let chat = null;
+    let messages = [];
+
+    if (state.historyModalOpen) {
+      if (!elements.historyModal || !elements.historyModal.classList.contains("show") || !state.historyModalPayload) {
+        return;
+      }
+
+      chat = state.historyModalPayload.chat;
+      messages = state.historyModalPayload.messages || [];
+    } else if (!elements.panel.hidden && elements.supportPane && !elements.supportPane.hidden && isConversationVisible()) {
+      chat = activeChat();
+      messages = (state.bootstrap && state.bootstrap.messages) || [];
+    }
+
+    if (!chat || Number(chat.unread_count || 0) <= 0 || !messages.length) {
+      return;
+    }
+
+    const id = Number(chat.id || 0);
+    const lastMessageId = Math.max(...messages.map((message) => Number(message.id || 0)));
+    const key = `${id}:${lastMessageId}`;
+    if (!id || !lastMessageId || state.seenRequests.has(key) || state.acknowledgedMessages.get(id) >= lastMessageId) {
+      return;
+    }
+
+    state.seenRequests.add(key);
+    try {
+      await fetchJson(seenUrl, {
+        method: "POST",
+        headers: {
+          Accept: "application/json",
+          "X-Requested-With": "XMLHttpRequest",
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ chat_id: id, last_message_id: lastMessageId }),
+      });
+      state.acknowledgedMessages.set(id, lastMessageId);
+      await refreshBootstrap();
+    } catch (error) {
+      // Read receipts are retried by the next refresh without interrupting chat.
+    } finally {
+      state.seenRequests.delete(key);
+    }
   }
 
   async function openHistoryModal(chatId) {
     state.historyModalChatId = Number(chatId);
+    state.historyModalPayload = null;
+    state.historyModalOpen = true;
     renderHistoryModalLoading(chatId);
     renderHistory();
     showHistoryModal();
 
     try {
       const payload = await fetchJson(`${chatUrlBase}/${encodeURIComponent(chatId)}`);
+      if (state.historyModalChatId !== Number(chatId)) {
+        return;
+      }
+
+      state.historyModalPayload = payload;
       renderHistoryModal(payload);
+      scheduleReadAcknowledgement();
     } catch (error) {
       renderHistoryModalError();
     }
@@ -471,6 +805,7 @@ document.addEventListener("DOMContentLoaded", () => {
           state.socketAuthenticated = true;
           state.reconnectDelay = 1200;
           setConnectionStatus("Conectado", true);
+          await refreshBootstrap();
           return;
         }
 
@@ -539,22 +874,64 @@ document.addEventListener("DOMContentLoaded", () => {
   elements.toggle.addEventListener("click", () => togglePanel());
   elements.close.addEventListener("click", () => togglePanel(false));
 
+  root.addEventListener("chat:visibility", () => {
+    scheduleReadAcknowledgement();
+  });
+
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible") {
+      refreshBootstrap().catch(() => {
+        setConnectionStatus("Falha ao atualizar", false);
+      });
+      scheduleReadAcknowledgement();
+    }
+  });
+
+  if (elements.historyModal) {
+    elements.historyModal.addEventListener("shown.bs.modal", () => {
+      scheduleReadAcknowledgement();
+    });
+    elements.historyModal.addEventListener("hidden.bs.modal", () => {
+      state.historyModalOpen = false;
+      state.historyModalPayload = null;
+      scheduleReadAcknowledgement();
+    });
+  }
+
   if (elements.historyToggle) {
     elements.historyToggle.addEventListener("click", () => {
       toggleHistory();
     });
   }
 
-  // On compact panels the whole history bar is the tap target.
+  // The whole history header is a tap target, not only the chevron.
   if (elements.historyHeader) {
     elements.historyHeader.addEventListener("click", (event) => {
-      if (compactQuery.matches && !event.target.closest("button")) {
+      if (!event.target.closest("button")) {
         toggleHistory();
       }
     });
   }
 
-  const onCompactChange = () => syncHistoryToggle();
+  // Attendants and the current chat in the list open the conversation.
+  [elements.attendantList, elements.historyList].forEach((list) => {
+    if (!list) {
+      return;
+    }
+
+    list.addEventListener("click", (event) => {
+      if (event.target.closest("[data-support-open-chat]")) {
+        openSupportConversation();
+      }
+    });
+  });
+
+  if (elements.back) {
+    elements.back.addEventListener("click", () => setCompactThreadOpen(false));
+  }
+
+  // Leaving the compact layout shows both columns; coming back starts at the list.
+  const onCompactChange = () => setCompactThreadOpen(false);
   if (typeof compactQuery.addEventListener === "function") {
     compactQuery.addEventListener("change", onCompactChange);
   } else if (typeof compactQuery.addListener === "function") {
@@ -604,6 +981,12 @@ document.addEventListener("DOMContentLoaded", () => {
   refreshBootstrap().catch(() => {
     setConnectionStatus("Falha ao carregar", false);
   });
+
+  window.setInterval(() => {
+    refreshBootstrap().catch(() => {
+      setConnectionStatus("Falha ao atualizar", false);
+    });
+  }, 5000);
 
   connectSocket();
 });
