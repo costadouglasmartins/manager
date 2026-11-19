@@ -140,6 +140,18 @@ document.addEventListener("DOMContentLoaded", () => {
     }).format(date);
   }
 
+  // Full date and time, e.g. "19/11/2026 19:17" (when a chat was closed).
+  function formatFullDateTime(value) {
+    const date = parseLocalDateTime(value);
+    if (!date || Number.isNaN(date.getTime())) {
+      return String(value || "");
+    }
+
+    const day = new Intl.DateTimeFormat("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric" }).format(date);
+    const time = new Intl.DateTimeFormat("pt-BR", { hour: "2-digit", minute: "2-digit" }).format(date);
+    return `${day} ${time}`;
+  }
+
   // Today: "21:10"; this year: "19/11 21:10"; older: "19/11/2025 21:10".
   function formatMessageTime(value) {
     const date = parseLocalDateTime(value);
@@ -413,7 +425,7 @@ document.addEventListener("DOMContentLoaded", () => {
       status = presenceStatus(chat && chat.attendant_presence_status);
       title = name || "Suporte";
       avatar = name ? escapeHtml(initials(name)) : avatar;
-      detail = `${name ? `<span class="chat-thread-presence">${presenceLabels[status]}</span> · ` : ""}${escapeHtml(closedAt ? `Finalizado em ${formatDate(closedAt)}` : "Atendimento finalizado")}`;
+      detail = `${name ? `<span class="chat-thread-presence">${presenceLabels[status]}</span> · ` : ""}${escapeHtml(closedAt ? `Finalizado em ${formatFullDateTime(closedAt)}` : "Atendimento finalizado")}`;
     } else if (chat && name) {
       status = presenceStatus(chat.attendant_presence_status);
       title = name;
@@ -481,7 +493,7 @@ document.addEventListener("DOMContentLoaded", () => {
         const name = attendantName(chat) || "Aguardando atendente";
         const status = attendantName(chat) ? presenceStatus(chat.attendant_presence_status) : "offline";
         const unread = Math.max(0, Number(chat.unread_count || 0));
-        let meta = `Finalizado · ${formatMessageTime(chat.closed_at || chat.last_message_at || chat.created)}`;
+        let meta = `Finalizado · ${formatFullDateTime(chat.closed_at || chat.last_message_at || chat.created)}`;
         if (isOpen) {
           meta = `${chat.status === "pending" ? "Na fila" : "Em andamento"} · ${formatMessageTime(chat.last_message_at || chat.created)}`;
         }

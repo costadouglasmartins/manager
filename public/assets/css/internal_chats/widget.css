@@ -29,11 +29,11 @@
     display: none;
   }
 
-  .internal-chat-widget.has-active-thread .internal-chat-main {
+  .internal-chat-widget.is-thread-open .internal-chat-main {
     display: flex;
   }
 
-  .internal-chat-widget.has-active-thread .internal-chat-sidebar {
+  .internal-chat-widget.is-thread-open .internal-chat-sidebar {
     display: none;
   }
 }

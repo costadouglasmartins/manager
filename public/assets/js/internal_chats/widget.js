@@ -63,6 +63,8 @@ document.addEventListener("DOMContentLoaded", () => {
     forceScrollToBottom: false,
     renderedUserHtml: "",
     renderedHeaderHtml: "",
+    // Compact panels show the team list or the conversation, never both.
+    compactThreadOpen: false,
     refreshVersion: 0,
     seenRequests: new Set(),
     seenMessages: new Map(),
@@ -104,7 +106,21 @@ document.addEventListener("DOMContentLoaded", () => {
 
   function isThreadVisible() {
     return !elements.panel.hidden && !root.hidden && state.activeTab === "internal"
-      && document.visibilityState === "visible";
+      && document.visibilityState === "visible" && (!compactQuery.matches || state.compactThreadOpen);
+  }
+
+  // Back keeps the conversation selected (header and list still show it),
+  // exactly like the Suporte tab.
+  function setCompactThreadOpen(isOpen) {
+    state.compactThreadOpen = Boolean(isOpen);
+    root.classList.toggle("is-thread-open", state.compactThreadOpen);
+    // The back button lives in the panel header, outside this pane.
+    shell.classList.toggle("has-internal-thread", state.compactThreadOpen);
+
+    if (state.compactThreadOpen) {
+      elements.messages.scrollTop = elements.messages.scrollHeight;
+      markVisibleMessagesSeen();
+    }
   }
 
   async function markVisibleMessagesSeen() {
@@ -135,6 +151,8 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
+  // Must match the compact breakpoint in support_chats/widget.css.
+  const compactQuery = window.matchMedia("(max-width: 767.98px)");
   // Touch devices: focusing the textarea would pop the virtual keyboard over the chat.
   const coarsePointerQuery = window.matchMedia("(pointer: coarse)");
   const presenceLabels = {
@@ -211,6 +229,11 @@ document.addEventListener("DOMContentLoaded", () => {
       dateStyle: "short",
       timeStyle: "short",
     }).format(date);
+  }
+
+  function timestamp(value) {
+    const date = parseLocalDateTime(value);
+    return date && !Number.isNaN(date.getTime()) ? date.getTime() : 0;
   }
 
   // Today: "21:10"; this year: "19/11 21:10"; older: "19/11/2025 21:10".
@@ -405,10 +428,6 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function render() {
-    const hasThread = Boolean(state.activeChat);
-    root.classList.toggle("has-active-thread", hasThread);
-    // The back button lives in the panel header, outside this pane.
-    shell.classList.toggle("has-internal-thread", hasThread);
     renderHeader();
     renderUserList();
     renderMessages();
@@ -452,9 +471,9 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
-  // One list for the whole team: each tenant user is one line tinted with the
-  // presence color, carrying the unread count of the conversation with them.
-  // Clicking a user opens that conversation (or starts it).
+  // One list for the whole team: each tenant user is a row tinted with the
+  // presence color, with the presence and the time of the last message below
+  // the name, like the support list. Clicking opens the conversation (or starts it).
   function teamRows() {
     const users = tenantUsers();
     const chats = (state.bootstrap && state.bootstrap.chats) || [];
@@ -480,10 +499,16 @@ document.addEventListener("DOMContentLoaded", () => {
       });
     });
 
-    // Unread first, then by presence; the server order (by name) breaks ties.
+    // Conversations by date (newest first), then the others by presence; the
+    // server order (by name) breaks ties.
     return rows
-      .map((row, index) => ({ ...row, index, unread: Math.max(0, Number((row.chat && row.chat.unread_count) || 0)) }))
-      .sort((a, b) => (Number(b.unread > 0) - Number(a.unread > 0))
+      .map((row, index) => ({
+        ...row,
+        index,
+        at: row.chat ? timestamp(row.chat.last_message_at || row.chat.created) : 0,
+        unread: Math.max(0, Number((row.chat && row.chat.unread_count) || 0)),
+      }))
+      .sort((a, b) => (b.at - a.at)
         || (presenceOrder.indexOf(a.status) - presenceOrder.indexOf(b.status))
         || (a.index - b.index));
   }
@@ -500,17 +525,23 @@ document.addEventListener("DOMContentLoaded", () => {
     if (!rows.length) {
       html = '<div class="chat-people-empty">Nenhum outro usuário neste tenant.</div>';
     } else {
+      // A conversation without messages yet is not listed by the server, so
+      // the selected row is also matched by the partner.
+      const partner = chatPartner(state.activeChat);
       html = rows.map((row) => {
         const label = presenceLabels[row.status];
-        const isActive = Boolean(row.chat) && Number(row.chat.id) === Number(state.activeChatId || 0);
-        const classes = ["chat-person"];
+        const meta = row.chat ? `${label} · ${formatMessageTime(row.chat.last_message_at || row.chat.created)}` : label;
+        const isActive = row.chat
+          ? Number(row.chat.id) === Number(state.activeChatId || 0)
+          : Boolean(partner) && Number(partner.id) === row.userId;
+        const classes = ["chat-person", "chat-person-chat"];
         if (isActive) {
           classes.push("is-active");
         }
         if (row.unread > 0) {
           classes.push("has-unread");
         }
-        const details = [label];
+        const details = [meta];
         if (row.unread > 0) {
           details.push(`${row.unread} ${row.unread === 1 ? "mensagem não lida" : "mensagens não lidas"}`);
         }
@@ -518,7 +549,10 @@ document.addEventListener("DOMContentLoaded", () => {
         return `
           <button type="button" class="${classes.join(" ")}" data-internal-user-id="${row.userId}" data-internal-chat-id="${row.chat ? Number(row.chat.id) : 0}" data-presence="${row.status}" title="${escapeHtml(row.name)} (${escapeHtml(details.join(", "))})" aria-label="Conversar com ${escapeHtml(row.name)}, ${escapeHtml(details.join(", "))}">
             <span class="chat-person-dot" aria-hidden="true"></span>
-            <span class="chat-person-name">${escapeHtml(row.name)}</span>
+            <span class="chat-person-text">
+              <span class="chat-person-name">${escapeHtml(row.name)}</span>
+              <span class="chat-person-meta">${escapeHtml(meta)}</span>
+            </span>
             ${row.unread > 0 ? `<span class="chat-unread-badge" aria-hidden="true">${row.unread}</span>` : ""}
           </button>
         `;
@@ -625,6 +659,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   async function openChat(chatId) {
+    setCompactThreadOpen(true);
     state.activeChatId = Number(chatId);
     writeStoredValue(storageKeys.activeChat, String(state.activeChatId));
     setConnectionStatus("Carregando conversa...", false);
@@ -642,22 +677,14 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
-  // Leaves the thread (compact layouts go back to the team list).
-  function closeChat() {
+  // Compact back button: returns to the team list, keeping the conversation selected.
+  function leaveThread() {
     sendTyping(false);
-    state.activeChatId = 0;
-    state.activeChat = null;
-    state.messages = [];
-    state.typingUsers = [];
-    writeStoredValue(storageKeys.activeChat, "");
-    render();
-    syncTypingPollTimer();
-    refreshBootstrap().catch(() => {
-      setConnectionStatus("Falha ao atualizar", false);
-    });
+    setCompactThreadOpen(false);
   }
 
   async function startDirectChat(userId) {
+    setCompactThreadOpen(true);
     setConnectionStatus("Iniciando conversa...", false);
 
     try {
@@ -945,7 +972,15 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 
   if (elements.back) {
-    elements.back.addEventListener("click", () => closeChat());
+    elements.back.addEventListener("click", () => leaveThread());
+  }
+
+  // Leaving the compact layout shows both columns; coming back starts at the list.
+  const onCompactChange = () => setCompactThreadOpen(false);
+  if (typeof compactQuery.addEventListener === "function") {
+    compactQuery.addEventListener("change", onCompactChange);
+  } else if (typeof compactQuery.addListener === "function") {
+    compactQuery.addListener(onCompactChange);
   }
   elements.refresh.addEventListener("click", () => {
     refreshBootstrap().catch(() => {
