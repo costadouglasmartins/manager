@@ -214,21 +214,27 @@ php manager_main/app/SupportChat/server.php
 
 Em produção, execute esse processo com `systemd`, Supervisor ou outro gerenciador de processos. Se expuser o WebSocket direto, libere a porta `8081`; se usar proxy reverso, encaminhe a rota pública configurada em `SUPPORT_CHAT_WS_URL` para esse serviço.
 
-As abas Suporte e Interno usam o mesmo layout: lista à esquerda e conversa à
-direita. Abaixo de 768px a lista ocupa a aba e tocar em alguém abre a conversa,
-com um botão para voltar.
+As abas Suporte e Interno usam o mesmo layout: a conversa à esquerda e a lista
+de pessoas à direita, colorida pela presença. O topo da janela mostra a conversa
+atual da aba aberta (nome, presença e situação). Abaixo de 768px a lista ocupa a
+aba e tocar em alguém abre a conversa, com um botão para voltar no topo.
 
-- Interno: a lista Equipe mostra todos os usuários do tenant, uma linha por
-  pessoa colorida pela presença e com o total de mensagens não lidas. Clicar
-  abre a conversa com a pessoa (ou cria uma, se ainda não existir). Conversas
-  internas não são encerradas: o histórico fica sempre disponível.
-- Suporte: Atendentes lista só usuários `root` ativos com presença `online`, a
-  mesma regra que o servidor usa para atribuir atendimentos
-  (`support_chat/bootstrap` devolve essa lista em `attendants`). Clicar em um
-  deles abre o atendimento; quem atende continua sendo escolhido pelo servidor.
-  Abaixo, Atendimentos mostra o atendimento atual e os encerrados no último mês.
-  Os mais antigos saem da lista e da contagem de não lidas, mas continuam
-  gravados no banco.
+- Interno: a lista Equipe mostra todos os usuários do tenant, com o total de
+  mensagens não lidas. Clicar abre a conversa com a pessoa (ou cria uma, se
+  ainda não existir). Conversas internas não são encerradas: o histórico fica
+  sempre disponível.
+- Suporte: a lista Atendimentos mostra os atendimentos do último mês em ordem de
+  data, inclusive os finalizados; cada linha é o atendente `root` daquele
+  atendimento, na cor da sua presença (`user_presences` em `manager_main`).
+  Clicar no atendimento em andamento abre a conversa; clicar num finalizado
+  mostra as mensagens com o campo de texto desabilitado, sem reabrir o
+  atendimento. O botão "Novo atendimento" (ou "Atendimento atual", se houver um
+  aberto) volta a liberar o campo; a próxima mensagem cria um atendimento novo,
+  e o servidor escolhe o atendente. Só usuários `root` encerram atendimentos (o
+  servidor recusa `close_chat` de outros papéis). Atendimentos encerrados há mais
+  de um mês saem da lista e da contagem de não lidas, mas continuam gravados no
+  banco. `support_chat/bootstrap` ainda devolve os roots online em `attendants`,
+  usado no topo quando não há atendimento aberto.
 
 O botão Chat mostra um badge vermelho com o total de mensagens não lidas do suporte
 e das conversas internas no tenant atual. Cada aba mostra sua própria contagem.

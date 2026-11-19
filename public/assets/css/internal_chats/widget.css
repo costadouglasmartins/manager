@@ -1,4 +1,4 @@
-/* Layout: team list | conversation, the same columns as the Suporte tab.
+/* Layout: conversation | team list, the same columns as the Suporte tab.
    Below 768px the list and the conversation take turns.
    Presence colors, the people list, avatars and the conversation header are
    shared with the Suporte tab in support_chats/widget.css. */
@@ -10,7 +10,7 @@
   display: grid;
   min-height: 0;
   flex: 1;
-  grid-template-columns: 220px minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr) 210px;
 }
 
 .internal-chat-main {

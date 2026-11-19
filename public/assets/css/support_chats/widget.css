@@ -55,8 +55,8 @@
   box-shadow: 0 0 0 2px var(--app-surface-solid);
 }
 
-/* Fixed size so switching between the Suporte and Interno tabs (or collapsing
-   the history) never resizes the panel; each pane fills it and scrolls inside. */
+/* Fixed size so switching between the Suporte and Interno tabs (or opening
+   another conversation) never resizes the panel; each pane scrolls inside. */
 .support-widget-panel {
   display: flex;
   width: min(780px, calc(100vw - 1.5rem));
@@ -76,17 +76,39 @@
 
 .support-widget-header {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
   gap: 0.75rem;
-  padding: 1rem;
+  padding: 0.75rem 1rem;
   border-bottom: 1px solid var(--app-border);
   background: linear-gradient(135deg, rgba(37, 99, 235, 0.1), rgba(14, 165, 233, 0.08));
 }
 
-.support-widget-header p {
-  color: var(--app-muted);
-  font-size: 0.82rem;
+/* The header names the conversation on screen (one block per tab). */
+.chat-header-current {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.chat-header-current[hidden] {
+  display: none !important;
+}
+
+.chat-header-current .chat-avatar {
+  width: 38px;
+  height: 38px;
+  font-size: 0.78rem;
+}
+
+.chat-header-current .chat-thread-name {
+  font-size: 1rem;
+}
+
+.chat-header-current .chat-thread-status {
+  font-size: 0.78rem;
 }
 
 .support-widget-tabs {
@@ -132,14 +154,14 @@
   display: none !important;
 }
 
-/* Both tabs share one layout: people on the left, the conversation on the
+/* Both tabs share one layout: the conversation, and the people list on the
    right. Below 768px the list and the conversation take turns (see the
    compact block). */
 .support-widget-content {
   display: grid;
   min-height: 0;
   flex: 1;
-  grid-template-columns: 220px minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr) 210px;
 }
 
 /* Presence colors follow the account menu: online, ausente, ocupado, offline. */
@@ -159,13 +181,13 @@
   --presence-color: var(--app-danger);
 }
 
-/* Left column of both tabs */
+/* Right column of both tabs */
 .chat-sidebar {
   display: flex;
   min-width: 0;
   min-height: 0;
   flex-direction: column;
-  border-right: 1px solid var(--app-border);
+  border-left: 1px solid var(--app-border);
   background: rgba(248, 250, 252, 0.72);
 }
 
@@ -300,9 +322,37 @@
   background: var(--app-surface-solid);
 }
 
+/* Unread rows stand out by weight; the color stays the presence color. */
 .chat-person.has-unread .chat-person-name {
-  color: var(--app-text);
   font-weight: 700;
+}
+
+/* Support chats: attendant on the first line, status and date below. */
+.chat-person-text {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+
+.chat-person-meta {
+  overflow: hidden;
+  color: var(--app-muted);
+  font-size: 0.7rem;
+  font-weight: 400;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.chat-person-chat {
+  padding-top: 0.35rem;
+  padding-bottom: 0.35rem;
+}
+
+.chat-person-chat.is-open .chat-person-meta {
+  color: var(--app-accent);
+  font-weight: 600;
 }
 
 .chat-people-empty {
@@ -310,23 +360,6 @@
   color: var(--app-muted);
   font-size: 0.74rem;
   text-align: center;
-}
-
-.chat-people-action {
-  width: 100%;
-  margin-top: 0.15rem;
-  padding: 0.4rem 0.55rem;
-  border: 1px dashed var(--app-border);
-  border-radius: 6px;
-  background: transparent;
-  color: var(--app-text);
-  font-size: 0.76rem;
-}
-
-.chat-people-action:focus-visible,
-.chat-people-action:hover {
-  border-color: rgba(37, 99, 235, 0.45);
-  outline: none;
 }
 
 /* Avatar and header of the open conversation */
@@ -373,19 +406,6 @@
   box-shadow: inset 0 0 0 2px var(--app-muted), 0 0 0 2px var(--app-surface-solid);
 }
 
-.chat-thread-header {
-  display: flex;
-  min-height: 50px;
-  align-items: center;
-  gap: 0.6rem;
-  padding: 0.45rem 0.85rem;
-  border-bottom: 1px solid var(--app-border);
-}
-
-.chat-thread-header[hidden] {
-  display: none !important;
-}
-
 .chat-thread-identity {
   display: flex;
   min-width: 0;
@@ -423,133 +443,6 @@
 
 .chat-thread-identity[data-presence="offline"] .chat-thread-presence {
   font-weight: 400;
-}
-
-/* Suporte: online attendants on top, history below. */
-.support-widget-attendant-list {
-  flex: 0 1 auto;
-  max-height: 45%;
-}
-
-.support-widget-history {
-  display: flex;
-  min-height: 0;
-  flex: 1 1 auto;
-  flex-direction: column;
-  border-top: 1px solid var(--app-border);
-}
-
-.support-widget-history-header {
-  cursor: pointer;
-}
-
-.support-widget-history-count {
-  margin-left: 0.2rem;
-  color: var(--app-muted);
-  font-size: 0.74rem;
-  font-weight: 600;
-}
-
-.support-widget-history-count:empty {
-  display: none;
-}
-
-.support-widget.is-history-collapsed .support-widget-history {
-  flex: 0 0 auto;
-}
-
-.support-widget.is-history-collapsed .support-widget-history-header {
-  border-bottom: 0;
-}
-
-.support-widget.is-history-collapsed .support-widget-history-list {
-  display: none;
-}
-
-.support-widget-history-list {
-  display: flex;
-  min-height: 0;
-  flex: 1;
-  flex-direction: column;
-  gap: 0.35rem;
-  padding: 0.45rem;
-  overflow-y: auto;
-}
-
-.support-widget-history-item {
-  width: 100%;
-  padding: 0.45rem 0.55rem;
-  border: 1px solid var(--app-border);
-  border-radius: 6px;
-  background: var(--app-surface-solid);
-  color: var(--app-text);
-  text-align: left;
-}
-
-.support-widget-history-item.is-active,
-.support-widget-history-item:focus,
-.support-widget-history-item:hover {
-  border-color: rgba(37, 99, 235, 0.45);
-  outline: none;
-}
-
-/* The ongoing chat sits first in the list and opens the conversation. */
-.support-widget-history-item.is-current {
-  border-color: color-mix(in srgb, var(--app-accent) 45%, var(--app-border));
-  background: color-mix(in srgb, var(--app-accent) 8%, var(--app-surface-solid));
-}
-
-.support-widget-history-item-top .support-widget-history-item-status {
-  color: var(--app-accent);
-  font-weight: 600;
-}
-
-.support-widget-history-item-top,
-.support-widget-history-item-bottom {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.5rem;
-}
-
-.support-widget-history-item-top strong {
-  font-size: 0.8rem;
-}
-
-.support-widget-history-item-top span,
-.support-widget-history-item-bottom {
-  color: var(--app-muted);
-  font-size: 0.72rem;
-}
-
-.support-widget-history-item-bottom > span:first-child {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.support-widget-history-item-bottom .chat-unread-badge {
-  min-width: 18px;
-  height: 18px;
-  padding: 0 5px;
-  font-size: 0.68rem;
-}
-
-[data-bs-theme="dark"] .support-widget-history-item {
-  background: var(--app-surface-raised);
-}
-
-[data-bs-theme="dark"] .support-widget-history-item.is-current {
-  background: color-mix(in srgb, var(--app-accent) 10%, var(--app-surface-raised));
-}
-
-.support-widget-history-empty,
-.support-widget-history-loading {
-  padding: 0.8rem 0.65rem;
-  color: var(--app-muted);
-  font-size: 0.76rem;
-  text-align: center;
 }
 
 /* Conversation */
@@ -650,6 +543,13 @@
   resize: vertical;
 }
 
+/* Closed support chats are read-only. */
+.support-widget-composer textarea:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+  resize: none;
+}
+
 .support-widget-footer {
   display: flex;
   align-items: center;
@@ -660,65 +560,6 @@
 .support-widget-connection {
   color: var(--app-muted);
   font-size: 0.78rem;
-}
-
-/* History modal */
-.support-widget-history-modal-meta {
-  color: var(--app-muted);
-  font-size: 0.8rem;
-}
-
-.support-widget-history-modal-messages {
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-  min-height: 280px;
-  max-height: min(620px, calc(100vh - 220px));
-  overflow-y: auto;
-}
-
-.support-widget-history-modal-message {
-  display: flex;
-  max-width: 82%;
-  flex-direction: column;
-  gap: 0.28rem;
-}
-
-.support-widget-history-modal-message.is-self {
-  align-self: flex-end;
-}
-
-.support-widget-history-modal-message.is-other {
-  align-self: flex-start;
-}
-
-.support-widget-history-modal-message-meta {
-  color: var(--app-muted);
-  font-size: 0.72rem;
-}
-
-.support-widget-history-modal-message-bubble {
-  padding: 0.72rem 0.85rem;
-  border: 1px solid var(--app-border);
-  border-radius: 8px;
-  background: var(--app-surface-raised);
-  color: var(--app-text);
-  line-height: 1.42;
-  white-space: pre-wrap;
-}
-
-.support-widget-history-modal-message.is-self .support-widget-history-modal-message-bubble {
-  border-color: color-mix(in srgb, var(--app-accent) 35%, var(--app-border));
-  background: color-mix(in srgb, var(--app-accent) 13%, var(--app-surface-raised));
-}
-
-.support-widget-history-modal-empty {
-  display: flex;
-  min-height: 240px;
-  align-items: center;
-  justify-content: center;
-  color: var(--app-muted);
-  text-align: center;
 }
 
 /* Compact panel (tablets and phones): the list fills the tab; choosing a
@@ -741,21 +582,21 @@
   }
 
   .chat-sidebar {
-    border-right: 0;
     background: transparent;
   }
 
-  .chat-back {
+  .support-widget.is-support-thread-open #supportWidgetBack,
+  .support-widget.has-internal-thread #internalChatBack {
     display: inline-flex !important;
+  }
+
+  .chat-sidebar {
+    border-left: 0;
   }
 
   .chat-person {
     min-height: 40px;
     font-size: 0.86rem;
-  }
-
-  .support-widget-attendant-list {
-    max-height: 50%;
   }
 }
 
@@ -763,16 +604,11 @@
    (textarea + send button side by side). */
 @media (max-width: 767.98px), (max-height: 539.98px) {
   .support-widget-header {
-    padding: 0.65rem 0.9rem;
+    padding: 0.55rem 0.75rem;
   }
 
   .support-widget-tab {
     min-height: 40px;
-  }
-
-  .chat-thread-header {
-    min-height: 44px;
-    padding: 0.35rem 0.65rem;
   }
 
   .support-widget-messages {
@@ -788,7 +624,7 @@
   .support-widget .support-widget-composer {
     display: grid;
     grid-template-columns: minmax(0, 1fr) auto;
-    align-items: end;
+    align-items: stretch;
     gap: 0.3rem 0.5rem;
     padding: 0.6rem 0.75rem;
   }
@@ -805,9 +641,14 @@
     display: contents;
   }
 
+  /* Same height as the textarea beside it, label centered. */
   .support-widget .support-widget-footer .btn {
+    display: inline-flex;
     grid-row: 1;
     grid-column: 2;
+    align-items: center;
+    align-self: stretch;
+    justify-content: center;
     min-height: 2.75rem;
     padding-right: 0.9rem;
     padding-left: 0.9rem;

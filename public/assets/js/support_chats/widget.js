@@ -11,7 +11,6 @@ document.addEventListener("DOMContentLoaded", () => {
   const wsAuthUrl = root.dataset.wsAuthUrl || "";
   const storageKeys = {
     panel: "manager.supportChat.panelState",
-    history: "manager.supportChat.historyState",
   };
 
   const elements = {
@@ -19,25 +18,18 @@ document.addEventListener("DOMContentLoaded", () => {
     close: document.getElementById("supportWidgetClose"),
     panel: document.getElementById("supportWidgetPanel"),
     supportPane: document.getElementById("supportWidgetSupportPane"),
-    headerMeta: document.getElementById("supportWidgetHeaderMeta"),
     threadIdentity: document.getElementById("supportWidgetThreadIdentity"),
     back: document.getElementById("supportWidgetBack"),
-    attendantList: document.getElementById("supportWidgetAttendantList"),
-    attendantsCount: document.getElementById("supportWidgetAttendantsCount"),
+    chatList: document.getElementById("supportWidgetChatList"),
+    chatsCount: document.getElementById("supportWidgetChatsCount"),
+    newChat: document.getElementById("supportWidgetNewChat"),
     messages: document.getElementById("supportWidgetMessages"),
-    historyList: document.getElementById("supportWidgetHistoryList"),
-    historyHeader: document.getElementById("supportWidgetHistoryHeader"),
-    historyCount: document.getElementById("supportWidgetHistoryCount"),
-    historyToggle: document.getElementById("supportWidgetHistoryToggle"),
-    historyModal: document.getElementById("supportWidgetHistoryModal"),
-    historyModalTitle: document.getElementById("supportWidgetHistoryModalTitle"),
-    historyModalMeta: document.getElementById("supportWidgetHistoryModalMeta"),
-    historyModalMessages: document.getElementById("supportWidgetHistoryModalMessages"),
     typing: document.getElementById("supportWidgetTyping"),
     notice: document.getElementById("supportWidgetNotice"),
     form: document.getElementById("supportWidgetComposer"),
     input: document.getElementById("supportWidgetInput"),
     sendButton: document.getElementById("supportWidgetSendButton"),
+    resumeButton: document.getElementById("supportWidgetResumeButton"),
     connection: document.getElementById("supportWidgetConnection"),
   };
 
@@ -49,19 +41,17 @@ document.addEventListener("DOMContentLoaded", () => {
     reconnectDelay: 1200,
     typingTimer: null,
     lastTypingState: false,
-    historyModalChatId: null,
-    historyCollapsed: false,
+    // 0 shows the active chat (or a new one); a closed chat id shows it read-only.
+    viewedChatId: 0,
+    viewedPayload: null,
     compactThreadOpen: false,
-    historyModalPayload: null,
-    historyModalOpen: false,
     refreshPromise: null,
     seenRequests: new Set(),
     acknowledgedMessages: new Map(),
     renderedMessagesKey: "",
     renderedChatId: 0,
-    renderedThreadHeaderHtml: "",
-    renderedAttendantsHtml: "",
-    renderedHistoryHtml: "",
+    renderedHeaderHtml: "",
+    renderedListHtml: "",
   };
 
   const presenceLabels = {
@@ -70,6 +60,7 @@ document.addEventListener("DOMContentLoaded", () => {
     busy: "Ocupado",
     offline: "Offline",
   };
+  const defaultPlaceholder = elements.input.getAttribute("placeholder") || "";
   // Consecutive messages from one sender inside this window share one name/time line.
   const messageGroupWindowMs = 5 * 60 * 1000;
 
@@ -128,6 +119,11 @@ document.addEventListener("DOMContentLoaded", () => {
     return new Date(text.replace(" ", "T"));
   }
 
+  function timestamp(value) {
+    const date = parseLocalDateTime(value);
+    return date && !Number.isNaN(date.getTime()) ? date.getTime() : 0;
+  }
+
   function formatDate(value) {
     if (!value) {
       return "";
@@ -173,8 +169,7 @@ document.addEventListener("DOMContentLoaded", () => {
     return messages.map((message) => {
       const isSelf = isSelfMessage(message);
       const senderKey = `${message.sender_role || ""}:${Number(message.sender_user_id || 0)}`;
-      const date = parseLocalDateTime(message.created);
-      const time = date && !Number.isNaN(date.getTime()) ? date.getTime() : null;
+      const time = timestamp(message.created) || null;
       const isContinued = Boolean(previous) && previous.senderKey === senderKey
         && time !== null && previous.time !== null
         && time - previous.time >= 0 && time - previous.time < messageGroupWindowMs;
@@ -217,24 +212,6 @@ document.addEventListener("DOMContentLoaded", () => {
     return (state.bootstrap && state.bootstrap.attendants) || [];
   }
 
-  function tenantName() {
-    const tenant = state.bootstrap && state.bootstrap.tenant;
-    return tenant ? (tenant.fantasy || tenant.name || ("Tenant " + tenant.database_number)) : "Suporte";
-  }
-
-  function statusLabel(status) {
-    switch (status) {
-      case "pending":
-        return "Aguardando atendente";
-      case "open":
-        return "Atendimento em andamento";
-      case "closed":
-        return "Atendimento finalizado";
-      default:
-        return "Suporte";
-    }
-  }
-
   function activeChat() {
     const chat = state.bootstrap && state.bootstrap.chat;
     return chat && chat.status !== "closed" ? chat : null;
@@ -251,6 +228,41 @@ document.addEventListener("DOMContentLoaded", () => {
 
   function currentUserId() {
     return Number((state.bootstrap && state.bootstrap.currentUser && state.bootstrap.currentUser.id) || 0);
+  }
+
+  function attendantName(chat) {
+    return Number((chat && chat.attendant_user_id) || 0) > 0
+      ? (chat.attendant_name || chat.attendant_username || "")
+      : "";
+  }
+
+  // A closed chat is shown read-only: it is never reopened from the widget.
+  function isReadOnly() {
+    return state.viewedChatId > 0;
+  }
+
+  // The closed chat on screen: the list entry first (available at once), then
+  // the loaded payload.
+  function viewedClosedChat() {
+    if (!isReadOnly()) {
+      return null;
+    }
+
+    return historyChats().find((chat) => Number(chat.id) === state.viewedChatId)
+      || (state.viewedPayload && state.viewedPayload.chat)
+      || null;
+  }
+
+  function viewedChat() {
+    return isReadOnly() ? viewedClosedChat() : activeChat();
+  }
+
+  function viewedMessages() {
+    if (isReadOnly()) {
+      return (state.viewedPayload && state.viewedPayload.messages) || [];
+    }
+
+    return activeChat() ? ((state.bootstrap && state.bootstrap.messages) || []) : [];
   }
 
   function setConnectionStatus(label, isOnline) {
@@ -282,7 +294,7 @@ document.addEventListener("DOMContentLoaded", () => {
       writeStoredValue(storageKeys.panel, isOpen ? "open" : "closed");
     }
 
-    if (isOpen && shouldFocus && !coarsePointerQuery.matches) {
+    if (isOpen && shouldFocus && !coarsePointerQuery.matches && !elements.input.disabled) {
       elements.input.focus();
     }
 
@@ -294,28 +306,7 @@ document.addEventListener("DOMContentLoaded", () => {
     setPanelOpen(shouldOpen);
   }
 
-  // The chat list is a section below the attendants; its collapsed state is
-  // persisted for every layout.
-  function syncHistoryToggle() {
-    const isExpanded = !state.historyCollapsed;
-    const label = isExpanded ? "Recolher atendimentos" : "Expandir atendimentos";
-
-    if (!elements.historyToggle) {
-      return;
-    }
-
-    elements.historyToggle.setAttribute("aria-expanded", isExpanded ? "true" : "false");
-    elements.historyToggle.setAttribute("aria-label", label);
-    elements.historyToggle.setAttribute("title", label);
-
-    const icon = elements.historyToggle.querySelector("i");
-    if (icon) {
-      icon.classList.remove("bi-chevron-up", "bi-chevron-down");
-      icon.classList.add(isExpanded ? "bi-chevron-up" : "bi-chevron-down");
-    }
-  }
-
-  // Compact panels show either the attendant list or the conversation.
+  // Compact panels show either the chat list or the conversation.
   function isConversationVisible() {
     return !compactQuery.matches || state.compactThreadOpen;
   }
@@ -330,45 +321,40 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
-  // Assignment stays automatic on the server: any attendant opens the
-  // customer's single support conversation.
-  function openSupportConversation() {
-    setCompactThreadOpen(true);
-
-    if (!coarsePointerQuery.matches) {
+  function focusInput() {
+    if (!coarsePointerQuery.matches && !elements.input.disabled) {
       elements.input.focus();
     }
   }
 
-  function setHistoryCollapsed(isCollapsed, shouldPersist = true) {
-    state.historyCollapsed = Boolean(isCollapsed);
-    root.classList.toggle("is-history-collapsed", state.historyCollapsed);
-    syncHistoryToggle();
-
-    if (shouldPersist) {
-      writeStoredValue(storageKeys.history, state.historyCollapsed ? "collapsed" : "expanded");
-    }
-  }
-
-  function toggleHistory() {
-    setHistoryCollapsed(!state.historyCollapsed);
+  function render() {
+    renderMessages();
+    renderComposer();
+    renderHeader();
+    renderChatList();
   }
 
   function renderMessages() {
-    const chat = activeChat();
-    const messages = chat ? ((state.bootstrap && state.bootstrap.messages) || []) : [];
+    const chat = viewedChat();
+    const messages = viewedMessages();
+    const id = Number((chat && chat.id) || state.viewedChatId || 0);
 
-    elements.headerMeta.textContent = tenantName();
-    elements.typing.textContent = "";
+    if (isReadOnly() || !activeChat()) {
+      elements.typing.textContent = "";
+    }
 
     if (!messages.length) {
+      let text = "Digite a primeira mensagem para iniciar o atendimento.";
+      if (isReadOnly()) {
+        text = state.viewedPayload ? "Nenhuma mensagem neste atendimento." : "Carregando atendimento...";
+      }
+
       state.renderedMessagesKey = "";
-      state.renderedChatId = Number((chat && chat.id) || 0);
-      elements.messages.innerHTML = '<div class="support-widget-empty"><p class="mb-0">Digite a primeira mensagem para iniciar o atendimento.</p></div>';
+      state.renderedChatId = id;
+      elements.messages.innerHTML = `<div class="support-widget-empty"><p class="mb-0">${text}</p></div>`;
       return;
     }
 
-    const id = Number(chat.id || 0);
     const lastMessage = messages[messages.length - 1] || {};
     const messagesKey = `${id}:${messages.length}:${lastMessage.id || ""}`;
     if (messagesKey === state.renderedMessagesKey) {
@@ -389,240 +375,199 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
-  // Who answers this chat: the assigned attendant with their presence, or
-  // "Suporte" with the queue state while nobody has taken it.
-  function renderThreadHeader() {
+  // A closed chat disables typing; the user starts a new atendimento (or goes
+  // back to the open one) with the button that replaces "Enviar".
+  function renderComposer() {
+    const readOnly = isReadOnly();
+    const hasActive = Boolean(activeChat());
+
+    elements.input.disabled = readOnly;
+    elements.input.setAttribute("placeholder", readOnly ? "Atendimento finalizado." : defaultPlaceholder);
+    elements.sendButton.hidden = readOnly;
+
+    if (elements.resumeButton) {
+      elements.resumeButton.hidden = !readOnly;
+      elements.resumeButton.textContent = hasActive ? "Atendimento atual" : "Novo atendimento";
+    }
+
+    if (elements.newChat) {
+      elements.newChat.hidden = hasActive;
+    }
+  }
+
+  // The panel header names the support chat on screen.
+  function renderHeader() {
     if (!elements.threadIdentity) {
       return;
     }
 
-    const chat = activeChat();
-    const attendantName = chat && Number(chat.attendant_user_id || 0) > 0
-      ? (chat.attendant_name || chat.attendant_username || "")
-      : "";
+    const chat = viewedChat();
+    const name = attendantName(chat);
     let status = "offline";
-    let html = "";
+    let avatar = '<i class="bi bi-headset"></i>';
+    let title = "Suporte";
+    let detail = "";
 
-    if (attendantName) {
+    if (isReadOnly()) {
+      const closedAt = chat && (chat.closed_at || chat.last_message_at || chat.created);
+      status = presenceStatus(chat && chat.attendant_presence_status);
+      title = name || "Suporte";
+      avatar = name ? escapeHtml(initials(name)) : avatar;
+      detail = `${name ? `<span class="chat-thread-presence">${presenceLabels[status]}</span> · ` : ""}${escapeHtml(closedAt ? `Finalizado em ${formatDate(closedAt)}` : "Atendimento finalizado")}`;
+    } else if (chat && name) {
       status = presenceStatus(chat.attendant_presence_status);
-      html = `
-        ${avatarHtml(escapeHtml(initials(attendantName)), status)}
-        <span class="chat-thread-text">
-          <span class="chat-thread-name">${escapeHtml(attendantName)}</span>
-          <span class="chat-thread-status"><span class="chat-thread-presence">${presenceLabels[status]}</span> · ${escapeHtml(statusLabel(chat.status))}</span>
-        </span>
-      `;
+      title = name;
+      avatar = escapeHtml(initials(name));
+      detail = `<span class="chat-thread-presence">${presenceLabels[status]}</span> · Atendimento em andamento`;
+    } else if (chat) {
+      status = onlineAttendants().length ? "online" : "offline";
+      detail = "Aguardando atendente";
     } else {
-      const hasAttendants = onlineAttendants().length > 0;
-      let detail = statusLabel(chat && chat.status);
-      if (!chat) {
-        detail = hasAttendants ? "Envie uma mensagem para iniciar o atendimento" : "Nenhum atendente online no momento";
-      }
-
-      status = hasAttendants ? "online" : "offline";
-      html = `
-        ${avatarHtml('<i class="bi bi-headset"></i>', status)}
-        <span class="chat-thread-text">
-          <span class="chat-thread-name">Suporte</span>
-          <span class="chat-thread-status">${escapeHtml(detail)}</span>
-        </span>
-      `;
+      const count = onlineAttendants().length;
+      status = count ? "online" : "offline";
+      detail = count
+        ? `${count} ${count === 1 ? "atendente online" : "atendentes online"} · escreva para iniciar`
+        : "Nenhum atendente online · sua mensagem fica na fila";
     }
 
+    const html = `
+      ${avatarHtml(avatar, status)}
+      <span class="chat-thread-text">
+        <span class="chat-thread-name">${escapeHtml(title)}</span>
+        <span class="chat-thread-status">${detail}</span>
+      </span>
+    `;
+
     elements.threadIdentity.dataset.presence = status;
-    if (html !== state.renderedThreadHeaderHtml) {
-      state.renderedThreadHeaderHtml = html;
+    if (html !== state.renderedHeaderHtml) {
+      state.renderedHeaderHtml = html;
       elements.threadIdentity.innerHTML = html;
     }
   }
 
-  // Only roots that can take a chat right now (active, presence online).
-  // Each one opens the support conversation; the server picks who answers.
-  function renderAttendants() {
-    if (!elements.attendantList) {
-      return;
-    }
+  // Support chats of the last month, newest first, closed ones included. Each
+  // row is the root attendant of that chat, tinted with their presence.
+  function supportChatEntries() {
+    const active = activeChat();
+    const entries = active ? [{ chat: active, isOpen: true, at: timestamp(active.last_message_at || active.created) }] : [];
 
-    const attendants = onlineAttendants();
-    const chat = activeChat();
-    const assignedId = Number((chat && chat.attendant_user_id) || 0);
-    let html = "";
-
-    if (elements.attendantsCount) {
-      elements.attendantsCount.textContent = attendants.length ? `${attendants.length} online` : "";
-    }
-
-    if (!attendants.length) {
-      // The queue still accepts messages, so a new conversation must stay
-      // reachable; a current one is already listed under Atendimentos.
-      html = `
-        <div class="chat-people-empty">Nenhum atendente online. Sua mensagem fica na fila.</div>
-        ${chat ? "" : '<button type="button" class="chat-people-action" data-support-open-chat="true">Deixar mensagem</button>'}
-      `;
-    } else {
-      html = attendants.map((attendant) => {
-        const name = attendant.name || attendant.username || "Atendente";
-        const status = presenceStatus(attendant.presence_status);
-        const isAssigned = Number(attendant.id) === assignedId;
-        const details = `${presenceLabels[status]}${isAssigned ? ", seu atendente" : ""}`;
-
-        return `
-          <button type="button" class="chat-person${isAssigned ? " is-active" : ""}" data-support-open-chat="true" data-presence="${status}" title="${escapeHtml(name)} (${escapeHtml(details)})" aria-label="Abrir atendimento: ${escapeHtml(name)}, ${escapeHtml(details)}">
-            <span class="chat-person-dot" aria-hidden="true"></span>
-            <span class="chat-person-name">${escapeHtml(name)}</span>
-          </button>
-        `;
-      }).join("");
-    }
-
-    if (html !== state.renderedAttendantsHtml) {
-      state.renderedAttendantsHtml = html;
-      elements.attendantList.innerHTML = html;
-    }
-  }
-
-  function historyModalInstance() {
-    if (!elements.historyModal || !window.bootstrap || !window.bootstrap.Modal) {
-      return null;
-    }
-
-    return window.bootstrap.Modal.getOrCreateInstance(elements.historyModal);
-  }
-
-  function showHistoryModal() {
-    const modal = historyModalInstance();
-    if (modal) {
-      modal.show();
-    }
-  }
-
-  function renderHistoryModalLoading(chatId) {
-    if (!elements.historyModalTitle || !elements.historyModalMeta || !elements.historyModalMessages) {
-      return;
-    }
-
-    elements.historyModalTitle.textContent = `Atendimento #${Number(chatId)}`;
-    elements.historyModalMeta.textContent = "";
-    elements.historyModalMessages.innerHTML = '<div class="support-widget-history-modal-empty">Carregando conversa...</div>';
-  }
-
-  function renderHistoryModalError() {
-    if (!elements.historyModalMessages) {
-      return;
-    }
-
-    elements.historyModalMessages.innerHTML = '<div class="support-widget-history-modal-empty">Não foi possível carregar este histórico.</div>';
-  }
-
-  function renderHistoryModal(payload) {
-    if (!elements.historyModalTitle || !elements.historyModalMeta || !elements.historyModalMessages) {
-      return;
-    }
-
-    const chat = payload.chat || {};
-    const messages = payload.messages || [];
-    const attendantName = chat.attendant_name || chat.attendant_username || "Sem atendente";
-    const closedAt = chat.closed_at || chat.last_message_at || chat.created;
-
-    elements.historyModalTitle.textContent = `Atendimento #${Number(chat.id || 0)}`;
-    elements.historyModalMeta.textContent = `${attendantName} | Finalizado em ${formatDate(closedAt)}`;
-
-    if (!messages.length) {
-      elements.historyModalMessages.innerHTML = '<div class="support-widget-history-modal-empty">Nenhuma mensagem neste atendimento.</div>';
-      return;
-    }
-
-    elements.historyModalMessages.innerHTML = messages.map((message) => {
-      const isSelf = Number(message.sender_user_id || 0) === currentUserId() && message.sender_role === "customer";
-      const cssClass = isSelf ? "is-self" : "is-other";
-
-      return `
-        <div class="support-widget-history-modal-message ${cssClass}">
-          <div class="support-widget-history-modal-message-meta">${escapeHtml(message.sender_name || message.sender_role)} | ${escapeHtml(formatDate(message.created))}</div>
-          <div class="support-widget-history-modal-message-bubble">${escapeHtml(message.message_text || "")}</div>
-        </div>
-      `;
-    }).join("");
-  }
-
-  // Support chats of the last month: the current one first (it opens the
-  // conversation), then the closed ones (read-only, in the modal). The server
-  // stops sending chats closed more than a month ago; they stay in the database.
-  function renderHistory() {
-    if (!elements.historyList) {
-      return;
-    }
-
-    const current = activeChat();
-    const history = historyChats();
-    const total = history.length + (current ? 1 : 0);
-    let html = "";
-
-    if (elements.historyCount) {
-      elements.historyCount.textContent = total ? `(${total})` : "";
-    }
-
-    const historyIds = history.map((chat) => Number(chat.id));
-    if (state.historyModalChatId && !historyIds.includes(Number(state.historyModalChatId))) {
-      state.historyModalChatId = null;
-    }
-
-    if (!total) {
-      html = '<div class="support-widget-history-empty">Nenhum atendimento no último mês.</div>';
-    } else {
-      if (current) {
-        const unread = Math.max(0, Number(current.unread_count || 0));
-        const attendantName = current.attendant_name || current.attendant_username || "Aguardando atendente";
-        html += `
-          <button type="button" class="support-widget-history-item is-current" data-support-open-chat="true" title="Abrir o atendimento atual">
-            <span class="support-widget-history-item-top">
-              <strong>Chat #${Number(current.id)}</strong>
-              <span class="support-widget-history-item-status">${current.status === "pending" ? "Na fila" : "Em andamento"}</span>
-            </span>
-            <span class="support-widget-history-item-bottom">
-              <span>${escapeHtml(attendantName)}</span>
-              ${unread > 0 ? `<span class="chat-unread-badge" aria-label="${unread} mensagens não lidas">${unread}</span>` : ""}
-            </span>
-          </button>
-        `;
+    historyChats().forEach((chat) => {
+      if (!active || Number(chat.id) !== Number(active.id)) {
+        entries.push({ chat, isOpen: false, at: timestamp(chat.closed_at || chat.last_message_at || chat.created) });
       }
+    });
 
-      html += history.map((chat) => {
-        const chatDate = chat.closed_at || chat.last_message_at || chat.created;
-        const activeClass = Number(chat.id) === Number(state.historyModalChatId) ? " is-active" : "";
-        const attendantName = chat.attendant_name || chat.attendant_username || "Sem atendente";
+    return entries.sort((a, b) => (b.at - a.at) || (Number(b.chat.id) - Number(a.chat.id)));
+  }
+
+  function renderChatList() {
+    if (!elements.chatList) {
+      return;
+    }
+
+    const entries = supportChatEntries();
+    const viewedId = isReadOnly() ? state.viewedChatId : chatId();
+    let html = "";
+
+    if (elements.chatsCount) {
+      elements.chatsCount.textContent = entries.length ? String(entries.length) : "";
+    }
+
+    if (!entries.length) {
+      html = '<div class="chat-people-empty">Nenhum atendimento no último mês.</div>';
+    } else {
+      html = entries.map(({ chat, isOpen }) => {
+        const id = Number(chat.id);
+        const name = attendantName(chat) || "Aguardando atendente";
+        const status = attendantName(chat) ? presenceStatus(chat.attendant_presence_status) : "offline";
         const unread = Math.max(0, Number(chat.unread_count || 0));
+        let meta = `Finalizado · ${formatMessageTime(chat.closed_at || chat.last_message_at || chat.created)}`;
+        if (isOpen) {
+          meta = `${chat.status === "pending" ? "Na fila" : "Em andamento"} · ${formatMessageTime(chat.last_message_at || chat.created)}`;
+        }
+
+        const classes = ["chat-person", "chat-person-chat", isOpen ? "is-open" : "is-closed"];
+        if (id === viewedId) {
+          classes.push("is-active");
+        }
+        if (unread > 0) {
+          classes.push("has-unread");
+        }
+        const details = [presenceLabels[status], meta];
+        if (unread > 0) {
+          details.push(`${unread} ${unread === 1 ? "mensagem não lida" : "mensagens não lidas"}`);
+        }
+        const label = `${name} (${details.join(", ")})`;
 
         return `
-          <button type="button" class="support-widget-history-item${activeClass}" data-history-chat-id="${Number(chat.id)}" title="Encerrado em ${escapeHtml(formatDate(chatDate))}">
-            <span class="support-widget-history-item-top">
-              <strong>Chat #${Number(chat.id)}</strong>
-              <span>${escapeHtml(formatMessageTime(chatDate))}</span>
+          <button type="button" class="${classes.join(" ")}" data-support-chat-id="${id}" data-presence="${status}" title="${escapeHtml(label)}" aria-label="${escapeHtml(`Atendimento #${id}: ${label}`)}">
+            <span class="chat-person-dot" aria-hidden="true"></span>
+            <span class="chat-person-text">
+              <span class="chat-person-name">${escapeHtml(name)}</span>
+              <span class="chat-person-meta">${escapeHtml(meta)}</span>
             </span>
-            <span class="support-widget-history-item-bottom">
-              <span>${escapeHtml(attendantName)}</span>
-              ${unread > 0 ? `<span class="chat-unread-badge" aria-label="${unread} mensagens não lidas">${unread}</span>` : ""}
-            </span>
+            ${unread > 0 ? `<span class="chat-unread-badge" aria-hidden="true">${unread}</span>` : ""}
           </button>
         `;
       }).join("");
     }
 
     // The 5s poll re-renders constantly; identical markup would drop hover and focus.
-    if (html === state.renderedHistoryHtml) {
+    if (html === state.renderedListHtml) {
       return;
     }
 
-    state.renderedHistoryHtml = html;
-    elements.historyList.innerHTML = html;
-    elements.historyList.querySelectorAll("[data-history-chat-id]").forEach((button) => {
+    state.renderedListHtml = html;
+    elements.chatList.innerHTML = html;
+    elements.chatList.querySelectorAll("[data-support-chat-id]").forEach((button) => {
       button.addEventListener("click", () => {
-        const chatId = Number(button.dataset.historyChatId || 0);
-        if (chatId > 0) {
-          openHistoryModal(chatId);
+        const id = Number(button.dataset.supportChatId || 0);
+        if (id > 0) {
+          showChat(id);
         }
       });
     });
+  }
+
+  // The active chat opens for typing; a closed one opens read-only.
+  async function showChat(id, openThread = true) {
+    if (openThread) {
+      setCompactThreadOpen(true);
+    }
+
+    if (id === chatId()) {
+      showActiveChat();
+      return;
+    }
+
+    state.viewedChatId = id;
+    state.viewedPayload = null;
+    render();
+
+    try {
+      const payload = await fetchJson(`${chatUrlBase}/${encodeURIComponent(id)}`);
+      if (state.viewedChatId !== id) {
+        return;
+      }
+
+      state.viewedPayload = payload;
+      render();
+      scheduleReadAcknowledgement();
+    } catch (error) {
+      if (state.viewedChatId === id) {
+        elements.messages.innerHTML = '<div class="support-widget-empty"><p class="mb-0">Não foi possível carregar este atendimento.</p></div>';
+      }
+    }
+  }
+
+  // Back to the open chat, or to a blank one that starts a new atendimento.
+  function showActiveChat() {
+    state.viewedChatId = 0;
+    state.viewedPayload = null;
+    setCompactThreadOpen(true);
+    render();
+    focusInput();
+    scheduleReadAcknowledgement();
   }
 
   async function fetchJson(url, options) {
@@ -649,11 +594,16 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     state.refreshPromise = fetchJson(bootstrapUrl).then((payload) => {
+      const previousActiveId = chatId();
       state.bootstrap = payload;
-      renderMessages();
-      renderThreadHeader();
-      renderAttendants();
-      renderHistory();
+
+      // An attendant closed the chat on screen: keep it visible, read-only.
+      if (!isReadOnly() && previousActiveId > 0 && chatId() !== previousActiveId
+        && historyChats().some((chat) => Number(chat.id) === previousActiveId)) {
+        showChat(previousActiveId, false);
+      }
+
+      render();
       publishUnreadCount();
       scheduleReadAcknowledgement();
     }).finally(() => {
@@ -679,24 +629,16 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   async function markVisibleMessagesSeen() {
-    if (document.visibilityState !== "visible") {
+    if (document.visibilityState !== "visible" || elements.panel.hidden
+      || !elements.supportPane || elements.supportPane.hidden || !isConversationVisible()) {
       return;
     }
 
-    let chat = null;
-    let messages = [];
-
-    if (state.historyModalOpen) {
-      if (!elements.historyModal || !elements.historyModal.classList.contains("show") || !state.historyModalPayload) {
-        return;
-      }
-
-      chat = state.historyModalPayload.chat;
-      messages = state.historyModalPayload.messages || [];
-    } else if (!elements.panel.hidden && elements.supportPane && !elements.supportPane.hidden && isConversationVisible()) {
-      chat = activeChat();
-      messages = (state.bootstrap && state.bootstrap.messages) || [];
+    let chat = viewedChat();
+    if (isReadOnly()) {
+      chat = state.viewedPayload && state.viewedPayload.chat;
     }
+    const messages = viewedMessages();
 
     if (!chat || Number(chat.unread_count || 0) <= 0 || !messages.length) {
       return;
@@ -726,28 +668,6 @@ document.addEventListener("DOMContentLoaded", () => {
       // Read receipts are retried by the next refresh without interrupting chat.
     } finally {
       state.seenRequests.delete(key);
-    }
-  }
-
-  async function openHistoryModal(chatId) {
-    state.historyModalChatId = Number(chatId);
-    state.historyModalPayload = null;
-    state.historyModalOpen = true;
-    renderHistoryModalLoading(chatId);
-    renderHistory();
-    showHistoryModal();
-
-    try {
-      const payload = await fetchJson(`${chatUrlBase}/${encodeURIComponent(chatId)}`);
-      if (state.historyModalChatId !== Number(chatId)) {
-        return;
-      }
-
-      state.historyModalPayload = payload;
-      renderHistoryModal(payload);
-      scheduleReadAcknowledgement();
-    } catch (error) {
-      renderHistoryModalError();
     }
   }
 
@@ -810,7 +730,7 @@ document.addEventListener("DOMContentLoaded", () => {
         }
 
         if (payload.type === "typing") {
-          if (Number(payload.chat_id) === chatId()) {
+          if (!isReadOnly() && Number(payload.chat_id) === chatId()) {
             elements.typing.textContent = payload.is_typing ? `${payload.user_name || "Atendente"} está digitando...` : "";
           }
           return;
@@ -887,44 +807,13 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   });
 
-  if (elements.historyModal) {
-    elements.historyModal.addEventListener("shown.bs.modal", () => {
-      scheduleReadAcknowledgement();
-    });
-    elements.historyModal.addEventListener("hidden.bs.modal", () => {
-      state.historyModalOpen = false;
-      state.historyModalPayload = null;
-      scheduleReadAcknowledgement();
-    });
+  if (elements.newChat) {
+    elements.newChat.addEventListener("click", () => showActiveChat());
   }
 
-  if (elements.historyToggle) {
-    elements.historyToggle.addEventListener("click", () => {
-      toggleHistory();
-    });
+  if (elements.resumeButton) {
+    elements.resumeButton.addEventListener("click", () => showActiveChat());
   }
-
-  // The whole history header is a tap target, not only the chevron.
-  if (elements.historyHeader) {
-    elements.historyHeader.addEventListener("click", (event) => {
-      if (!event.target.closest("button")) {
-        toggleHistory();
-      }
-    });
-  }
-
-  // Attendants and the current chat in the list open the conversation.
-  [elements.attendantList, elements.historyList].forEach((list) => {
-    if (!list) {
-      return;
-    }
-
-    list.addEventListener("click", (event) => {
-      if (event.target.closest("[data-support-open-chat]")) {
-        openSupportConversation();
-      }
-    });
-  });
 
   if (elements.back) {
     elements.back.addEventListener("click", () => setCompactThreadOpen(false));
@@ -942,10 +831,11 @@ document.addEventListener("DOMContentLoaded", () => {
     event.preventDefault();
 
     const message = elements.input.value.trim();
-    if (!message) {
+    if (!message || isReadOnly()) {
       return;
     }
 
+    // Without an open chat the server creates a new one; closed chats are never reused.
     const sent = sendSocketMessage({
       type: "send_message",
       chat_id: chatId() || null,
@@ -974,7 +864,6 @@ document.addEventListener("DOMContentLoaded", () => {
     }, 900);
   });
 
-  setHistoryCollapsed(readStoredValue(storageKeys.history) === "collapsed", false);
   const shouldResetPanel = root.dataset.resetPanel === "true";
   setPanelOpen(!shouldResetPanel && readStoredValue(storageKeys.panel) === "open", shouldResetPanel, false);
 

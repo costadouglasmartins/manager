@@ -126,6 +126,7 @@ class SupportChat extends Model
 		$usersTable = $this->managerTable('users');
 		$peopleTable = $this->managerTable('people');
 		$tenantsTable = $this->managerTable('tenants');
+		$userPresencesTable = $this->managerTable('user_presences');
 		$unreadCountSql = $this->unreadCountSql();
 
 		$sql = "SELECT Chat.id,
@@ -144,13 +145,15 @@ class SupportChat extends Model
 		               Tenant.observations AS tenant_name,
 		               Tenant.database_number,
 		               AttendantPerson.name AS attendant_name,
-		               AttendantUser.username AS attendant_username
+		               AttendantUser.username AS attendant_username,
+		               COALESCE(AttendantPresence.status, 'offline') AS attendant_presence_status
 		        FROM {$chatsTable} AS Chat
 		        INNER JOIN {$usersTable} AS CustomerUser ON CustomerUser.id = Chat.customer_user_id
 		        INNER JOIN {$peopleTable} AS CustomerPerson ON CustomerPerson.id = CustomerUser.person_id
 		        LEFT JOIN {$tenantsTable} AS Tenant ON Tenant.id = Chat.tenant_id
 		        LEFT JOIN {$usersTable} AS AttendantUser ON AttendantUser.id = Chat.attendant_user_id
 		        LEFT JOIN {$peopleTable} AS AttendantPerson ON AttendantPerson.id = AttendantUser.person_id
+		        LEFT JOIN {$userPresencesTable} AS AttendantPresence ON AttendantPresence.user_id = Chat.attendant_user_id
 		        WHERE Chat.customer_user_id = :customer_user_id
 		          AND Chat.tenant_id = :tenant_id
 		          AND Chat.status = 'closed'
@@ -179,6 +182,7 @@ class SupportChat extends Model
 		$usersTable = $this->managerTable('users');
 		$peopleTable = $this->managerTable('people');
 		$tenantsTable = $this->managerTable('tenants');
+		$userPresencesTable = $this->managerTable('user_presences');
 		$unreadCountSql = $this->unreadCountSql();
 
 		$sql = "SELECT Chat.id,
@@ -197,13 +201,15 @@ class SupportChat extends Model
 		               Tenant.observations AS tenant_name,
 		               Tenant.database_number,
 		               AttendantPerson.name AS attendant_name,
-		               AttendantUser.username AS attendant_username
+		               AttendantUser.username AS attendant_username,
+		               COALESCE(AttendantPresence.status, 'offline') AS attendant_presence_status
 		        FROM {$chatsTable} AS Chat
 		        INNER JOIN {$usersTable} AS CustomerUser ON CustomerUser.id = Chat.customer_user_id
 		        INNER JOIN {$peopleTable} AS CustomerPerson ON CustomerPerson.id = CustomerUser.person_id
 		        LEFT JOIN {$tenantsTable} AS Tenant ON Tenant.id = Chat.tenant_id
 		        LEFT JOIN {$usersTable} AS AttendantUser ON AttendantUser.id = Chat.attendant_user_id
 		        LEFT JOIN {$peopleTable} AS AttendantPerson ON AttendantPerson.id = AttendantUser.person_id
+		        LEFT JOIN {$userPresencesTable} AS AttendantPresence ON AttendantPresence.user_id = Chat.attendant_user_id
 		        WHERE Chat.id = :chat_id
 		          AND Chat.customer_user_id = :customer_user_id
 		          AND Chat.tenant_id = :tenant_id

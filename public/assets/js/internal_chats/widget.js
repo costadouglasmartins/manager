@@ -28,12 +28,11 @@ document.addEventListener("DOMContentLoaded", () => {
     supportUnread: document.getElementById("supportWidgetSupportUnreadCount"),
     totalUnread: document.getElementById("supportWidgetUnreadCount"),
     supportPane: document.getElementById("supportWidgetSupportPane"),
-    supportMeta: document.getElementById("supportWidgetHeaderMeta"),
-    internalMeta: document.getElementById("internalChatHeaderMeta"),
+    supportMeta: document.getElementById("supportWidgetHeaderCurrent"),
+    internalMeta: document.getElementById("internalChatHeaderCurrent"),
     userList: document.getElementById("internalChatUserList"),
     teamCount: document.getElementById("internalChatTeamCount"),
     refresh: document.getElementById("internalChatRefresh"),
-    threadHeader: document.getElementById("internalChatThreadHeader"),
     threadIdentity: document.getElementById("internalChatThreadIdentity"),
     back: document.getElementById("internalChatBack"),
     messages: document.getElementById("internalChatMessages"),
@@ -63,6 +62,7 @@ document.addEventListener("DOMContentLoaded", () => {
     renderedChatId: 0,
     forceScrollToBottom: false,
     renderedUserHtml: "",
+    renderedHeaderHtml: "",
     refreshVersion: 0,
     seenRequests: new Set(),
     seenMessages: new Map(),
@@ -283,15 +283,6 @@ document.addEventListener("DOMContentLoaded", () => {
     return Number((state.bootstrap && state.bootstrap.currentUser && state.bootstrap.currentUser.id) || 0);
   }
 
-  function tenantName() {
-    const tenant = state.bootstrap && state.bootstrap.tenant;
-    if (!tenant) {
-      return "Chat interno";
-    }
-
-    return tenant.fantasy || tenant.name || ("Tenant " + tenant.database_number);
-  }
-
   function chatTitle(chat) {
     if (!chat) {
       return "";
@@ -414,43 +405,51 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function render() {
-    root.classList.toggle("has-active-thread", Boolean(state.activeChat));
+    const hasThread = Boolean(state.activeChat);
+    root.classList.toggle("has-active-thread", hasThread);
+    // The back button lives in the panel header, outside this pane.
+    shell.classList.toggle("has-internal-thread", hasThread);
     renderHeader();
-    renderThreadHeader();
     renderUserList();
     renderMessages();
     renderTyping();
   }
 
-  // The open conversation is named in the thread header, so this only gives context.
+  // The panel header names the internal conversation on screen.
   function renderHeader() {
-    elements.internalMeta.textContent = tenantName();
-  }
-
-  function renderThreadHeader() {
-    if (!elements.threadHeader || !elements.threadIdentity) {
+    if (!elements.threadIdentity) {
       return;
     }
+
+    let html = "";
+    let status = "offline";
 
     if (!state.activeChat) {
-      elements.threadHeader.hidden = true;
-      elements.threadIdentity.innerHTML = "";
-      return;
+      html = `
+        <span class="chat-avatar" data-presence="offline" aria-hidden="true"><i class="bi bi-people-fill"></i></span>
+        <span class="chat-thread-text">
+          <span class="chat-thread-name">Chat interno</span>
+          <span class="chat-thread-status">Escolha alguém da equipe para conversar</span>
+        </span>
+      `;
+    } else {
+      const partner = chatPartner(state.activeChat);
+      const title = chatTitle(state.activeChat);
+      status = partner ? presenceStatus(partner) : "offline";
+      html = `
+        ${avatarHtml(title, status)}
+        <span class="chat-thread-text">
+          <span class="chat-thread-name">${escapeHtml(title)}</span>
+          <span class="chat-thread-status"><span class="chat-thread-presence">${escapeHtml(presenceLabels[status])}</span></span>
+        </span>
+      `;
     }
 
-    const partner = chatPartner(state.activeChat);
-    const status = partner ? presenceStatus(partner) : "offline";
-    const title = chatTitle(state.activeChat);
-
-    elements.threadHeader.hidden = false;
     elements.threadIdentity.dataset.presence = status;
-    elements.threadIdentity.innerHTML = `
-      ${avatarHtml(title, status)}
-      <span class="chat-thread-text">
-        <span class="chat-thread-name">${escapeHtml(title)}</span>
-        ${partner ? `<span class="chat-thread-status"><span class="chat-thread-presence">${escapeHtml(presenceLabels[status])}</span></span>` : ""}
-      </span>
-    `;
+    if (html !== state.renderedHeaderHtml) {
+      state.renderedHeaderHtml = html;
+      elements.threadIdentity.innerHTML = html;
+    }
   }
 
   // One list for the whole team: each tenant user is one line tinted with the
