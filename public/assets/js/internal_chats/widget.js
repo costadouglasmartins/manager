@@ -236,6 +236,18 @@ document.addEventListener("DOMContentLoaded", () => {
     return date && !Number.isNaN(date.getTime()) ? date.getTime() : 0;
   }
 
+  // Full date and time, e.g. "28/10/2026 16:51" (when a conversation started).
+  function formatFullDateTime(value) {
+    const date = parseLocalDateTime(value);
+    if (!date || Number.isNaN(date.getTime())) {
+      return String(value || "");
+    }
+
+    const day = new Intl.DateTimeFormat("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric" }).format(date);
+    const time = new Intl.DateTimeFormat("pt-BR", { hour: "2-digit", minute: "2-digit" }).format(date);
+    return `${day} ${time}`;
+  }
+
   // Today: "21:10"; this year: "19/11 21:10"; older: "19/11/2025 21:10".
   function formatMessageTime(value) {
     const date = parseLocalDateTime(value);
@@ -459,7 +471,7 @@ document.addEventListener("DOMContentLoaded", () => {
         ${avatarHtml(title, status)}
         <span class="chat-thread-text">
           <span class="chat-thread-name">${escapeHtml(title)}</span>
-          <span class="chat-thread-status"><span class="chat-thread-presence">${escapeHtml(presenceLabels[status])}</span></span>
+          <span class="chat-thread-status"><span class="chat-thread-presence">${escapeHtml(presenceLabels[status])}</span>${state.activeChat.created ? ` · <span class="chat-thread-started">Iniciado em ${escapeHtml(formatFullDateTime(state.activeChat.created))}</span>` : ""}</span>
         </span>
       `;
     }

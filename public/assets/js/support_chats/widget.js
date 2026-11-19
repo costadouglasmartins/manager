@@ -29,7 +29,6 @@ document.addEventListener("DOMContentLoaded", () => {
     form: document.getElementById("supportWidgetComposer"),
     input: document.getElementById("supportWidgetInput"),
     sendButton: document.getElementById("supportWidgetSendButton"),
-    resumeButton: document.getElementById("supportWidgetResumeButton"),
     connection: document.getElementById("supportWidgetConnection"),
   };
 
@@ -387,23 +386,17 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
-  // A closed chat disables typing; the user starts a new atendimento (or goes
-  // back to the open one) with the button that replaces "Enviar".
+  // A closed chat is read-only: the field and Enviar stay disabled. A new
+  // atendimento starts from "+" in the list (or the open chat's row).
   function renderComposer() {
     const readOnly = isReadOnly();
-    const hasActive = Boolean(activeChat());
 
     elements.input.disabled = readOnly;
     elements.input.setAttribute("placeholder", readOnly ? "Atendimento finalizado." : defaultPlaceholder);
-    elements.sendButton.hidden = readOnly;
-
-    if (elements.resumeButton) {
-      elements.resumeButton.hidden = !readOnly;
-      elements.resumeButton.textContent = hasActive ? "Atendimento atual" : "Novo atendimento";
-    }
+    elements.sendButton.disabled = readOnly;
 
     if (elements.newChat) {
-      elements.newChat.hidden = hasActive;
+      elements.newChat.hidden = Boolean(activeChat());
     }
   }
 
@@ -420,20 +413,33 @@ document.addEventListener("DOMContentLoaded", () => {
     let title = "Suporte";
     let detail = "";
 
+    // When the chat started, shown after the presence and status.
+    const started = chat && chat.created
+      ? ` · <span class="chat-thread-started">Iniciado em ${escapeHtml(formatFullDateTime(chat.created))}</span>`
+      : "";
+
     if (isReadOnly()) {
-      const closedAt = chat && (chat.closed_at || chat.last_message_at || chat.created);
-      status = presenceStatus(chat && chat.attendant_presence_status);
+      // A finished chat is shown in neutral colors, without the attendant's presence.
+      const closedAt = chat && (chat.closed_at || chat.last_message_at);
+      const parts = [];
+      if (chat && chat.created) {
+        parts.push(`<span class="chat-thread-started">Iniciado em ${escapeHtml(formatFullDateTime(chat.created))}</span>`);
+      }
+      parts.push(closedAt
+        ? `<span class="chat-thread-started">Finalizado em ${escapeHtml(formatFullDateTime(closedAt))}</span>`
+        : "Atendimento finalizado");
+      status = "closed";
       title = name || "Suporte";
       avatar = name ? escapeHtml(initials(name)) : avatar;
-      detail = `${name ? `<span class="chat-thread-presence">${presenceLabels[status]}</span> · ` : ""}${escapeHtml(closedAt ? `Finalizado em ${formatFullDateTime(closedAt)}` : "Atendimento finalizado")}`;
+      detail = parts.join(" · ");
     } else if (chat && name) {
       status = presenceStatus(chat.attendant_presence_status);
       title = name;
       avatar = escapeHtml(initials(name));
-      detail = `<span class="chat-thread-presence">${presenceLabels[status]}</span> · Atendimento em andamento`;
+      detail = `<span class="chat-thread-presence">${presenceLabels[status]}</span> · Atendimento em andamento${started}`;
     } else if (chat) {
       status = onlineAttendants().length ? "online" : "offline";
-      detail = "Aguardando atendente";
+      detail = `Aguardando atendente${started}`;
     } else {
       const count = onlineAttendants().length;
       status = count ? "online" : "offline";
@@ -491,7 +497,11 @@ document.addEventListener("DOMContentLoaded", () => {
       html = entries.map(({ chat, isOpen }) => {
         const id = Number(chat.id);
         const name = attendantName(chat) || "Aguardando atendente";
-        const status = attendantName(chat) ? presenceStatus(chat.attendant_presence_status) : "offline";
+        // Finished chats are neutral; only open ones carry the attendant's presence color.
+        let status = attendantName(chat) ? presenceStatus(chat.attendant_presence_status) : "offline";
+        if (!isOpen) {
+          status = "closed";
+        }
         const unread = Math.max(0, Number(chat.unread_count || 0));
         let meta = `Finalizado · ${formatFullDateTime(chat.closed_at || chat.last_message_at || chat.created)}`;
         if (isOpen) {
@@ -505,7 +515,7 @@ document.addEventListener("DOMContentLoaded", () => {
         if (unread > 0) {
           classes.push("has-unread");
         }
-        const details = [presenceLabels[status], meta];
+        const details = isOpen ? [presenceLabels[status], meta] : [meta];
         if (unread > 0) {
           details.push(`${unread} ${unread === 1 ? "mensagem não lida" : "mensagens não lidas"}`);
         }
@@ -821,10 +831,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
   if (elements.newChat) {
     elements.newChat.addEventListener("click", () => showActiveChat());
-  }
-
-  if (elements.resumeButton) {
-    elements.resumeButton.addEventListener("click", () => showActiveChat());
   }
 
   if (elements.back) {

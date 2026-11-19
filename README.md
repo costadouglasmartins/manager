@@ -224,12 +224,13 @@ aba e tocar em alguém abre a conversa, com um botão para voltar no topo.
   ainda não existir). Conversas internas não são encerradas: o histórico fica
   sempre disponível.
 - Suporte: a lista Atendimentos mostra os atendimentos do último mês em ordem de
-  data, inclusive os finalizados; cada linha é o atendente `root` daquele
-  atendimento, na cor da sua presença (`user_presences` em `manager_main`).
-  Clicar no atendimento em andamento abre a conversa; clicar num finalizado
-  mostra as mensagens com o campo de texto desabilitado, sem reabrir o
-  atendimento. O botão "Novo atendimento" (ou "Atendimento atual", se houver um
-  aberto) volta a liberar o campo; a próxima mensagem cria um atendimento novo,
+  data, inclusive os finalizados. O atendimento em andamento usa a cor da
+  presença do atendente `root` (`user_presences` em `manager_main`); os
+  finalizados ficam em cinza neutro. Clicar no atendimento em andamento abre a
+  conversa; clicar num finalizado mostra as mensagens com o campo de texto e o
+  botão Enviar desabilitados, sem reabrir o atendimento. Para escrever de novo,
+  use o "+" da lista (aparece quando não há atendimento aberto) ou a linha em
+  andamento; a próxima mensagem cria um atendimento novo,
   e o servidor escolhe o atendente. Só usuários `root` encerram atendimentos (o
   servidor recusa `close_chat` de outros papéis). Atendimentos encerrados há mais
   de um mês saem da lista e da contagem de não lidas, mas continuam gravados no

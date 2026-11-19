@@ -109,6 +109,12 @@
 
 .chat-header-current .chat-thread-status {
   font-size: 0.78rem;
+  white-space: normal;
+}
+
+/* Keeps "Iniciado em 19/11/2026 19:13" together when the line wraps. */
+.chat-thread-started {
+  white-space: nowrap;
 }
 
 .support-widget-tabs {
@@ -161,7 +167,7 @@
   display: grid;
   min-height: 0;
   flex: 1;
-  grid-template-columns: minmax(0, 1fr) 210px;
+  grid-template-columns: minmax(0, 1fr) 236px;
 }
 
 /* Presence colors follow the account menu: online, ausente, ocupado, offline. */
@@ -355,6 +361,24 @@
   font-weight: 600;
 }
 
+/* Finished support chats: neutral gray instead of the presence color, still
+   readable (they open read-only). */
+.chat-person[data-presence="closed"] {
+  background: color-mix(in srgb, var(--app-muted) 8%, transparent);
+  color: color-mix(in srgb, var(--app-muted) 70%, var(--app-text));
+}
+
+.chat-person[data-presence="closed"] .chat-person-dot {
+  background: color-mix(in srgb, var(--app-muted) 60%, transparent);
+}
+
+.chat-person[data-presence="closed"]:focus-visible,
+.chat-person[data-presence="closed"]:hover,
+.chat-person[data-presence="closed"].is-active {
+  border-color: var(--app-border);
+  background: color-mix(in srgb, var(--app-muted) 14%, transparent);
+}
+
 .chat-people-empty {
   padding: 0.75rem 0.35rem;
   color: var(--app-muted);
@@ -399,6 +423,11 @@
 .chat-avatar[data-presence="offline"] {
   background: var(--app-surface-raised);
   color: var(--app-muted);
+}
+
+/* A finished chat has no presence to show. */
+.chat-avatar[data-presence="closed"] .chat-presence-dot {
+  display: none;
 }
 
 .chat-avatar[data-presence="offline"] .chat-presence-dot {

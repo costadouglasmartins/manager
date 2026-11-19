@@ -10,7 +10,7 @@
   display: grid;
   min-height: 0;
   flex: 1;
-  grid-template-columns: minmax(0, 1fr) 210px;
+  grid-template-columns: minmax(0, 1fr) 236px;
 }
 
 .internal-chat-main {
