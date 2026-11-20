@@ -253,6 +253,49 @@ Para verificar os totais e as confirmações sem usar o banco da aplicação:
 php tests/chat_unread_test.php
 ```
 
+### Chamadas de voz
+
+A chamada acontece dentro da janela do chat. O botão de telefone aparece no
+cabeçalho da conversa interna (com alguém da equipe do tenant) e no da conversa
+de suporte (quando há atendente atribuído). No `manager_main`, o atendente liga
+pelo botão "Ligar" em `support_chat/attend`. O toque, Atender/Recusar, o
+microfone e o encerrar aparecem num cartão no topo do chat; quem recebe a
+chamada vê o chat abrir sozinho. Nas páginas do `manager_main` sem chat aberto,
+o cartão flutua no canto da tela.
+
+- O áudio vai direto entre os navegadores (WebRTC). O servidor do chat
+  (`manager_main/app/SupportChat`) só toca para o destinatário e repassa a
+  negociação. As regras ficam em `VoiceCallRelay.php`: chamada interna só entre
+  usuários do mesmo tenant; chamada de suporte só entre o cliente e o atendente
+  do atendimento aberto.
+- A chamada vive na página. Trocar de tela durante a chamada pede confirmação
+  e, se a pessoa sair, a chamada termina para os dois.
+- O microfone exige HTTPS (ou `localhost`).
+- Cada chamada fica registrada em `manager_main.voice_calls` (tocando, atendida,
+  recusada, perdida, cancelada, duração).
+- A configuração `voice_calls_enabled` (módulo Communication, nas configurações
+  do sistema) liga ou desliga por tenant. Sem a migration
+  `manager_main/public/database/migrations/manager_main_voice_calls.sql`, a
+  configuração não existe e o recurso fica desligado.
+
+Servidores ICE (variáveis de ambiente do PHP-FPM):
+
+| Variável | Uso |
+| --- | --- |
+| `VOICE_CALL_STUN_URLS` | Lista separada por vírgula. Padrão: `stun:stun.l.google.com:19302`. |
+| `VOICE_CALL_TURN_URLS` | Lista de URLs TURN, por exemplo `turn:seu-dominio.com:3478?transport=udp,turn:seu-dominio.com:3478?transport=tcp`. Vazio desliga o TURN. |
+| `VOICE_CALL_TURN_SECRET` | O mesmo `static-auth-secret` do coturn. As credenciais duram uma hora. |
+
+Sem TURN, a chamada funciona na maioria das redes, mas falha em redes
+corporativas ou 4G mais restritivos. No Docker local, o serviço `coturn` do
+`compose.yaml` já faz esse papel.
+
+Testes (a partir de `manager_main`):
+
+```sh
+php tests/voice_call_handler_test.php
+```
+
 ## Presença no login e logoff
 
 O login só cria a sessão autenticada depois de gravar `online` em `user_presences`.

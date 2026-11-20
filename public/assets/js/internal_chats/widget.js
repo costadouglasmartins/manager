@@ -35,6 +35,7 @@ document.addEventListener("DOMContentLoaded", () => {
     refresh: document.getElementById("internalChatRefresh"),
     threadIdentity: document.getElementById("internalChatThreadIdentity"),
     back: document.getElementById("internalChatBack"),
+    callButton: document.getElementById("internalChatCallButton"),
     messages: document.getElementById("internalChatMessages"),
     typing: document.getElementById("internalChatTyping"),
     form: document.getElementById("internalChatComposer"),
@@ -480,6 +481,28 @@ document.addEventListener("DOMContentLoaded", () => {
     if (html !== state.renderedHeaderHtml) {
       state.renderedHeaderHtml = html;
       elements.threadIdentity.innerHTML = html;
+    }
+
+    renderCallButton();
+  }
+
+  // Voice call button: direct conversations with someone still in the team.
+  function renderCallButton() {
+    if (!elements.callButton) {
+      return;
+    }
+
+    const partner = state.activeChat ? chatPartner(state.activeChat) : null;
+    const canCall = Boolean(partner) && Boolean(window.VoiceCall && window.VoiceCall.enabled);
+    elements.callButton.hidden = !canCall;
+    elements.callButton.disabled = canCall && window.VoiceCall.isBusy();
+
+    if (canCall) {
+      const name = partner.name || partner.username || chatTitle(state.activeChat);
+      elements.callButton.dataset.targetUserId = String(partner.id);
+      elements.callButton.dataset.peerName = name;
+      elements.callButton.setAttribute("aria-label", `Ligar para ${name}`);
+      elements.callButton.title = `Ligar para ${name}`;
     }
   }
 
@@ -985,6 +1008,20 @@ document.addEventListener("DOMContentLoaded", () => {
 
   if (elements.back) {
     elements.back.addEventListener("click", () => leaveThread());
+  }
+
+  if (elements.callButton) {
+    elements.callButton.addEventListener("click", () => {
+      if (!window.VoiceCall || !elements.callButton.dataset.targetUserId) {
+        return;
+      }
+      window.VoiceCall.start({
+        kind: "internal",
+        targetUserId: Number(elements.callButton.dataset.targetUserId),
+        peerName: elements.callButton.dataset.peerName || "",
+      });
+    });
+    document.addEventListener("voicecall:change", renderCallButton);
   }
 
   // Leaving the compact layout shows both columns; coming back starts at the list.
