@@ -20,7 +20,6 @@ document.addEventListener("DOMContentLoaded", () => {
     supportPane: document.getElementById("supportWidgetSupportPane"),
     threadIdentity: document.getElementById("supportWidgetThreadIdentity"),
     back: document.getElementById("supportWidgetBack"),
-    callButton: document.getElementById("supportWidgetCallButton"),
     chatList: document.getElementById("supportWidgetChatList"),
     chatsCount: document.getElementById("supportWidgetChatsCount"),
     newChat: document.getElementById("supportWidgetNewChat"),
@@ -462,28 +461,6 @@ document.addEventListener("DOMContentLoaded", () => {
       state.renderedHeaderHtml = html;
       elements.threadIdentity.innerHTML = html;
     }
-
-    renderCallButton();
-  }
-
-  // Voice call button: only for the open support chat with an assigned attendant.
-  function renderCallButton() {
-    if (!elements.callButton) {
-      return;
-    }
-
-    const chat = isReadOnly() ? null : activeChat();
-    const name = attendantName(chat);
-    const canCall = Boolean(chat && name) && Boolean(window.VoiceCall && window.VoiceCall.enabled);
-    elements.callButton.hidden = !canCall;
-    elements.callButton.disabled = canCall && window.VoiceCall.isBusy();
-
-    if (canCall) {
-      elements.callButton.dataset.chatId = String(chat.id);
-      elements.callButton.dataset.peerName = name;
-      elements.callButton.setAttribute("aria-label", `Ligar para ${name}`);
-      elements.callButton.title = `Ligar para ${name}`;
-    }
   }
 
   // Support chats of the last month, newest first, closed ones included. Each
@@ -854,20 +831,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
   if (elements.newChat) {
     elements.newChat.addEventListener("click", () => showActiveChat());
-  }
-
-  if (elements.callButton) {
-    elements.callButton.addEventListener("click", () => {
-      if (!window.VoiceCall || !elements.callButton.dataset.chatId) {
-        return;
-      }
-      window.VoiceCall.start({
-        kind: "support",
-        chatId: Number(elements.callButton.dataset.chatId),
-        peerName: elements.callButton.dataset.peerName || "",
-      });
-    });
-    document.addEventListener("voicecall:change", renderCallButton);
   }
 
   if (elements.back) {

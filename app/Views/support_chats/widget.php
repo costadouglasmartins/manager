@@ -1,14 +1,9 @@
 <?php
 $resetChatPanel = !empty($_SESSION['manager']['reset_chat_panel']);
 unset($_SESSION['manager']['reset_chat_panel']);
-$voiceCallsEnabled = \App\Services\VoiceCallService::enabledForTenant((int) ((\App\Core\TenantContext::tenant() ?? [])['id'] ?? 0));
 ?>
 <link rel="stylesheet" href="<?= url('assets/css/support_chats/widget.css?v=17'); ?>">
 <link rel="stylesheet" href="<?= url('assets/css/internal_chats/widget.css?v=7'); ?>">
-<?php if ($voiceCallsEnabled): ?>
-<link rel="stylesheet" href="/manager_assets/voice_call/voice_call.css?v=1">
-<div id="voiceCallConfig" hidden data-ws-auth-url="<?= url('voice_call/wsAuth'); ?>" data-ice-url="<?= url('voice_call/iceServers'); ?>" data-slot="#voiceCallSlot" data-toggle="#supportWidgetToggle" data-panel="#supportWidgetPanel"></div>
-<?php endif; ?>
 
 <div class="support-widget" id="supportWidget" data-bootstrap-url="<?= url('support_chat/bootstrap'); ?>" data-chat-url-base="<?= url('support_chat/show'); ?>" data-seen-url="<?= url('support_chat/seen'); ?>" data-ws-auth-url="<?= url('support_chat/wsAuth'); ?>" data-reset-panel="<?= $resetChatPanel ? 'true' : 'false'; ?>">
   <button class="support-widget-toggle" id="supportWidgetToggle" type="button" aria-expanded="false" aria-controls="supportWidgetPanel">
@@ -30,9 +25,6 @@ $voiceCallsEnabled = \App\Services\VoiceCallService::enabledForTenant((int) ((\A
             <span class="chat-thread-status">Conectando ao suporte...</span>
           </span>
         </div>
-        <button class="chat-icon-button voice-call-start" id="supportWidgetCallButton" type="button" aria-label="Ligar para o atendente" title="Ligar para o atendente" hidden>
-          <i class="bi bi-telephone-fill"></i>
-        </button>
       </div>
       <div class="chat-header-current" id="internalChatHeaderCurrent" hidden>
         <button class="chat-icon-button chat-back" id="internalChatBack" type="button" aria-label="Voltar para a equipe" title="Voltar para a equipe">
@@ -44,15 +36,9 @@ $voiceCallsEnabled = \App\Services\VoiceCallService::enabledForTenant((int) ((\A
             <span class="chat-thread-status">Carregando conversas internas...</span>
           </span>
         </div>
-        <button class="chat-icon-button voice-call-start" id="internalChatCallButton" type="button" aria-label="Ligar" title="Ligar" hidden>
-          <i class="bi bi-telephone-fill"></i>
-        </button>
       </div>
       <button class="btn-close" id="supportWidgetClose" type="button" aria-label="Fechar"></button>
     </header>
-
-    <!-- Voice call card: ringing, answer/decline, mute and hang up. -->
-    <div class="voice-call-slot" id="voiceCallSlot" aria-live="polite"></div>
 
     <div class="support-widget-tabs" role="tablist" aria-label="Canais do chat">
       <button class="support-widget-tab is-active" id="supportWidgetSupportTab" type="button" role="tab" aria-selected="true" aria-controls="supportWidgetSupportPane" data-chat-widget-tab="support">
@@ -142,8 +128,5 @@ $voiceCallsEnabled = \App\Services\VoiceCallService::enabledForTenant((int) ((\A
   </section>
 </div>
 
-<?php if ($voiceCallsEnabled): ?>
-<script src="/manager_assets/voice_call/voice_call.js?v=1"></script>
-<?php endif; ?>
-<script src="<?= url('assets/js/support_chats/widget.js?v=17'); ?>"></script>
-<script src="<?= url('assets/js/internal_chats/widget.js?v=10'); ?>"></script>
+<script src="<?= url('assets/js/support_chats/widget.js?v=16'); ?>"></script>
+<script src="<?= url('assets/js/internal_chats/widget.js?v=9'); ?>"></script>
